@@ -7,7 +7,6 @@ import App from './App.jsx'
 import SignUp from './components/Signup.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {/*<App />*/}
-    <SignUp />
+    <App />
   </StrictMode>,
 )
