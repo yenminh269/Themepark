@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+h1, p{
+    color:#176B87;
+}
+
+.divChild {
+    display: flex;
+    justify-content: center;
+    margin: 15px 0px;
+}

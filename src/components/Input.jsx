@@ -3,7 +3,7 @@ import Form from 'react-bootstrap/Form';
 import Col from 'react-bootstrap/Col';
 function Input(props){
     return (
-        <Form.Group as={Col} md="4" >
+        <Form.Group as={Col} md={props.size} >
             <FloatingLabel label={props.label}>
                 <Form.Control
                     required
