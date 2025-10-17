@@ -1,7 +1,7 @@
 import {  useState } from 'react';
+import { Link } from 'react-router-dom';
 import Form from 'react-bootstrap/Form';
 import Input from './Input';
-import Row from 'react-bootstrap/Row';
 import ButtonSignUp from './ButtonSignUp';
 import { Zoom } from '@mui/material';
 import { Fab } from '@mui/material';
@@ -24,7 +24,7 @@ function Login(){
     return(
     <div className='bg-[#EEF5FF] rounded-2xl p-8 shadow-md mx-auto mt-10'>
         <h1>Welcome to our Theme Park</h1>
-        <p>Log In or Create an account</p>
+        <p>Log In or <Link to="/signup">Create an account</Link></p>
         <Form  noValidate validated={validated} onSubmit={handleSubmit}>
             <div className='divChild'>
                 <Input size="7" type="text" label="Email" feedback="Please provide a valid email." />
