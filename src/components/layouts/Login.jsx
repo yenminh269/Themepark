@@ -1,8 +1,8 @@
 import {  useState } from 'react';
 import { Link } from 'react-router-dom';
 import Form from 'react-bootstrap/Form';
-import Input from './Input';
-import ButtonSignUp from './ButtonSignUp';
+import Input from '../ui/Input';
+import ButtonSignUp from '../ui/button/ButtonSignUp';
 import { Zoom } from '@mui/material';
 import { Fab } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -39,13 +39,13 @@ function Login(){
                     onChange={(e) => setIsE(e.target.checked)} /> Log in as employee
             </label>        
 
-            <Zoom in={isE}>
+            {/* <Zoom in={isE}>
                 <div className='divChild'>
                     <Input size="3" type="text" label="Employee ID" feedback="Employee ID is required."/>
                 </div>
-            </Zoom>
-
-            <ButtonSignUp text="Log In"/>
+            </Zoom> */}
+            <div className='divChild'> <ButtonSignUp text="Log In"/></div>
+           
         </Form>
     </div>
     )

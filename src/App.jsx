@@ -3,8 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
-import SignUp from './components/Signup.jsx'
-import Login from './components/Login.jsx'
+import SignUp from './components/layouts/Signup.jsx'
+import Login from './components/layouts/Login.jsx'
 function App() {
   const [count, setCount] = useState(0)
 
