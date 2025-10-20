@@ -7,17 +7,21 @@ import { Zoom } from '@mui/material';
 import { Fab } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import './Login.css';
-function Login(){
+function Login({setAdmin}){
     const [isE,setIsE] = useState(false);
     const [validated, setValidated] = useState(false);
     
     const handleSubmit = (event) => {
-    const form = event.currentTarget;
-        if (form.checkValidity() === false) {
-          event.preventDefault();
-          event.stopPropagation();
-        }
-        setValidated(true);
+        const form = event.currentTarget;
+            if (form.checkValidity() === false) {
+            event.stopPropagation();
+            }else{
+                if(isE) {setAdmin(true)}
+                else{
+                    alert("Non-employee login not implemented yet");
+                }
+            }
+            setValidated(true);
     };
 
   
@@ -39,11 +43,11 @@ function Login(){
                     onChange={(e) => setIsE(e.target.checked)} /> Log in as employee
             </label>        
 
-            {/* <Zoom in={isE}>
+             <Zoom in={isE}>
                 <div className='divChild'>
-                    <Input size="3" type="text" label="Employee ID" feedback="Employee ID is required."/>
+                    <Input size="4" type="text" label="Employee ID" feedback="Employee ID is required."/>
                 </div>
-            </Zoom> */}
+            </Zoom> 
             <div className='divChild'> <ButtonSignUp text="Log In"/></div>
            
         </Form>
