@@ -16,7 +16,6 @@ function AdminMain() {
   }
 
   if (!isMobile && isExpanded) setIsExpanded(false);
-
   return (
     <Flex h="100vh"  w="100vw" overflow="hidden" bg="#D1D8BE">
       {/*Sidebar: fixed-width, full-height */}
