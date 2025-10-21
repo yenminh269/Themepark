@@ -1,8 +1,8 @@
 import {  useState } from 'react';
 import { Link } from 'react-router-dom';
 import Form from 'react-bootstrap/Form';
-import Input from '../ui/Input';
-import ButtonSignUp from '../ui/button/ButtonSignUp';
+import Input from '../../input/Input';
+import CustomButton from '../../button/CustomButton';
 import { Zoom } from '@mui/material';
 import { Fab } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -48,7 +48,7 @@ function Login({setAdmin}){
                     <Input size="4" type="text" label="Employee ID" feedback="Employee ID is required."/>
                 </div>
             </Zoom> 
-            <div className='divChild'> <ButtonSignUp text="Log In"/></div>
+            <div className='divChild'> <CustomButton text="Log In"/></div>
            
         </Form>
     </div>
