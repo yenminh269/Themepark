@@ -3,8 +3,8 @@ import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import FloatingLabel from 'react-bootstrap/FloatingLabel'; 
-import Input from '../ui/Input';
-import ButtonSignUp from '../ui/button/ButtonSignUp';
+import Input from '../../input/Input';
+import CustomButton from '../../button/CustomButton';
 
 function SignUp() {
   const [validated, setValidated] = useState(false);
@@ -63,7 +63,7 @@ function SignUp() {
             feedbackType="invalid"/>
       </Form.Group>
 
-      <ButtonSignUp text="Sign Up"/>
+      <CustomButton text="Sign Up"/>
     </Form>
   );
 }

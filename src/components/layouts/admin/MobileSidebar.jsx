@@ -1,6 +1,6 @@
 import { Box, VStack, Text, HStack, Icon } from "@chakra-ui/react"
 import { NavLink, useLocation } from "react-router-dom"
-import entities from '../../docs/entities'
+import entities from '../../../docs/entities'
 
 export default function MobileSidebar({ isOpen, onClose }) {
   const location = useLocation()

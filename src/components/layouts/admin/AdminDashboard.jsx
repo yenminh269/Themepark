@@ -6,9 +6,9 @@ import {
   MdPeople,
   MdTrendingUp
 } from 'react-icons/md';
-import StatCard from '../../ui/StatCard';
-import ChartCard from '../../ui/ChartCard';
-import DataTable from '../../ui/data-table/DataTable';
+import StatCard from '../../card/StatCard';
+import ChartCard from '../../card/ChartCard';
+import DataTable from '../../data-table/DataTable';
 const AdminDashboard = () => {
   // Mock data for stats
   const statsData = [
