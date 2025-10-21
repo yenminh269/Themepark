@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { useCart } from "../contexts/CartContext";
+import { useAuth } from "../login/AuthContext.jsx";
+import { useCart } from "./CartContext";
 
 export default function CheckoutPage() {
   const { user, signout } = useAuth();

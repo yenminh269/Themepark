@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { useCart } from "../contexts/CartContext";
+import { useAuth } from "../login/AuthContext";
+import { useCart } from "./CartContext";
 
 export default function TicketsPage() {
   const { user, signout } = useAuth();
