@@ -1,0 +1,89 @@
+/* App.css */
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  font-family: Arial, sans-serif;
+}
+
+.sidebar {
+  background-color: #4b5d16;
+  color: #a7b383;
+  width: 220px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+.sidebar-title {
+  font-weight: bold;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+
+.logout-button {
+  background-color: #8da679;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.main-content {
+  flex-grow: 1;
+  background-color: #cdd6b9;
+  padding: 40px;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.card {
+  background-color: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.card h2 {
+  color: #3e4b2b;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.table {
+  width: 900px; /* fixed width */
+  border-collapse: separate;
+  border-spacing: 0 10px;
+}
+
+.table th {
+  background-color: #e3e3e3;
+  padding: 12px;
+  text-align: left;
+  color: #555;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 12px;
+  vertical-align: middle;
+  white-space: nowrap;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.edit-button {
+  background-color: #8da679;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
