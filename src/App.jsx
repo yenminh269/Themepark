@@ -1,29 +1,31 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import './App.css';
-import SignUp from './components/layouts/Signup.jsx';
-import Login from './components/layouts/Login.jsx';
-import AdminMain from './components/layouts/admin/AdminMain.jsx';
-import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
-import { useState } from 'react';
+// src/App.jsx
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import { CartProvider } from "./contexts/CartContext";
 
-function App() {
-  const [isAdmin, setAdmin] = useState(true); // force admin for testing
+import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import TicketsPage from "./pages/TicketsPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import ConfirmationPage from "./pages/ConfirmationPage";
+import UserInfoPage from "./pages/UserInfoPage"; // ✅ new import
 
+export default function App() {
   return (
-    <Router>
-      {isAdmin ? (
-        <ChakraProvider value={defaultSystem}>
-          <AdminMain />
-        </ChakraProvider>
-      ) : (
-        <Routes>
-          <Route path="/admin" element={<Login setAdmin={setAdmin} />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      )}
-    </Router>
+    <AuthProvider>
+      <CartProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/tickets" element={<TicketsPage />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/confirmation" element={<ConfirmationPage />} />
+            <Route path="/userinfo" element={<UserInfoPage />} /> {/* ✅ new route */}
+          </Routes>
+        </Router>
+      </CartProvider>
+    </AuthProvider>
   );
 }
-
-export default App;
