@@ -20,6 +20,7 @@ function AddNewRide(){
                 <Input type="text" label="Description"  required/>
                 <Input type="time" label="Open Time"  required/>
                 <Input type="time" label="Close Time"  required/>
+                <Input type="time" label="Close Time"  required/>
                 <ButtonSignUp text="Add New Ride" />
             </Form>
         </div>
