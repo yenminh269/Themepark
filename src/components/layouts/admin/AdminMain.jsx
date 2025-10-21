@@ -16,9 +16,10 @@ function AdminMain() {
   }
 
   if (!isMobile && isExpanded) setIsExpanded(false);
+
   return (
     <Flex h="100vh"  w="100vw" overflow="hidden" bg="#D1D8BE">
-      {/*Sidebar: fixed-width, full-height */}
+      {/* ✅ Sidebar: fixed-width, full-height */}
       <Box
         w={{ base: "0", lg: "280px" }}
         bg="#4B5945"
@@ -32,7 +33,7 @@ function AdminMain() {
         <Sidebar />
       </Box>
 
-      {/* Main content area */}
+      {/* ✅ Main content area */}
       <Box
         ml={{ base: 0, lg: "280px" }}
         w={{ base: "100%", lg: "calc(100% - 280px)" }}
