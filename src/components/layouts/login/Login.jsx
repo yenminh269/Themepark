@@ -7,7 +7,7 @@ import { Zoom } from '@mui/material';
 import { Fab } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import './Login.css';
-function Login({setAdmin}){
+function Login(){
     const [isE,setIsE] = useState(false);
     const [validated, setValidated] = useState(false);
     
@@ -15,13 +15,8 @@ function Login({setAdmin}){
         const form = event.currentTarget;
             if (form.checkValidity() === false) {
             event.stopPropagation();
-            }else{
-                if(isE) {setAdmin(true)}
-                else{
-                    alert("Non-employee login not implemented yet");
-                }
-            }
             setValidated(true);
+            }
     };
 
   
