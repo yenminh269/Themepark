@@ -13,7 +13,7 @@ import UserInfoPage from "./components/layouts/customer/UserInfoPage.jsx";
 import SignUp from './components/layouts/login/Signup.jsx';
 import Login from './components/layouts/login/Login.jsx';
 import AdminMain from './components/layouts/admin/AdminMain.jsx';
-import ManagerPage from './components/layouts/manager/ManagerPage.jsx';
+import ManagerPage from  "./components/layouts/Manager/ManagerPage.jsx";
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
 export default function App() {
