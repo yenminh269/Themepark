@@ -1,3 +1,4 @@
+// src/components/layouts/manager/DashboardCard.jsx
 import React from "react";
 
 const DashboardCard = ({ title, value, badge, alert }) => (

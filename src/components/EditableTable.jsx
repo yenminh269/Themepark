@@ -1,6 +1,7 @@
+// src/components/layouts/manager/EditableTable.jsx
 import React, { useState } from "react";
 
-const EditableTable = ({ data, searchable }) => {
+const EditableTable = ({ data, searchable, onEdit, onDelete }) => {
   const [rows, setRows] = useState(data);
   const [query, setQuery] = useState("");
 
@@ -32,6 +33,7 @@ const EditableTable = ({ data, searchable }) => {
             <th>Quantity</th>
             <th>Price</th>
             <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -77,6 +79,22 @@ const EditableTable = ({ data, searchable }) => {
                     IN STOCK
                   </span>
                 )}
+              </td>
+              <td>
+                <div className="action-buttons">
+                  <button 
+                    className="action-btn edit-btn"
+                    onClick={() => onEdit && onEdit(row)}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    className="action-btn delete-btn"
+                    onClick={() => onDelete && onDelete(row.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

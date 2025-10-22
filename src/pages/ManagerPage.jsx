@@ -1,13 +1,19 @@
+// i made it more compatable w vite hopefully easier to merge
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../login/AuthContext";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import DashboardCard from "../components/DashboardCard";
 import EditableTable from "../components/EditableTable";
 import TransactionTable from "../components/TransactionTable";
-import "../styles/ManagerPage.css";
+import "./ManagerPage.css";
 
 const ManagerPage = () => {
-  // TODO: Get manager email from your login context/props
-  const managerEmail = "giftshop.manager@themepark.com";
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  // Get manager email from logged-in user, this is pulled from the database, i made fake data in it.
+  const managerEmail = user?.email || "giftshop.manager@themepark.com";
   
   const [managerInfo, setManagerInfo] = useState(null);
   const [activeTab, setActiveTab] = useState("overview");
@@ -31,7 +37,7 @@ const ManagerPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [reportType, setReportType] = useState("");
 
-  const API_BASE = "http://localhost:5000";
+  const API_BASE = "http://localhost:5000"; //change this if needed
 
   useEffect(() => {
     fetchManagerInfo();
@@ -128,7 +134,7 @@ const ManagerPage = () => {
     });
   };
 
-  // Data Entry Functions
+  // Data Entry Functions (thinking about the project requirements here )
   const handleAddItem = () => {
     setShowAddModal(true);
   };
@@ -142,8 +148,7 @@ const ManagerPage = () => {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
     
     try {
-      // TODO: Add delete API endpoint
-      alert("Delete functionality");
+      alert("Delete functionality - connect to backend API");
       fetchAllData();
     } catch (err) {
       console.error("Error deleting item:", err);
@@ -175,9 +180,12 @@ const ManagerPage = () => {
             <p style={{ fontSize: "0.9rem", color: "#66785F" }}>
               Email used: {managerEmail}
             </p>
-            <p style={{ fontSize: "0.9rem", color: "#66785F", marginTop: "1rem" }}>
-              Check console for more details (Press F12)
-            </p>
+            <button 
+              onClick={() => navigate("/")}
+              className="btn-primary mt-4"
+            >
+              Return Home
+            </button>
           </div>
         </div>
       </div>
@@ -189,6 +197,12 @@ const ManagerPage = () => {
       <div className="manager-layout">
         <div className="loading-container">
           <p>No manager found with email: {managerEmail}</p>
+          <button 
+            onClick={() => navigate("/")}
+            className="btn-primary mt-4"
+          >
+            Return Home
+          </button>
         </div>
       </div>
     );
@@ -516,13 +530,13 @@ const ManagerPage = () => {
         )}
       </main>
 
-      {/* Add/Edit Modal Placeholder */}
+      {/* Modals */}
       {(showAddModal || showEditModal) && (
         <div className="modal-overlay" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <h2>{showAddModal ? "Add New Item" : "Edit Item"}</h2>
             <p style={{ color: "#66785F", marginBottom: "1rem" }}>
-              Data entry form will go here
+              Data entry form will go here - connect to backend API
             </p>
             <button 
               className="add-button"
@@ -534,7 +548,6 @@ const ManagerPage = () => {
         </div>
       )}
 
-      {/* Report Modal Placeholder */}
       {showReportModal && (
         <div className="modal-overlay" onClick={() => setShowReportModal(false)}>
           <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
