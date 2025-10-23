@@ -1,13 +1,14 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, Routes, Route } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import "./Homepage.css";
 
 export default function HomePage() {
   const { user, signout } = useAuth();
   const navigate = useNavigate();
 
   const handleGetTickets = () => {
-    if (user) navigate("/tickets");
+    if (user) navigate("/tickets"); // ✅ must include /homepage/
     else navigate("/login");
   };
 
@@ -21,7 +22,6 @@ export default function HomePage() {
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-[#EEF5FF] border-b border-[#B4D4FF] backdrop-blur-md">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          {/* Logo */}
           <button
             onClick={() => navigate("/")}
             className="text-2xl font-extrabold tracking-wide text-[#176B87] hover:opacity-80 transition"
@@ -29,7 +29,6 @@ export default function HomePage() {
             🎢 ThemePark
           </button>
 
-          {/* Right side */}
           {!user ? (
             <div className="space-x-3">
               <Link
@@ -51,7 +50,7 @@ export default function HomePage() {
                 Signed in as <strong>{user.email}</strong>
               </span>
               <button
-                onClick={() => navigate("/userinfo")}
+                onClick={() => navigate("/homepage/userinfo")}
                 className="px-4 py-2 rounded-lg font-semibold border border-[#176B87] text-[#176B87] hover:bg-[#B4D4FF] transition"
               >
                 User Info
@@ -92,4 +91,3 @@ export default function HomePage() {
     </div>
   );
 }
-  
