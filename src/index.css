@@ -4,12 +4,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 html, body {
   margin: 0;
   padding: 0;
@@ -18,12 +12,3 @@ html, body {
   overflow-x: hidden;
 }
 
-body {
-  min-width: 320px;
-  background-color: #FFFBDE;
-}
-
-#root {
-  width: 100%;
-  height: 100%;
-}

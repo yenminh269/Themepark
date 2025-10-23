@@ -14,7 +14,8 @@ function Login({setAdmin}){
     const handleSubmit = (event) => {
         const form = event.currentTarget;
             if (form.checkValidity() === false) {
-            event.stopPropagation();
+                event.preventDefault();
+                event.stopPropagation();
             }else{
                 if(isE) {setAdmin(true)}
                 else{
@@ -23,35 +24,34 @@ function Login({setAdmin}){
             }
             setValidated(true);
     };
-
   
     return(
-    <div className='bg-[#EEF5FF] rounded-2xl p-8 shadow-md mx-auto mt-10'>
-        <h1>Welcome to our Theme Park</h1>
-        <p>Log In or <Link to="/signup">Create an account</Link></p>
-        <Form  noValidate validated={validated} onSubmit={handleSubmit}>
-            <div className='divChild'>
-                <Input size="7" type="text" label="Email" feedback="Please provide a valid email." />
+    <Form noValidate validated={validated} onSubmit={handleSubmit}>
+        <div className='flex flex-col gap-4 items-center bg-[#EEF5FF] rounded-2xl p-4 w-200 shadow-2xl mx-auto '>
+            <h1>Welcome to our Theme Park</h1>
+            <p>Log In or <Link to="/signup"><span>Create an account</span></Link></p>
+            <div>
+                <Input size="15" type="text" label="Email" feedback="Please provide a valid email." />
             </div>
 
-            <div className='divChild'>
-                <Input size="7" type="password" label="Password" feedback="Password is required." />
+            <div>
+                <Input size="15" type="password" label="Password" feedback="Password is required." />
             </div>
+            <div>
+                <input type="checkbox"  className="accent-[#176B87] inputCheck"  checked={isE}
+                    onChange={(e) => setIsE(e.target.checked)}/>Log in as employee
+            </div>
+            
 
-            <label className="flex items-center gap-2">
-                <input type="checkbox"  className="accent-[#176B87]"  checked={isE}
-                    onChange={(e) => setIsE(e.target.checked)} /> Log in as employee
-            </label>        
-
-             <Zoom in={isE}>
+             {/* <Zoom in={isE}>
                 <div className='divChild'>
                     <Input size="4" type="text" label="Employee ID" feedback="Employee ID is required."/>
                 </div>
-            </Zoom> 
-            <div className='divChild'> <CustomButton text="Log In"/></div>
-           
-        </Form>
-    </div>
+            </Zoom>  */}
+            <div> <CustomButton text="Log In"/></div>
+        </div>
+    </Form>
+    
     )
 }
 export default Login;
