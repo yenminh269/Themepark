@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './EMaintenance.css'; // import the stylesheet
 
-export default function App() {
+export default function EMaintenance() {
   const [maintenanceData, setMaintenanceData] = useState([
     {
       maintenanceId: 1,

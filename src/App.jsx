@@ -1,52 +1,49 @@
-// src/App.jsx
-import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from "./components/layouts/login/AuthContext.jsx";
+import { ChakraProvider } from '@chakra-ui/react';
+import { AuthProvider } from "./components/layouts/customer/AuthContext.jsx";
 import { CartProvider } from "./components/layouts/customer/CartContext.jsx";
-import './App.css';
-import HomePage from "./components/layouts/customer/HomePage.jsx";
-import LoginPage from "./components/layouts/login/LoginPage.jsx";
-import TicketsPage from "./components/layouts/customer/TicketsPage.jsx";
-import CheckoutPage from "./components/layouts/customer/CheckoutPage.jsx";
-import ConfirmationPage from "./components/layouts/customer/ConfirmationPage.jsx";
-import UserInfoPage from "./components/layouts/customer/UserInfoPage.jsx";
+import 'bootstrap/dist/css/bootstrap.min.css';
 import SignUp from './components/layouts/login/Signup.jsx';
 import Login from './components/layouts/login/Login.jsx';
 import AdminMain from './components/layouts/admin/AdminMain.jsx';
-import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
+import EMaintenance from './components/layouts/employee-maintenance/EMaintenance.jsx';
+import HomePage from './components/layouts/customer/HomePage.jsx';
+import TicketsPage from './components/layouts/customer/TicketsPage.jsx';
+import CheckoutPage from './components/layouts/customer/CheckoutPage.jsx';
+import ConfirmationPage from './components/layouts/customer/ConfirmationPage.jsx';
+import UserInfoPage from './components/layouts/customer/UserInfoPage.jsx';
 
-export default function App() {
-  const [isAdmin, setAdmin] = useState(true);
-
-  // Temporary debug - remove after testing
-  console.log("App component rendering, isAdmin:", isAdmin);
-
+function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <ChakraProvider value={defaultSystem}>
+    <ChakraProvider>
+      <AuthProvider>
+        <CartProvider>
           <Router>
-            {isAdmin ? (
-              <Routes>
-                <Route path="/admin/*" element={<AdminMain/>} />
-                <Route path="*" element={<Navigate to="/admin" replace />} />
-              </Routes>
-            ) : (
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/tickets" element={<TicketsPage />} />
-                <Route path="/checkout" element={<CheckoutPage />} />
-                <Route path="/confirmation" element={<ConfirmationPage />} />
-                <Route path="/userinfo" element={<UserInfoPage />} />
-                <Route path="/admin" element={<Login setAdmin={setAdmin} />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            )}
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+              
+              {/*Customer route */}
+              <Route path="/tickets" element={<TicketsPage />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/confirmation" element={<ConfirmationPage />} />
+              <Route path="/userinfo" element={<UserInfoPage />} />
+
+              {/*Maintenance employee route */}
+              <Route path="/maintenance" element={<EMaintenance />} />
+
+              {/* Admin routes */}
+              <Route path="/admin/*" element={<AdminMain />} />
+              
+              {/* Catch-all redirect */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </Router>
-        </ChakraProvider>
-      </CartProvider>
-    </AuthProvider>
+        </CartProvider>
+      </AuthProvider>
+    </ChakraProvider>
   );
 }
+
+export default App;

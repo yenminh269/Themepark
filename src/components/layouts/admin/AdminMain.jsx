@@ -90,11 +90,11 @@ function AdminMain() {
         {/* ✅ Routed content scrolls inside this area */}
         <Box p="40px">
           <Routes>
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/rides/add" element={<AddNewRide />} />
-            <Route path="/admin/rides/list" element={<RideList />} />
-            <Route path="/admin/maintenance/add" element={<Box>Add Maintenance Page</Box>} />
-            <Route path="/admin/employees" element={<Box>Manage Employees Page</Box>} />
+            <Route path="/" element={<AdminDashboard />} />
+            <Route path="rides/add" element={<AddNewRide />} />
+            <Route path="rides/list" element={<RideList />} />
+            <Route path="maintenance/add" element={<Box>Add Maintenance Page</Box>} />
+            <Route path="employees" element={<Box>Manage Employees Page</Box>} />
           </Routes>
         </Box>
       </Box>

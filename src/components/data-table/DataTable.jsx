@@ -1,4 +1,4 @@
-import { Box, Text, Table } from '@chakra-ui/react';
+import { Box, Text, Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react';
 
 const DataTable = ({ title, columns, data }) => {
   return (
@@ -17,33 +17,33 @@ const DataTable = ({ title, columns, data }) => {
         {title}
       </Text>
       <Box overflowX="auto">
-        <Table.Root variant="outline" size="md">
-          <Table.Header>
-            <Table.Row>
+        <Table variant="simple" size="md">
+          <Thead>
+            <Tr>
               {columns.map((column, index) => (
-                <Table.ColumnHeader key={index} color="gray.500" fontSize="xs" fontWeight="700">
+                <Th key={index} color="gray.500" fontSize="xs" fontWeight="700">
                   {column}
-                </Table.ColumnHeader>
+                </Th>
               ))}
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
+            </Tr>
+          </Thead>
+          <Tbody>
             {data.map((row, rowIndex) => (
-              <Table.Row key={rowIndex}>
+              <Tr key={rowIndex}>
                 {row.map((cell, cellIndex) => (
-                  <Table.Cell
+                  <Td
                     key={cellIndex}
                     color="gray.900"
                     fontSize="sm"
                     fontWeight="500"
                   >
                     {cell}
-                  </Table.Cell>
+                  </Td>
                 ))}
-              </Table.Row>
+              </Tr>
             ))}
-          </Table.Body>
-        </Table.Root>
+          </Tbody>
+        </Table>
       </Box>
     </Box>
   );
