@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { useCart } from "../contexts/CartContext";
+import { useAuth } from "./AuthContext";
+import { useCart } from "./CartContext";
+import PageFooter from "./PageFooter";
 import "./Homepage.css";
 
 export default function TicketsPage() {
@@ -28,33 +29,33 @@ export default function TicketsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#EEF5FF] to-[#B4D4FF] text-slate-800">
+    <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-[#EEF5FF] border-b border-[#B4D4FF] backdrop-blur-md">
-        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+      <nav className="!sticky !top-0 !z-50 !bg-[#EEF5FF] !border-b !border-[#B4D4FF] backdrop-blur-md">
+        <div className="!mx-auto !max-w-6xl !px-6 !py-4 !flex !items-center !justify-between">
           {/* Logo */}
           <button
             onClick={() => navigate("/")}
-            className="text-2xl font-extrabold tracking-wide text-[#176B87] hover:opacity-80 transition"
+            className="!text-2xl !font-bold !tracking-wide !text-[#176B87] hover:!opacity-80 !transition !bg-transparent !border-none"
           >
             🎢 ThemePark
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="!flex !items-center !gap-3">
             {user && (
-              <span className="hidden sm:inline text-sm text-slate-700">
+              <span className="!hidden sm:!inline !text-sm !text-slate-700">
                 Signed in as <strong>{user.email}</strong>
               </span>
             )}
             <button
               onClick={() => navigate("/userinfo")}
-              className="px-4 py-2 rounded-lg font-semibold border border-[#176B87] text-[#176B87] hover:bg-[#B4D4FF] transition"
+              className="!px-4 !py-2 !rounded-lg !font-semibold !border !border-[#176B87] !text-[#176B87] hover:!bg-[#B4D4FF] !transition !bg-transparent"
             >
               User Info
             </button>
             <button
               onClick={handleSignOut}
-              className="px-4 py-2 rounded-lg font-semibold border border-[#176B87] text-[#176B87] hover:bg-[#B4D4FF] transition"
+              className="!px-4 !py-2 !rounded-lg !font-semibold !border !border-[#176B87] !text-[#176B87] hover:!bg-[#B4D4FF] !transition !bg-transparent"
             >
               Sign Out
             </button>
@@ -63,34 +64,34 @@ export default function TicketsPage() {
       </nav>
 
       {/* Ticket Selection */}
-      <main className="flex-1 max-w-6xl mx-auto p-6">
-        <h1 className="text-3xl font-bold text-[#176B87] mb-6">
+      <main className="!flex-1 !max-w-6xl !mx-auto !p-6">
+        <h1 className="!text-3xl !font-bold !text-[#176B87] !mb-6">
           Available Tickets
         </h1>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="!grid sm:!grid-cols-2 lg:!grid-cols-3 !gap-6">
           {rides.map((ride) => (
             <div
               key={ride.id}
-              className="bg-white/80 rounded-xl shadow p-6 border border-[#B4D4FF]"
+              className="!bg-white/80 !rounded-xl !shadow !p-6 !border !border-[#B4D4FF]"
             >
-              <h3 className="text-xl font-bold text-[#176B87] mb-2">
+              <h3 className="!text-xl !font-bold !text-[#176B87] !mb-2">
                 {ride.name}
               </h3>
-              <p className="text-slate-700 mb-4">${ride.price}</p>
-              <div className="flex gap-2 items-center">
+              <p className="!text-slate-700 !mb-4">${ride.price}</p>
+              <div className="!flex !gap-2 !items-center">
                 <button
                   onClick={() => removeFromCart(ride.id)}
-                  className="px-3 py-2 bg-white border border-[#176B87] text-[#176B87] rounded-lg hover:bg-[#EEF5FF] transition"
+                  className="!px-3 !py-2 !bg-white !border !border-[#176B87] !text-[#176B87] !rounded-lg hover:!bg-[#EEF5FF] !transition"
                 >
                   -
                 </button>
-                <span className="px-3 font-semibold text-[#176B87]">
+                <span className="!px-3 !font-semibold !text-[#176B87]">
                   {getQuantity(ride.id)}
                 </span>
                 <button
                   onClick={() => addToCart(ride)}
-                  className="px-3 py-2 bg-[#176B87] text-white rounded-lg hover:opacity-90 transition"
+                  className="!px-3 !py-2 !bg-[#176B87] !text-white !rounded-lg hover:!opacity-90 !transition !border-none"
                 >
                   +
                 </button>
@@ -100,18 +101,20 @@ export default function TicketsPage() {
         </div>
 
         {/* Summary */}
-        <div className="mt-10 bg-white/70 p-6 rounded-xl shadow flex justify-between items-center">
-          <p className="text-lg font-semibold text-[#176B87]">
+        <div className="!mt-10 !bg-white/70 !p-6 !rounded-xl !shadow !flex !justify-between !items-center">
+          <p className="!text-lg !font-semibold !text-[#176B87]">
             Total: ${total.toFixed(2)}
           </p>
           <button
             onClick={() => navigate("/checkout")}
-            className="px-6 py-3 bg-[#176B87] text-white rounded-lg font-bold hover:opacity-90 transition"
+            className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
           >
             Continue to Payment
           </button>
         </div>
       </main>
+
+      <PageFooter />
     </div>
   );
 }
