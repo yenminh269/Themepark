@@ -8,7 +8,7 @@ import {
 } from 'react-icons/md';
 import StatCard from '../../card/StatCard';
 import ChartCard from '../../card/ChartCard';
-import DataTable from '../../data-table/DataTable';
+import DataTable from "../../input/data-table/DataTable";
 const AdminDashboard = () => {
   // Mock data for stats
   const statsData = [

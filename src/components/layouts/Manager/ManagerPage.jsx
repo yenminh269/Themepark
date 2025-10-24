@@ -1,104 +1,81 @@
 // src/components/layouts/manager/ManagerPage.jsx
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../login/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import DashboardCard from "./DashboardCard";
 import EditableTable from "./EditableTable";
 import TransactionTable from "./TransactionTable";
+import "./ManagerPage.css";
 
 const ManagerPage = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   
-  const managerEmail = user?.email || "giftshop.manager@themepark.com";
-  
-  const [managerInfo, setManagerInfo] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [dashboardData, setDashboardData] = useState({
-    staff: [],
-    inventory: [],
-    sales: { today: 0, week: 0, month: 0 }
+  // Hardcoded manager info - NO BACKEND NEEDED
+  const [managerInfo] = useState({
+    first_name: "Sarah",
+    last_name: "Johnson",
+    job_title: "Manager",
+    department: "giftshop",
+    email: "sarah.johnson@themepark.com"
   });
-  const [staffDetails, setStaffDetails] = useState([]);
-  const [recentTransactions, setRecentTransactions] = useState([]);
-  const [lowStock, setLowStock] = useState([]);
-  const [topItems, setTopItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  
+  const [activeTab, setActiveTab] = useState("overview");
+  
+  // Hardcoded dashboard data
+  const [dashboardData] = useState({
+    staff: [],
+    inventory: [
+      { item_id: 1, item_name: "Theme Park T-Shirt", store_name: "Main Gift Shop", quantity: 45, price: 24.99, type: "Apparel" },
+      { item_id: 2, item_name: "Plush Mascot", store_name: "Main Gift Shop", quantity: 15, price: 34.99, type: "Toys" },
+      { item_id: 3, item_name: "Water Bottle", store_name: "West Gift Shop", quantity: 78, price: 12.99, type: "Accessories" },
+      { item_id: 4, item_name: "Keychain Set", store_name: "Main Gift Shop", quantity: 5, price: 8.99, type: "Accessories" },
+      { item_id: 5, item_name: "Baseball Cap", store_name: "East Gift Shop", quantity: 32, price: 22.00, type: "Apparel" },
+      { item_id: 6, item_name: "Souvenir Mug", store_name: "Main Gift Shop", quantity: 67, price: 15.99, type: "Drinkware" },
+    ],
+    sales: { today: 2847.50, week: 18290.75, month: 74382.20 }
+  });
+  
+  const [staffDetails] = useState([
+    { employee_id: 1, first_name: "Emily", last_name: "Chen", job_title: "Sales Associate", stores_assigned: 2, store_names: "Main Gift Shop, West Gift Shop" },
+    { employee_id: 2, first_name: "Michael", last_name: "Brown", job_title: "Cashier", stores_assigned: 1, store_names: "Main Gift Shop" },
+    { employee_id: 3, first_name: "Jessica", last_name: "Davis", job_title: "Stock Clerk", stores_assigned: 3, store_names: "Main Gift Shop, West Gift Shop, East Gift Shop" },
+    { employee_id: 4, first_name: "David", last_name: "Wilson", job_title: "Sales Associate", stores_assigned: 1, store_names: "East Gift Shop" },
+    { employee_id: 5, first_name: "Amanda", last_name: "Taylor", job_title: "Supervisor", stores_assigned: 2, store_names: "Main Gift Shop, West Gift Shop" },
+    { employee_id: 6, first_name: "Ryan", last_name: "Martinez", job_title: "Cashier", stores_assigned: 1, store_names: "West Gift Shop" },
+    { employee_id: 7, first_name: "Sophie", last_name: "Anderson", job_title: "Sales Associate", stores_assigned: 2, store_names: "East Gift Shop, Main Gift Shop" },
+  ]);
+  
+  const [recentTransactions] = useState([
+    { store_order_id: 1001, order_date: "2025-10-22", store_name: "Main Gift Shop", total_amount: 89.97, item_count: 3 },
+    { store_order_id: 1002, order_date: "2025-10-22", store_name: "West Gift Shop", total_amount: 124.50, item_count: 5 },
+    { store_order_id: 1003, order_date: "2025-10-23", store_name: "Main Gift Shop", total_amount: 45.98, item_count: 2 },
+    { store_order_id: 1004, order_date: "2025-10-23", store_name: "East Gift Shop", total_amount: 67.95, item_count: 4 },
+    { store_order_id: 1005, order_date: "2025-10-23", store_name: "Main Gift Shop", total_amount: 156.89, item_count: 7 },
+    { store_order_id: 1006, order_date: "2025-10-23", store_name: "West Gift Shop", total_amount: 78.45, item_count: 3 },
+  ]);
+  
+  const [lowStock] = useState([
+    { name: "Keychain Set", store_name: "Main Gift Shop", quantity: 5 },
+    { name: "Plush Mascot", store_name: "Main Gift Shop", quantity: 15 },
+  ]);
+  
+  const [topItems] = useState([
+    { name: "Theme Park T-Shirt", total_sold: 342, revenue: 8544.58 },
+    { name: "Plush Mascot", total_sold: 189, revenue: 6608.11 },
+    { name: "Water Bottle", total_sold: 267, revenue: 3468.33 },
+    { name: "Baseball Cap", total_sold: 156, revenue: 3432.00 },
+    { name: "Keychain Set", total_sold: 423, revenue: 3802.77 },
+  ]);
+  
+  const [loading] = useState(false);
   const [staffSearchQuery, setStaffSearchQuery] = useState("");
   
+  // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [reportType, setReportType] = useState("");
-
-  const API_BASE = "http://localhost:5000";
-
-  useEffect(() => {
-    fetchManagerInfo();
-  }, []);
-
-  useEffect(() => {
-    if (managerInfo && managerInfo.department) {
-      fetchAllData();
-    }
-  }, [managerInfo]);
-
-  const fetchManagerInfo = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/manager-info/${managerEmail}`);
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      
-      const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-        setLoading(false);
-        return;
-      }
-      
-      setManagerInfo(data);
-      setLoading(false);
-    } catch (err) {
-      console.error("Error fetching manager info:", err);
-      setError(err.message);
-      setLoading(false);
-    }
-  };
-
-  const fetchAllData = async () => {
-    if (!managerInfo) return;
-    
-    setLoading(true);
-    const dept = managerInfo.department;
-    
-    try {
-      const [dashRes, staffRes, transRes, stockRes, topRes] = await Promise.all([
-        fetch(`${API_BASE}/manager/${dept}`),
-        fetch(`${API_BASE}/manager/${dept}/staff-details`),
-        fetch(`${API_BASE}/manager/${dept}/recent-transactions`),
-        fetch(`${API_BASE}/manager/${dept}/low-stock`),
-        fetch(`${API_BASE}/manager/${dept}/top-items`)
-      ]);
-
-      const dashData = await dashRes.json();
-      const staffData = await staffRes.json();
-      const transData = await transRes.json();
-      const stockData = await stockRes.json();
-      const topData = await topRes.json();
-
-      setDashboardData(dashData);
-      setStaffDetails(staffData);
-      setRecentTransactions(transData);
-      setLowStock(stockData);
-      setTopItems(topData);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getDepartmentName = () => {
     if (!managerInfo) return "";
@@ -124,16 +101,20 @@ const ManagerPage = () => {
     });
   };
 
-  const handleAddItem = () => setShowAddModal(true);
+  const handleAddItem = () => {
+    setShowAddModal(true);
+  };
+
   const handleEditItem = (item) => {
     setSelectedItem(item);
     setShowEditModal(true);
   };
+
   const handleDeleteItem = async (itemId) => {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
-    alert("Delete functionality - connect to backend API");
-    fetchAllData();
+    alert("Delete functionality - will be connected to backend later");
   };
+
   const handleGenerateReport = (type) => {
     setReportType(type);
     setShowReportModal(true);
@@ -141,41 +122,9 @@ const ManagerPage = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-brand-200">
-        <p className="text-lg text-brand-800">Loading manager information...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-brand-200">
-        <div className="text-center">
-          <h2 className="mb-4 text-2xl font-bold text-red-600">Error Loading Manager Data</h2>
-          <p className="mb-2">Error: {error}</p>
-          <p className="mb-4 text-sm text-gray-600">Email used: {managerEmail}</p>
-          <button 
-            onClick={() => navigate("/")}
-            className="rounded-lg bg-brand-800 px-6 py-3 font-semibold text-white transition-colors hover:bg-brand-800/90"
-          >
-            Return Home
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!managerInfo) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-brand-200">
-        <div className="text-center">
-          <p className="mb-4">No manager found with email: {managerEmail}</p>
-          <button 
-            onClick={() => navigate("/")}
-            className="rounded-lg bg-brand-800 px-6 py-3 font-semibold text-white transition-colors hover:bg-brand-800/90"
-          >
-            Return Home
-          </button>
+      <div className="manager-layout">
+        <div className="loading-container">
+          <p>Loading manager information...</p>
         </div>
       </div>
     );
@@ -184,20 +133,21 @@ const ManagerPage = () => {
   const isMaintenance = managerInfo.department === "maintenance";
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-brand-50 to-brand-200">
+    <div className="manager-layout">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} managerInfo={managerInfo} />
       
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="manager-content">
         {activeTab === "overview" && (
           <>
-            <header className="mb-8 rounded-2xl border border-brand-200/40 bg-white/50 p-6 shadow-lg backdrop-blur-md">
-              <h1 className="text-3xl font-bold text-brand-800">{getDepartmentName()} Manager Dashboard</h1>
-              <p className="mt-1 text-gray-600">Welcome back, {managerInfo.first_name}</p>
+            <header className="manager-header">
+              <div>
+                <h1>{getDepartmentName()} Manager Dashboard</h1>
+                <p>Welcome back, {managerInfo.first_name}</p>
+              </div>
             </header>
 
-            <section>
-              {/* Metrics Cards */}
-              <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <section className="overview-section">
+              <div className="card-grid">
                 <DashboardCard 
                   title="Today's Revenue" 
                   value={formatCurrency(dashboardData.sales.today)} 
@@ -224,24 +174,26 @@ const ManagerPage = () => {
               </div>
 
               {/* Reports Section */}
-              <div className="mb-8 rounded-2xl border border-brand-200/40 bg-white/50 p-6 shadow-lg backdrop-blur-md">
-                <h3 className="mb-2 text-xl font-bold text-brand-800">Data Reports</h3>
-                <p className="mb-4 text-sm text-gray-600">Generate formatted reports from multiple database tables</p>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="section-card" style={{ marginBottom: "2rem" }}>
+                <h3>Data Reports</h3>
+                <p style={{ color: "#66bb6a", marginBottom: "1rem", fontSize: "0.9rem" }}>
+                  Generate formatted reports from multiple database tables
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
                   <button 
-                    className="rounded-lg bg-brand-300 px-4 py-3 font-semibold text-white transition-colors hover:bg-brand-800"
+                    className="report-button"
                     onClick={() => handleGenerateReport("sales")}
                   >
                     Sales Report
                   </button>
                   <button 
-                    className="rounded-lg bg-brand-300 px-4 py-3 font-semibold text-white transition-colors hover:bg-brand-800"
+                    className="report-button"
                     onClick={() => handleGenerateReport("inventory")}
                   >
                     Inventory Status Report
                   </button>
                   <button 
-                    className="rounded-lg bg-brand-300 px-4 py-3 font-semibold text-white transition-colors hover:bg-brand-800"
+                    className="report-button"
                     onClick={() => handleGenerateReport("staff")}
                   >
                     Staff Performance Report
@@ -249,45 +201,43 @@ const ManagerPage = () => {
                 </div>
               </div>
 
-              {/* Two Column Grid */}
-              <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Top Items / Recent Activity */}
+              <div className="two-column-grid">
                 {!isMaintenance && topItems.length > 0 && (
-                  <div className="rounded-2xl border border-brand-200/40 bg-white/50 p-6 shadow-lg backdrop-blur-md">
-                    <h3 className="mb-4 text-xl font-bold text-brand-800">Top Selling Items</h3>
-                    <div className="space-y-3">
+                  <div className="section-card">
+                    <h3>Top Selling Items</h3>
+                    <div className="items-list">
                       {topItems.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between rounded-lg bg-white/60 p-3">
-                          <div className="flex items-center gap-3">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-800 text-sm font-bold text-white">
-                              {idx + 1}
-                            </span>
+                        <div key={idx} className="item-row">
+                          <div className="item-info">
+                            <span className="item-rank">{idx + 1}</span>
                             <div>
-                              <p className="font-semibold text-brand-800">{item.name}</p>
-                              <p className="text-sm text-gray-600">{item.total_sold} units sold</p>
+                              <p className="item-name">{item.name}</p>
+                              <p className="item-meta">{item.total_sold} units sold</p>
                             </div>
                           </div>
-                          <span className="font-bold text-brand-800">{formatCurrency(item.revenue)}</span>
+                          <span className="item-value">{formatCurrency(item.revenue)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <div className="rounded-2xl border border-brand-200/40 bg-white/50 p-6 shadow-lg backdrop-blur-md">
-                  <h3 className="mb-4 text-xl font-bold text-brand-800">Staff Overview</h3>
-                  <div className="space-y-3">
+                <div className="section-card">
+                  <h3>Staff Overview</h3>
+                  <div className="items-list">
                     {staffDetails.slice(0, 5).map((staff, idx) => (
-                      <div key={idx} className="flex items-center justify-between rounded-lg bg-white/60 p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-800 font-bold text-white">
+                      <div key={idx} className="item-row">
+                        <div className="item-info">
+                          <div className="staff-avatar">
                             {staff.first_name?.[0]}{staff.last_name?.[0]}
                           </div>
                           <div>
-                            <p className="font-semibold text-brand-800">{staff.first_name} {staff.last_name}</p>
-                            <p className="text-sm text-gray-600">{staff.job_title}</p>
+                            <p className="item-name">{staff.first_name} {staff.last_name}</p>
+                            <p className="item-meta">{staff.job_title}</p>
                           </div>
                         </div>
-                        <span className="text-sm text-gray-600">
+                        <span className="item-meta">
                           {isMaintenance ? `${staff.active_jobs || 0} jobs` : `${staff.stores_assigned || 0} stores`}
                         </span>
                       </div>
@@ -298,14 +248,14 @@ const ManagerPage = () => {
 
               {/* Low Stock Alert */}
               {!isMaintenance && lowStock.length > 0 && (
-                <div className="rounded-2xl border border-red-200 bg-red-50/80 p-6 shadow-lg backdrop-blur-md">
-                  <h3 className="mb-4 text-xl font-bold text-red-600">⚠️ Low Stock Alert</h3>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="alert-section">
+                  <h3>Low Stock Alert</h3>
+                  <div className="alert-grid">
                     {lowStock.map((item, idx) => (
-                      <div key={idx} className="rounded-lg bg-white p-4 shadow">
-                        <p className="font-semibold text-brand-800">{item.name}</p>
-                        <p className="text-sm text-gray-600">{item.store_name}</p>
-                        <p className="mt-2 font-bold text-red-600">Only {item.quantity} left</p>
+                      <div key={idx} className="alert-card">
+                        <p className="alert-item-name">{item.name}</p>
+                        <p className="alert-store">{item.store_name}</p>
+                        <p className="alert-quantity">Only {item.quantity} left</p>
                       </div>
                     ))}
                   </div>
@@ -316,93 +266,83 @@ const ManagerPage = () => {
         )}
 
         {activeTab === "staff" && (
-          <section className="rounded-2xl border border-brand-200/40 bg-white/50 shadow-lg backdrop-blur-md">
-            <div className="flex items-center justify-between border-b border-brand-200/40 p-6">
-              <h2 className="text-2xl font-bold text-brand-800">Staff Management</h2>
-              <button 
-                className="rounded-lg bg-brand-800 px-6 py-2 font-semibold text-white transition-colors hover:bg-brand-800/90"
-                onClick={handleAddItem}
-              >
+          <section className="staff-section scrollable">
+            <div className="section-header">
+              <h2>Staff Management</h2>
+              <button className="add-button" onClick={handleAddItem}>
                 + Add Staff
               </button>
             </div>
-            <div className="border-b border-brand-200/40 p-6">
+            <div style={{ padding: "1.5rem", borderBottom: "1px solid rgba(46, 125, 50, 0.08)" }}>
               <input
                 type="text"
                 placeholder="Search staff by name or job title..."
-                className="w-full rounded-lg border border-brand-200 bg-white px-4 py-2 outline-none focus:border-brand-800 focus:ring-2 focus:ring-brand-800/20"
+                className="search-bar"
                 value={staffSearchQuery}
                 onChange={(e) => setStaffSearchQuery(e.target.value)}
               />
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b border-brand-200/40 bg-brand-800/5">
-                  <tr>
-                    <th className="px-6 py-4 text-left font-semibold text-brand-800">Name</th>
-                    <th className="px-6 py-4 text-left font-semibold text-brand-800">Job Title</th>
-                    <th className="px-6 py-4 text-left font-semibold text-brand-800">
-                      {isMaintenance ? "Active Jobs" : "Assigned Stores"}
-                    </th>
-                    <th className="px-6 py-4 text-left font-semibold text-brand-800">Details</th>
-                    <th className="px-6 py-4 text-left font-semibold text-brand-800">Actions</th>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Job Title</th>
+                  <th>{isMaintenance ? "Active Jobs" : "Assigned Stores"}</th>
+                  <th>Details</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staffDetails
+                  .filter(staff => 
+                    `${staff.first_name} ${staff.last_name}`.toLowerCase().includes(staffSearchQuery.toLowerCase()) ||
+                    staff.job_title?.toLowerCase().includes(staffSearchQuery.toLowerCase())
+                  )
+                  .map((staff, idx) => (
+                  <tr key={idx}>
+                    <td>
+                      <div className="staff-cell">
+                        <div className="staff-avatar-small">
+                          {staff.first_name?.[0]}{staff.last_name?.[0]}
+                        </div>
+                        {staff.first_name} {staff.last_name}
+                      </div>
+                    </td>
+                    <td>{staff.job_title}</td>
+                    <td>
+                      <span className="badge">
+                        {isMaintenance ? `${staff.active_jobs || 0} jobs` : `${staff.stores_assigned || 0} stores`}
+                      </span>
+                    </td>
+                    <td className="details-cell">{staff.store_names || staff.job_statuses || "N/A"}</td>
+                    <td>
+                      <div className="action-buttons">
+                        <button 
+                          className="action-btn edit-btn"
+                          onClick={() => handleEditItem(staff)}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          className="action-btn delete-btn"
+                          onClick={() => handleDeleteItem(staff.employee_id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-brand-200/30">
-                  {staffDetails
-                    .filter(staff => 
-                      `${staff.first_name} ${staff.last_name}`.toLowerCase().includes(staffSearchQuery.toLowerCase()) ||
-                      staff.job_title?.toLowerCase().includes(staffSearchQuery.toLowerCase())
-                    )
-                    .map((staff, idx) => (
-                    <tr key={idx} className="transition-colors hover:bg-brand-50/50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-800 font-bold text-white">
-                            {staff.first_name?.[0]}{staff.last_name?.[0]}
-                          </div>
-                          <span className="font-semibold">{staff.first_name} {staff.last_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">{staff.job_title}</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-block rounded-full bg-brand-200 px-3 py-1 text-sm font-semibold text-brand-800">
-                          {isMaintenance ? `${staff.active_jobs || 0} jobs` : `${staff.stores_assigned || 0} stores`}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{staff.store_names || staff.job_statuses || "N/A"}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          <button 
-                            className="rounded bg-brand-300 px-3 py-1 text-sm font-semibold text-white transition-colors hover:bg-brand-800"
-                            onClick={() => handleEditItem(staff)}
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            className="rounded bg-red-500 px-3 py-1 text-sm font-semibold text-white transition-colors hover:bg-red-600"
-                            onClick={() => handleDeleteItem(staff.employee_id)}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </section>
         )}
 
         {activeTab === "inventory" && !isMaintenance && (
-          <section className="rounded-2xl border border-brand-200/40 bg-white/50 shadow-lg backdrop-blur-md">
-            <div className="flex items-center justify-between border-b border-brand-200/40 p-6">
-              <h2 className="text-2xl font-bold text-brand-800">Inventory Management</h2>
-              <button 
-                className="rounded-lg bg-brand-800 px-6 py-2 font-semibold text-white transition-colors hover:bg-brand-800/90"
-                onClick={handleAddItem}
-              >
+          <section className="inventory-section scrollable">
+            <div className="section-header">
+              <h2>Inventory Management</h2>
+              <button className="add-button" onClick={handleAddItem}>
                 + Add Product
               </button>
             </div>
@@ -423,23 +363,18 @@ const ManagerPage = () => {
         )}
 
         {activeTab === "transactions" && (
-          <section className="rounded-2xl border border-brand-200/40 bg-white/50 shadow-lg backdrop-blur-md">
-            <div className="flex items-center justify-between border-b border-brand-200/40 p-6">
-              <h2 className="text-2xl font-bold text-brand-800">
-                {isMaintenance ? "Maintenance Jobs" : "Transaction History"}
-              </h2>
+          <section className="transactions-section scrollable">
+            <div className="section-header mb-8">
+              <h2>{isMaintenance ? "Maintenance Jobs" : "Transaction History"}</h2>
               {isMaintenance && (
-                <button 
-                  className="rounded-lg bg-brand-800 px-6 py-2 font-semibold text-white transition-colors hover:bg-brand-800/90"
-                  onClick={handleAddItem}
-                >
+                <button className="add-button" onClick={handleAddItem}>
                   + New Maintenance Job
                 </button>
               )}
             </div>
 
             {!isMaintenance && (
-              <div className="grid grid-cols-1 gap-6 p-6 md:grid-cols-3">
+              <div className="transaction-cards">
                 <DashboardCard title="Total Revenue" value={formatCurrency(dashboardData.sales.month)} />
                 <DashboardCard 
                   title="Total Transactions" 
@@ -455,92 +390,30 @@ const ManagerPage = () => {
               </div>
             )}
 
-            {isMaintenance ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="border-b border-brand-200/40 bg-brand-800/5">
-                    <tr>
-                      <th className="px-6 py-4 text-left font-semibold text-brand-800">Job ID</th>
-                      <th className="px-6 py-4 text-left font-semibold text-brand-800">Ride</th>
-                      <th className="px-6 py-4 text-left font-semibold text-brand-800">Description</th>
-                      <th className="px-6 py-4 text-left font-semibold text-brand-800">Start Date</th>
-                      <th className="px-6 py-4 text-left font-semibold text-brand-800">End Date</th>
-                      <th className="px-6 py-4 text-left font-semibold text-brand-800">Status</th>
-                      <th className="px-6 py-4 text-left font-semibold text-brand-800">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-brand-200/30">
-                    {recentTransactions.map((job, idx) => (
-                      <tr key={idx} className="transition-colors hover:bg-brand-50/50">
-                        <td className="px-6 py-4 font-semibold">#{job.maintenance_id}</td>
-                        <td className="px-6 py-4">{job.ride_name || "N/A"}</td>
-                        <td className="px-6 py-4 max-w-xs truncate text-sm">{job.description}</td>
-                        <td className="px-6 py-4">{formatDate(job.start_date)}</td>
-                        <td className="px-6 py-4">{job.end_date ? formatDate(job.end_date) : "Ongoing"}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold uppercase ${
-                            job.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            job.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                            'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {job.status?.replace("_", " ")}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-2">
-                            <button 
-                              className="rounded bg-brand-300 px-3 py-1 text-sm font-semibold text-white transition-colors hover:bg-brand-800"
-                              onClick={() => handleEditItem(job)}
-                            >
-                              Edit
-                            </button>
-                            <button 
-                              className="rounded bg-red-500 px-3 py-1 text-sm font-semibold text-white transition-colors hover:bg-red-600"
-                              onClick={() => handleDeleteItem(job.maintenance_id)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <TransactionTable 
-                data={recentTransactions.map(trans => ({
-                  id: trans.store_order_id,
-                  date: formatDate(trans.order_date),
-                  customer: trans.store_name,
-                  total: parseFloat(trans.total_amount || 0),
-                  status: `${trans.item_count} items`
-                }))} 
-                searchable={true} 
-              />
-            )}
+            <TransactionTable 
+              data={recentTransactions.map(trans => ({
+                id: trans.store_order_id,
+                date: formatDate(trans.order_date),
+                customer: trans.store_name,
+                total: parseFloat(trans.total_amount || 0),
+                status: `${trans.item_count} items`
+              }))} 
+              searchable={true} 
+            />
           </section>
         )}
       </main>
 
       {/* Modals */}
       {(showAddModal || showEditModal) && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => { setShowAddModal(false); setShowEditModal(false); }}
-        >
-          <div 
-            className="w-full max-w-md rounded-2xl border border-brand-200/40 bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="mb-4 text-2xl font-bold text-brand-800">
-              {showAddModal ? "Add New Item" : "Edit Item"}
-            </h2>
-            <p className="mb-6 text-gray-600">
-              Data entry form will go here - connect to backend API
+        <div className="modal-overlay" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>{showAddModal ? "Add New Item" : "Edit Item"}</h2>
+            <p style={{ color: "#66bb6a", marginBottom: "1rem" }}>
+              Data entry form will go here - connect to backend later
             </p>
             <button 
-              className="w-full rounded-lg bg-brand-800 px-6 py-3 font-semibold text-white transition-colors hover:bg-brand-800/90"
+              className="add-button"
               onClick={() => { setShowAddModal(false); setShowEditModal(false); }}
             >
               Close
@@ -550,22 +423,14 @@ const ManagerPage = () => {
       )}
 
       {showReportModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => setShowReportModal(false)}
-        >
-          <div 
-            className="w-full max-w-4xl rounded-2xl border border-brand-200/40 bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="mb-4 text-2xl font-bold text-brand-800 capitalize">
-              {reportType} Report
-            </h2>
-            <p className="mb-6 text-gray-600">
+        <div className="modal-overlay" onClick={() => setShowReportModal(false)}>
+          <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
+            <h2>{reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report</h2>
+            <p style={{ color: "#66bb6a", marginBottom: "1rem" }}>
               Report data from multiple tables will display here
             </p>
             <button 
-              className="w-full rounded-lg bg-brand-800 px-6 py-3 font-semibold text-white transition-colors hover:bg-brand-800/90"
+              className="add-button"
               onClick={() => setShowReportModal(false)}
             >
               Close

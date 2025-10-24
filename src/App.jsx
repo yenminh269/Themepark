@@ -17,7 +17,7 @@ import ManagerPage from  "./components/layouts/Manager/ManagerPage.jsx";
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
 export default function App() {
-  const [isAdmin, setAdmin] = useState(true);
+  const [isAdmin, setAdmin] = useState(false);
 
   // Temporary debug - remove after testing
   console.log("App component rendering, isAdmin:", isAdmin);

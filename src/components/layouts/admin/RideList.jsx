@@ -1,4 +1,4 @@
-import DataTable from '../../data-table/DataTable';
+import DataTable from "../../input/data-table/DataTable";
 function RideList(){
     const rideListAttr = ['RideId', 'Name', 'Price', 'Capacity', 'Description', 'Status', 'Open Time', 'Close Time'];
     const rideDetailed = [

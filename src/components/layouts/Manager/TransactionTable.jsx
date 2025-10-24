@@ -1,3 +1,4 @@
+// src/components/layouts/manager/TransactionTable.jsx
 import React, { useState } from "react";
 
 const TransactionTable = ({ data, searchable }) => {
@@ -12,7 +13,7 @@ const TransactionTable = ({ data, searchable }) => {
   return (
     <div className="table-container">
       {searchable && (
-        <div style={{ padding: "1.5rem", borderBottom: "1px solid rgba(178, 201, 173, 0.3)" }}>
+        <div style={{ padding: "2rem", borderBottom: "1px solid rgba(178, 201, 173, 0.3)" }}>
           <input
             type="text"
             placeholder="Search transactions..."

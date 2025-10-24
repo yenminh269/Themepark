@@ -18,6 +18,9 @@ body {
   background: linear-gradient(to bottom right, #EEF5FF, #B4D4FF);
 }
 
+
+
+
 /* --- Smooth transitions for everything --- */
 * {
   transition: all 0.2s ease-in-out;
