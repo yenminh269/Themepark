@@ -1,0 +1,38 @@
+/* Custom scrollbar styles */
+
+/* Main content area scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 12px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #D1D8BE;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #819A91;
+  border-radius: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6d8479;
+}
+
+/* Sidebar scrollbar (dark background) */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 12px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: #4B5945;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: #819A91;
+  border-radius: 6px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6d8479;
+}
+

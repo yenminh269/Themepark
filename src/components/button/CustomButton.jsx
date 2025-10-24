@@ -1,8 +1,14 @@
 import Button from 'react-bootstrap/Button';
 import './CustomButton.css'
-function ButtonSignUp(props){
+
+function CustomButton(props){
     return (
-        <Button className='btn-custom mb-4' type="submit">{props.text}</Button>
+        <Button 
+            className={`btn-custom mb-4 ${props.className || ''}`} 
+            type="submit"
+        >
+            {props.text}
+        </Button>
     )
 }
-export default ButtonSignUp;
+export default CustomButton;
