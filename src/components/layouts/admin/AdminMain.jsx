@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar.jsx";
 import MobileSidebar from "./MobileSidebar.jsx";
 import AddNewRide from "./AddNewRide.jsx";
 import AdminDashboard from "./AdminDashboard.jsx";
+import './AdminMain.css'
 
 function AdminMain() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -19,7 +20,7 @@ function AdminMain() {
 
   return (
     <Flex h="100vh"  w="100vw" overflow="hidden" bg="#D1D8BE">
-      {/* ✅ Sidebar: fixed-width, full-height */}
+      {/* Sidebar */}
       <Box
         w={{ base: "0", lg: "280px" }}
         bg="#4B5945"
@@ -33,12 +34,13 @@ function AdminMain() {
         <Sidebar />
       </Box>
 
-      {/* ✅ Main content area */}
+      {/* Main content area */}
       <Box
         ml={{ base: 0, lg: "280px" }}
         w={{ base: "100%", lg: "calc(100% - 280px)" }}
         h="100vh"
         overflowY="auto"
+        className="custom-scrollbar"
       >
         {/* Mobile Header */}
         {isMobile && (

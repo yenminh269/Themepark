@@ -15,13 +15,13 @@ const Sidebar = () => {
   };
 
   const SidebarContent = () => (
-    <Flex direction="column" h="100%" pt="25px" px="14px">
+    <Flex direction="column" h="100%" pt="18px" px="14px">
       <Box mb="10px" px="20px">
         <Flex alignItems="center" gap="10px">
           <Box color="#A7C1A8">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-roller-coaster-icon lucide-roller-coaster"><path d="M6 19V5"/><path d="M10 19V6.8"/><path d="M14 19v-7.8"/><path d="M18 5v4"/><path d="M18 19v-6"/><path d="M22 19V9"/><path d="M2 19V9a4 4 0 0 1 4-4c2 0 4 1.33 6 4s4 4 6 4a4 4 0 1 0-3-6.65"/></svg>
           </Box>
-          <Text className="mt-2" fontSize="3xl" fontWeight="bold" color="#A7C1A8">
+          <Text className="mt-4" fontSize="3xl" fontWeight="bold" color="#A7C1A8">
             Theme Park
           </Text>
         </Flex>
@@ -31,7 +31,7 @@ const Sidebar = () => {
       </Box>
 
       {/* Navigation Links */}
-      <VStack align="stretch" gap="5px" px="10px" flex="1" overflowY="auto" pb="20px">
+      <VStack className="sidebar-scrollbar" align="stretch" gap="5px" px="10px" flex="1" overflowY="auto" pb="20px">
         {routes.map((route, index) => {
           if (route.category) {
             return (
@@ -68,7 +68,7 @@ const Sidebar = () => {
                   color={isActive ? '#8bb289ff' : '#EEEFE0'}
                 />
                 <Text
-                  className='mt-3'
+                  className='mt-3 pb-0'
                   fontSize="m"
                   fontWeight={isActive ? 'bold' : 'normal'}
                   color={isActive ? ' #4B5945' : '#EEEFE0'}
