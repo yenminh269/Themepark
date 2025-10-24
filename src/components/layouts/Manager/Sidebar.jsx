@@ -1,5 +1,5 @@
 import React from "react";
-import "./ManagerPage.css"
+import "./Sidebar.css"
 import { MdDashboard, MdPeople, MdInventory, MdReceipt } from "react-icons/md";
 
 const Sidebar = ({ activeTab, setActiveTab, managerInfo }) => {
@@ -36,26 +36,28 @@ const Sidebar = ({ activeTab, setActiveTab, managerInfo }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-2 p-6">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex w-full items-center gap-3 rounded-xl px-5 py-3 text-base font-medium transition-all ${
-                isActive
-                  ? "bg-[#8FB996] text-white shadow-md"
-                  : "text-[#2F4F4F] hover:bg-[#CFE3D3]/50 hover:text-[#2F4F4F]"
-              }`}
-            >
-              <Icon size={22} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      <nav className="flex-1 space-y-2 p-6 bg-[#EEF5FF] border-r border-[#B4D4FF]/60 shadow-sm">
+  {tabs.map((tab) => {
+    const Icon = tab.icon;
+    const isActive = activeTab === tab.id;
+    return (
+      <button
+        key={tab.id}
+        onClick={() => setActiveTab(tab.id)}
+        className={`flex w-full items-center gap-3 rounded-xl px-5 py-3 text-base font-medium transition-all duration-200
+          ${
+            isActive
+              ? "bg-[#176B87] !text-[#86B6F6] shadow-lg scale-[1.02]"
+              : "text-[#176B87] !hover:bg-black/60 !hover:text-[#0E4A5A]"
+          }`}
+      >
+        <Icon size={22} />
+        <span>{tab.label}</span>
+      </button>
+    );
+  })}
+</nav>
+
 
       {/* Profile Section */}
       {managerInfo && (

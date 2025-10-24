@@ -12,6 +12,7 @@ import TicketsPage from './components/layouts/customer/TicketsPage.jsx';
 import CheckoutPage from './components/layouts/customer/CheckoutPage.jsx';
 import ConfirmationPage from './components/layouts/customer/ConfirmationPage.jsx';
 import UserInfoPage from './components/layouts/customer/UserInfoPage.jsx';
+import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
 
 function App() {
   return (
@@ -35,6 +36,9 @@ function App() {
 
               {/* Admin routes */}
               <Route path="/admin/*" element={<AdminMain />} />
+
+              {/*Maintenance employee route */}
+              <Route path="/manager" element={<ManagerPage />} />
               
               {/* Catch-all redirect */}
               <Route path="*" element={<Navigate to="/" replace />} />
