@@ -16,7 +16,7 @@ const DataTable = ({ title, columns, data }) => {
       >
         {title}
       </Text>
-      <Box overflowX="auto">
+      <Box overflowX="auto" className="custom-scrollbar">
         <Table variant="simple" size="md">
           <Thead>
             <Tr>
