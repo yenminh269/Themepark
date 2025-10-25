@@ -3,7 +3,7 @@ import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
 import FloatingLabel from 'react-bootstrap/FloatingLabel'; 
-import Input from '../../input/Input';
+import InputLogin from '../../input/InputLogin';
 import CustomButton from '../../button/CustomButton';
 
 function SignUp() {
@@ -26,19 +26,19 @@ function SignUp() {
         <h1 className='text-[#176B87] p-4'>Sign up now to reserve tickets and skip the lines!</h1>  
 
         <Row className="mb-3">
-          <Input size="5" type="text" label="Email" feedback="Please provide a valid email." />
-          <Input size="5" type="password" label="Password" feedback="Password is required." />
+          <InputLogin size="5" type="text" label="Email" feedback="Please provide a valid email." />
+          <InputLogin size="5" type="password" label="Password" feedback="Password is required." />
           <p className='text-left text-[#176B87]'>This email and password will be used to log into your account.</p>
         </Row>
 
         <div className='w-225 gap-4 flex '>
-          <Input size="4" type="text" label="First Name" feedback="Please provide a valid first name." />
-          <Input size="4" type="text" label="Last Name" feedback="Please provide a valid last name." />
+          <InputLogin size="4" type="text" label="First Name" feedback="Please provide a valid first name." />
+          <InputLogin size="4" type="text" label="Last Name" feedback="Please provide a valid last name." />
         </div>
 
       <Row className='w-230 gap-4 flex mt-5 '>
-            <Input className="" size="2" type="date" label="Date of birth" feedback="Please provide a valid birthdate." />
-            <Input size="3" type="tel" label="Phone Number" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number (123-456-7890)" />
+            <InputLogin className="" size="2" type="date" label="Date of birth" feedback="Please provide a valid birthdate." />
+            <InputLogin size="3" type="tel" label="Phone Number" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number (123-456-7890)" />
           
           <Form.Group as={Col} md="3" controlId="validationCustom07">
             <FloatingLabel label="Gender">

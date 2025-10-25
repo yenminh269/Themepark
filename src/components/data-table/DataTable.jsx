@@ -1,6 +1,6 @@
 import { Box, Text, Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react';
 
-const DataTable = ({ title, columns, data }) => {
+const DataTable = ({ title, columns, data, onRowSelect }) => {
   return (
     <Box
       p="20px"
@@ -9,7 +9,7 @@ const DataTable = ({ title, columns, data }) => {
       boxShadow="sm"
     >
       <Text
-        color="gray.900"
+        color="#3A6F43"
         fontSize="lg"
         fontWeight="700"
         mb="20px"
@@ -29,7 +29,7 @@ const DataTable = ({ title, columns, data }) => {
           </Thead>
           <Tbody>
             {data.map((row, rowIndex) => (
-              <Tr key={rowIndex}>
+              <Tr key={rowIndex}  _hover={{ bg: "#c6cbb8ff", cursor: "pointer" }} onClick={() => onRowSelect && onRowSelect(row[0])} >
                 {row.map((cell, cellIndex) => (
                   <Td
                     key={cellIndex}

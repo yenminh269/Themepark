@@ -11,12 +11,12 @@ const entities = [
     },
     {
       name: 'Add New Ride',
-      path: '/admin/rides/add',
+      path: '/admin/add/ride',
       icon: MdAdd
     },
     {
       name: 'Ride Lists',
-      path: '/admin/rides/list',
+      path: '/admin/list/rides',
       icon: MdList
     },
     {
@@ -24,20 +24,20 @@ const entities = [
     },
     {
       name: 'Schedule Ride Maintenance',
-      path: '/admin/maintenance/add',
+      path: '/admin/add/maintenance',
       icon: MdBuild
     },
     {
-      category: 'INVENTORY'
+      category: 'STORES'
     },
     {
-      name: 'Add New Item',
-      path: '/admin/inventory/add',
+      name: 'Add New Store',
+      path: '/admin/add/store',
       icon: MdAdd
     },
     {
-      name: 'Item Lists',
-      path: '/admin/inventory/list',
+      name: 'Manage Stores',
+      path: '/admin/list/stores',
       icon: MdList
     },
     {
