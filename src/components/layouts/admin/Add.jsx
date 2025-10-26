@@ -75,19 +75,15 @@ function Add({store=false}){
                     classNamePrefix="react-select"
                 />
             </FormControl>
-            {!isStore && (
-                <>
             <Input 
                 type="file" 
-                label={"Ride Photo"}
+                label={isStore ? "Store Photo" :"Ride Photo"}
                 required 
                 className="custom-input"
                 labelClassName="custom-form-label"
                 accept="image/png, image/jpeg, image/jpg"
                 feedback="Please select an image file (PNG, JPG, JPEG)"
             />
-            </>
-            )}
              <CustomButton text={isStore ? "Add New Store" : "Add New Ride"} className="custom-button" />
         </Form>
     </div>

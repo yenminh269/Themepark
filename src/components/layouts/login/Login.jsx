@@ -3,9 +3,7 @@ import { Link } from 'react-router-dom';
 import Form from 'react-bootstrap/Form';
 import InputLogIn from '../../input/InputLogin';
 import CustomButton from '../../button/CustomButton';
-import { Zoom } from '@mui/material';
-import { Fab } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+
 import './Login.css';
 import InputLogin from '../../input/InputLogin';
 
@@ -45,13 +43,6 @@ function Login({setAdmin}){
                     <input type="checkbox" className="accent-[#176B87]"  checked={isE}
                         onChange={(e) => setIsE(e.target.checked)}/>Log in as employee
                 </div>
-                
-
-                {/* <Zoom in={isE}>
-                    <div className='divChild'>
-                        <Input size="4" type="text" label="Employee ID" feedback="Employee ID is required."/>
-                    </div>
-                </Zoom>  */}
                 <div> <CustomButton text="Log In"/></div>
             </div>
         </Form>
