@@ -6,8 +6,9 @@ import MobileSidebar from "./MobileSidebar.jsx";
 import Add from "./Add.jsx";
 import List from "./List.jsx";
 import AdminDashboard from "./AdminDashboard.jsx";
-import RideMaintenance from "./RideMaintenance.jsx";
+import RideMaintenance from "./rides/RideMaintenance.jsx";
 import Employees from "./Employees.jsx";
+import RideGalleryWrapper from "./rides/RideGalleryWrapper.jsx";
 import './AdminMain.css'
 
 function AdminMain() {
@@ -96,9 +97,10 @@ function AdminMain() {
           <Routes>
             <Route path="/" element={<AdminDashboard />} />
             <Route path="add/ride" element={<Add />} />
+            <Route path="view/rides" element={<RideGalleryWrapper />}/>
             <Route path="add/store" element={<Add store={true} />} />
             <Route path="list/rides" element={<List ride={true} />} />
-             <Route path="list/stores" element={<List store={true} />} />
+            <Route path="list/stores" element={<List store={true} />} />
             <Route path="add/maintenance" element={<RideMaintenance />} />
             <Route path="/employees" element={<Employees />} />
           </Routes>

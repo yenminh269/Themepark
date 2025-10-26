@@ -1,17 +1,13 @@
 import { useState } from "react";
-import Input from "../../input/Input";
+import Input from "../../../input/Input";
 import Form from "react-bootstrap/Form";
-import CustomButton from "../../button/CustomButton";
+import CustomButton from "../../../button/CustomButton";
 import { FormControl, FormLabel, ScaleFade } from '@chakra-ui/react';
 import Select from 'react-select';
-import "./Add.css";
-import List from "./List";
+import "../Add.css";
+import List from "../List";
 
 function RideMaintenance() {
-  const statusOptions = [
-    { value: 'open', label: 'Open' },
-    { value: 'closed', label: 'Closed' }
-  ];
   const today = new Date().toISOString().split("T")[0];
 
   const [selectedRideId, setSelectedRideId] = useState("");

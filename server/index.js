@@ -2,10 +2,17 @@ import express from 'express';
 import cors from 'cors';
 import env from "dotenv";
 import mysql from 'mysql'
+import multer from 'multer';
+import path from 'path';
 
 const app = express();
 const PORT = 3001;
 env.config();
+
+//Middlewares
+app.use(cors());
+app.use(express.json());
+app.use('/uploads', express.static('uploads'));// serve uploaded images
 
 //connect to local database
 const db = mysql.createConnection({
@@ -22,25 +29,58 @@ db.connect((err) => {
   console.log('Connected to the MySQL server.');
 });
 
-//Middlewares
-app.use(cors());
-app.use(express.json());
+// ===== Multer Configuration =====
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/ride_photos'); // folder to save files
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now();
+    cb(null, uniqueSuffix + path.extname(file.originalname)); // e.g. 16981983019.jpg
+  }
+});
 
-// //ROUTES
-// //Get all the rides
-// app.get('/rides', async (req, res) => {
-//     try{
-//         const response = null;
-//         res.json({success: true})
+const upload = multer({ storage });
 
-//     }catch(error){
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error fetching rides',
-//             error: error.message
-//         })
-//     }
-// })
+//ROUTES
+//Get all the rides
+app.get('/rides', async (req, res) => {
+    db.query(`SELECT * FROM ride;`, (err, results) =>{
+        if(err){
+            return res.status(500).json({
+            message: 'Error fetching rides',
+            error: err.message
+            })
+        }
+        res.json({data: results });
+    });
+})
+
+//Add a new ride
+app.post('/ride/add', upload.single('photo'), (req, res) => {
+    const { name, price, capacity, description, status, open_time, close_time } = req.body;
+    const photo_path = req.file ? `/uploads/ride_photos/${req.file.filename}` : null;
+
+    if (!name || !price || !capacity || !description || !status || !open_time || !close_time || !photo_path) {
+        return res.status(400).json({ message: 'All fields are required,  including photo.' });
+    }
+    const sql = `
+        INSERT INTO ride (name, price, capacity, description, status, open_time, close_time, photo_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);`;
+
+    db.query(sql, [name, price, capacity, description, status, open_time, close_time, photo_path],
+        (err, result) => {
+            if(err){
+                console.error("Error inserting new ride:", err);
+                return res.status(500).json({
+                message: 'Error adding new ride',
+                error: err.message
+                })
+            }
+            console.log("A new ride has added to the database");
+            res.status(201).json({message: 'Ride added successfully', rideId: result.insertId, photo_path });
+        })
+})
 
  //Get all the employees under admin
  app.get('/employees', async (req, res) => {
@@ -51,7 +91,6 @@ app.use(express.json());
             error: err.message
             })
         }
-        console.log(results);
         res.json({data: results });
     });
 })

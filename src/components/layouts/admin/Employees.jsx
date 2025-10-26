@@ -2,6 +2,7 @@ import DataTable from '../../data-table/DataTable';
 import { Box } from '@chakra-ui/react';
 import { api } from '../../../services/api';
 import { useState, useEffect, useMemo } from 'react';
+import Loading from './loading/loading';
 
 function Employees() {
   const [loading, setLoading] = useState(true);
@@ -9,22 +10,24 @@ function Employees() {
   const [emp, setEmp] = useState([]);
   const [searchText, setSearchText] = useState('');
 
-  const EAttr = ['Emp_Id', 'First Name', 'Last Name', 'Gender', 'Email', 'Password', 
-                 'Job Title', 'Phone','SSN', 'Hire Date', 'Terminate Date'];
+  const EAttr = [
+    'Emp_Id', 'First Name', 'Last Name', 'Gender', 'Email', 'Password',
+    'Job Title', 'Phone', 'SSN', 'Hire Date', 'Terminate Date'
+  ];
+
   const columnKeys = [
-  'employee_id', 'first_name', 'last_name', 'gender', 'email', 'password',
-  'job_title', 'phone', 'ssn', 'hire_date', 'terminate_date'
-];
+    'employee_id', 'first_name', 'last_name', 'gender', 'email', 'password',
+    'job_title', 'phone', 'ssn', 'hire_date', 'terminate_date'
+  ];
 
   useEffect(() => {
     const fetchEmp = async () => {
       try {
         setLoading(true);
         const data = await api.getAllEmployees();
-        console.log(data)
+        console.log(data);
         setEmp(data);
-        setError(null);
-      } catch(err) {
+      } catch (err) {
         setError('Failed to load employees. Please make sure the backend server is running.');
       } finally {
         setLoading(false);
@@ -35,23 +38,23 @@ function Employees() {
 
   const filteredData = useMemo(() => {
     if (!searchText) return emp;
+    const normalizedSearch = searchText.toLowerCase().replace(/\s+/g, '');
     return emp.filter(empObj =>
-      EAttr.some(key =>
-        empObj[key]?.toString().toLowerCase().includes(searchText.toLowerCase())
-      )
+      columnKeys.some(key => {
+        const value = empObj[key]?.toString().toLowerCase().replace(/\s+/g, '');
+        return value && value.includes(normalizedSearch);
+      })
     );
   }, [emp, searchText]);
 
   const formattedData = filteredData.map(empObj =>
-  columnKeys.map(key => {
-    if ((key === 'hire_date' || key === 'terminate_date') && empObj[key]) {
-      return new Date(empObj[key]).toISOString().slice(0, 10); // YYYY-MM-DD
-    }
-    return empObj[key] ?? '';
-  })
-);
-
-
+    columnKeys.map(key => {
+      if ((key === 'hire_date' || key === 'terminate_date') && empObj[key]) {
+        return empObj[key]?.slice(0, 10); // safely extract YYYY-MM-DD
+      }
+      return empObj[key] ?? '';
+    })
+  );
 
   const handleEdit = (id, row) => {
     console.log('Edit clicked for ID:', id);
@@ -65,8 +68,8 @@ function Employees() {
     }
   };
 
-  if (loading) return <div>Loading employees...</div>;
-  if (error) return <div className="error">{error}</div>;
+   // Show loading spinner while fetching data
+  if (loading) return <Loading isLoading={loading} />;
 
   return (
     <Box position="relative" p={4}>

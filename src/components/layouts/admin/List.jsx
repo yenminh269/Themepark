@@ -16,7 +16,6 @@ function List({ ride = false, store = false, schedule = false, onRideSelect, mai
   // Table headers
   const rideColumns = ['RideId', 'Name', 'Price', 'Capacity', 'Description', 'Status', 'Open Time', 'Close Time'];
   const storeColumns = ['StoreId', 'Name', 'Type', 'Open Time', 'Close Time'];
-  const employeeColumns = ['Emp_Id', 'First Name', 'Last Name', 'Job Title', 'Email', 'Password', 'Gender', 'Phone', 'SSN', 'Hire Date', 'Terminate Date'];
 
   // Example hardcoded data
   const rideData = [
@@ -30,7 +29,6 @@ function List({ ride = false, store = false, schedule = false, onRideSelect, mai
     ['1', 'Food Court', 'food/drink', '9:00am', '9:00pm'],
     ['2', 'Gift Shop', 'merchandise', '9:00am', '9:00pm']
   ];
-
 
 
   // Select columns and data based on prop
