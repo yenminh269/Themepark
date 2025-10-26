@@ -2,10 +2,9 @@ import { useState, useMemo, useEffect } from "react";
 import DataTable from "../../data-table/DataTable";
 import { Box, IconButton, HStack } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
-import { ScaleFade } from '@chakra-ui/react';
-import Add from './Add'
 
-function List({ ride = false, store = false, employee = false, schedule = false, onRideSelect, maintenance, onAddMaintenance }) {
+
+function List({ ride = false, store = false, schedule = false, onRideSelect, maintenance, onAddMaintenance }) {
   const [searchText, setSearchText] = useState("");
   const [isSchedule, setSchedule] = useState(false);
   const [isAdd, setAdd] = useState(false);
@@ -32,10 +31,7 @@ function List({ ride = false, store = false, employee = false, schedule = false,
     ['2', 'Gift Shop', 'merchandise', '9:00am', '9:00pm']
   ];
 
-  const employeeData = [
-    ['1', 'John', 'Doe', 'M', 'john@example.com', '****', 'Manager', '123-456', '111-22-3333', '2023-01-01', ''],
-    ['2', 'Jane', 'Smith', 'F', 'jane@example.com', '****', 'Staff', '987-654', '222-33-4444', '2023-02-01', '']
-  ];
+
 
   // Select columns and data based on prop
   let columns = [];

@@ -2,19 +2,15 @@ const SERVER_URL = 'http://localhost:3001';
 async function fetchAPI(endpoint){
     try{
         const response = await fetch(`${SERVER_URL}${endpoint}`);
-
+        //get to the server then get error
         if(!response.ok){
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
+        const json = await response.json(); // wait for the JSON to parse
+        const data = json.data; // access the data
+        return data;
 
-        const result = await response.json();
-
-        if(!result.success){
-            throw new Error(result.message || 'API request failed');
-        }
-        return result.data;
-
-    }catch(error){
+    }catch(error){ //before get to the server
         console.error('API error:', error);
         throw error;
     }

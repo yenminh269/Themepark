@@ -7,7 +7,7 @@ import Add from "./Add.jsx";
 import List from "./List.jsx";
 import AdminDashboard from "./AdminDashboard.jsx";
 import RideMaintenance from "./RideMaintenance.jsx";
-
+import Employees from "./Employees.jsx";
 import './AdminMain.css'
 
 function AdminMain() {
@@ -100,7 +100,7 @@ function AdminMain() {
             <Route path="list/rides" element={<List ride={true} />} />
              <Route path="list/stores" element={<List store={true} />} />
             <Route path="add/maintenance" element={<RideMaintenance />} />
-            <Route path="/employees" element={<List employee={true}/>} />
+            <Route path="/employees" element={<Employees />} />
           </Routes>
         </Box>
       </Box>
