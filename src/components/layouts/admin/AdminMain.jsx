@@ -1,11 +1,13 @@
 import { Routes, Route } from "react-router-dom";
 import { Box, Flex, useBreakpointValue } from "@chakra-ui/react";
 import { useState } from "react";
-import RideList from "./RideList.jsx";
 import Sidebar from "./Sidebar.jsx";
 import MobileSidebar from "./MobileSidebar.jsx";
-import AddNewRide from "./AddNewRide.jsx";
+import Add from "./Add.jsx";
+import List from "./List.jsx";
 import AdminDashboard from "./AdminDashboard.jsx";
+import RideMaintenance from "./RideMaintenance.jsx";
+
 import './AdminMain.css'
 
 function AdminMain() {
@@ -93,10 +95,12 @@ function AdminMain() {
         <Box p="40px">
           <Routes>
             <Route path="/" element={<AdminDashboard />} />
-            <Route path="rides/add" element={<AddNewRide />} />
-            <Route path="rides/list" element={<RideList />} />
-            <Route path="maintenance/add" element={<Box>Add Maintenance Page</Box>} />
-            <Route path="employees" element={<Box>Manage Employees Page</Box>} />
+            <Route path="add/ride" element={<Add />} />
+            <Route path="add/store" element={<Add store={true} />} />
+            <Route path="list/rides" element={<List ride={true} />} />
+             <Route path="list/stores" element={<List store={true} />} />
+            <Route path="add/maintenance" element={<RideMaintenance />} />
+            <Route path="/employees" element={<List employee={true}/>} />
           </Routes>
         </Box>
       </Box>

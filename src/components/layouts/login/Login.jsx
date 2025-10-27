@@ -1,12 +1,13 @@
 import {  useState } from 'react';
 import { Link } from 'react-router-dom';
 import Form from 'react-bootstrap/Form';
-import Input from '../../input/Input';
+import InputLogIn from '../../input/InputLogin';
 import CustomButton from '../../button/CustomButton';
 import { Zoom } from '@mui/material';
 import { Fab } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import './Login.css';
+import InputLogin from '../../input/InputLogin';
 
 function Login({setAdmin}){
     const [isE,setIsE] = useState(false);
@@ -34,11 +35,11 @@ function Login({setAdmin}){
                 <h1>Welcome to our Theme Park</h1>
                <p>Log In or <Link to="/signup" className='!no-underline'><span className='hover:outline-dashed font-bold'>Create an account</span></Link></p>
                 <div>
-                    <Input size="15" type="text" label="Email" feedback="Please provide a valid email." />
+                    <InputLogin size="15" type="text" label="Email" feedback="Please provide a valid email." />
                 </div>
 
                 <div>
-                    <Input size="15" type="password" label="Password" feedback="Password is required." />
+                    <InputLogin size="15" type="password" label="Password" feedback="Password is required." />
                 </div>
                 <div>
                     <input type="checkbox" className="accent-[#176B87]"  checked={isE}

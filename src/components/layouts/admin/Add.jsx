@@ -3,13 +3,23 @@ import Form from 'react-bootstrap/Form';
 import CustomButton from "../../button/CustomButton";
 import { FormControl, FormLabel } from '@chakra-ui/react';
 import Select from 'react-select';
-import './AddNewRide.css'
+import './Add.css'
+import { useState, useEffect } from "react";
 
-function AddNewRide(){
+function Add({store=false}){
+    const [isStore, setStore] = useState(false);
     const statusOptions = [
         { value: 'open', label: 'Open' },
         { value: 'closed', label: 'Closed' }
     ];
+    const storeType = [
+        { value: 'food/drink', label: 'Food & Drink'},
+        { value: 'merchandise', label: 'Merchandise'}
+    ];
+    
+    useEffect(() => {
+        setStore(store);
+    }, [store]);
 
     return (
     <div className="flex justify-center items-center min-h-screen">
@@ -20,6 +30,8 @@ function AddNewRide(){
                 className="custom-input"
                 labelClassName="custom-form-label"
                 />
+            {!isStore && (
+            <>
             <Input required 
                 type="currency" 
                 label="Price" 
@@ -28,10 +40,10 @@ function AddNewRide(){
             />
             <Input required 
                 type="number" 
-                label="Capacity"
+                label={"Capacity"}
                 className="custom-input"
                 labelClassName="custom-form-label"
-                min={2} max={50}
+                min={2 } max={50}
                 />
             <Input required 
                 type="text" 
@@ -39,10 +51,11 @@ function AddNewRide(){
                 className="custom-input"
                 labelClassName="custom-form-label"
                 />
+            </>
+            )}
             <Input required 
                 type="time" 
                 label="Open Time" 
-                
                 className="custom-input"
                 labelClassName="custom-form-label"
                     />
@@ -53,28 +66,31 @@ function AddNewRide(){
                 className="custom-input"
                 labelClassName="custom-form-label"
                 />
-            <FormControl className='mb-3' isRequired>
-                <FormLabel color="#4B5945" fontWeight="500">Ride Status</FormLabel>
+            <FormControl className='mb-4' isRequired>
+                <FormLabel color="#4B5945" fontWeight="500">{isStore ? "Store Type" : "Ride Status"}</FormLabel>
                 <Select
-                    options={statusOptions}
-                    placeholder="Select ride status"
+                    options={isStore ? storeType : statusOptions}
+                    placeholder={isStore?"Store type:" : "Select ride status"}
                     className="custom-react-select"
                     classNamePrefix="react-select"
                 />
             </FormControl>
+            {!isStore && (
+                <>
             <Input 
                 type="file" 
-                label="Ride Photo" 
+                label={"Ride Photo"}
                 required 
                 className="custom-input"
                 labelClassName="custom-form-label"
                 accept="image/png, image/jpeg, image/jpg"
                 feedback="Please select an image file (PNG, JPG, JPEG)"
             />
-            
-            <CustomButton text="Add New Ride" className="custom-button" />
+            </>
+            )}
+             <CustomButton text={isStore ? "Add New Store" : "Add New Ride"} className="custom-button" />
         </Form>
     </div>
 )
 }
-export default AddNewRide;
+export default Add;

@@ -1,6 +1,6 @@
 import DataTable from '../../data-table/DataTable';
-function RideList(){
-    const rideListAttr = ['RideId', 'Name', 'Price', 'Capacity', 'Description', 'Status', 'Open Time', 'Close Time'];
+function Employees(){
+    const EAttr = ['Emp_Id', 'First Name', 'Last Name', 'Gender', 'Email', 'Password', 'Job Title', 'Phone','SSN', 'Hire Date', 'Terminate Date'];
     const rideDetailed = [
     ['1','abc','$0.05', 5, 'abc', 'Approved', '8:00am', '10:00'],
     ['2','abc','$0.05', 5, 'abc', 'Pending', '8:00am', '12:00'],
@@ -9,10 +9,10 @@ function RideList(){
   ];
     return (
     <DataTable
-        title="Ride Lists"
-        columns={rideListAttr}
+        title="Employees"
+        columns={EAttr}
         data={rideDetailed}
     />
     )
 }
-export default RideList;
+export default Employees;
