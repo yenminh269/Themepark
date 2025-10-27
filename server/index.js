@@ -110,6 +110,160 @@ app.get('/employees', async (req, res) => {
     res.json({data: results});
   });
 });
+//Get maintenance employee
+app.get('/employees/maintenance', async (req, res) => {
+  const sql = `SELECT employee_id, first_name, last_name, gender, email, 
+               job_title, phone, hire_date
+               FROM employee 
+WHERE deleted_at IS NULL AND terminate_date IS NULL 
+AND job_title ='Mechanical Employee'`;
+  db.query(sql, (err, results) => {
+    if(err){
+      return res.status(500).json({
+        message: 'Error fetching employees',
+        error: err.message
+      });
+    }
+    res.json({data: results});
+  });
+});
+
+// Schedule ride maintenance 
+app.post('/ride-maintenance', async (req, res) => {
+  const { ride_id, employee_id, description, date, hour } = req.body;
+  // Validate required fields
+  if (!ride_id || !employee_id || !description || !date || !hour) {
+    return res.status(400).json({
+      message: 'Missing required fields',
+      required: ['ride_id', 'employee_id', 'description', 'date']
+    });
+  }
+
+  try {
+    // Check if ride exists
+    const checksql = `SELECT EXISTS (
+      SELECT 1
+      FROM ride
+      WHERE ride_id = ?
+    ) as ride_exists`;
+    
+    const rideCheck = await new Promise((resolve, reject) => {
+      db.query(checksql, [ride_id], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+
+    if (!rideCheck[0].ride_exists) {
+      return res.status(404).json({
+        message: 'Ride does not exist',
+        ride_id: ride_id
+      });
+    }
+
+    // Check if employee exists
+    const empChecksql = `SELECT EXISTS (
+      SELECT 1
+      FROM employee
+      WHERE employee_id = ?
+    ) as emp_exists`;
+    
+    const empCheck = await new Promise((resolve, reject) => {
+      db.query(empChecksql, [employee_id], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+
+    if (!empCheck[0].emp_exists) {
+      return res.status(404).json({
+        message: 'Employee does not exist',
+        employee_id: employee_id
+      });
+    }
+    // Insert into maintenance table
+    const maintenanceSql = `INSERT INTO maintenance(ride_id, description, scheduled_date)
+      VALUES(?, ?, ?)`;
+    
+    const maintenanceResult = await new Promise((resolve, reject) => {
+      db.query(maintenanceSql, [ride_id, description, date], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+    const maintenance_id = maintenanceResult.insertId;
+    // Insert into employee_maintenance_job table
+    const scheduleSql = `INSERT INTO employee_maintenance_job(employee_id, maintenance_id, work_date, worked_hour)
+      VALUES(?, ?, ?, ?)`;
+    
+    const scheduleResult = await new Promise((resolve, reject) => {
+      db.query(scheduleSql, [employee_id, maintenance_id, date, hour], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+    res.status(201).json({
+      message: 'Maintenance scheduled successfully',
+      data: {
+        maintenance_id: maintenance_id,
+        ride_id: ride_id,
+        employee_id: employee_id,
+        scheduled_date: date
+      }
+    });
+  } catch (err) {
+    console.error('Error scheduling maintenance:', err);
+    return res.status(500).json({
+      message: 'Error scheduling maintenance',
+      error: err.message
+    });
+  }
+});
+
+
+// Get all maintenance schedules with details
+app.get('/maintenances', async (req, res) => {
+  const sql = `
+    SELECT 
+      m.maintenance_id,
+      m.ride_id,
+      r.name as ride_name,
+      m.description,
+      m.scheduled_date,
+      m.status,
+      emj.employee_id,
+      e.first_name,
+      e.last_name,
+      emj.work_date,
+      emj.worked_hour
+    FROM maintenance m
+    INNER JOIN employee_maintenance_job emj ON m.maintenance_id = emj.maintenance_id
+    INNER JOIN employee e ON emj.employee_id = e.employee_id
+    INNER JOIN ride r ON m.ride_id = r.ride_id
+    ORDER BY m.scheduled_date DESC
+  `;
+  
+  try {
+    const results = await new Promise((resolve, reject) => {
+      db.query(sql, (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+    
+    res.json({
+      message: 'Maintenance schedules retrieved successfully',
+      data: results
+    });
+  } catch (err) {
+    console.error('Error fetching maintenance schedules:', err);
+    return res.status(500).json({
+      message: 'Error fetching maintenance schedules',
+      error: err.message
+    });
+  }
+});
+
 
 //Update an employee
 app.put('/employees/:id', async (req, res) => {
@@ -136,7 +290,6 @@ app.put('/employees/:id', async (req, res) => {
       terminate_date = ?
     WHERE employee_id = ?;
   `;
-
   db.query(sql, [
     first_name, last_name, job_title, gender,
     email, phone, ssn, hireDate, terminateDate, id

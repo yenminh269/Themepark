@@ -48,6 +48,10 @@ export const api = {
     getAllEmployees: async() => {
         return await fetchAPI('/employees');
     },
+    //Get all the maintenance employees
+    getMaintEmployees: async() => {
+        return await fetchAPI('/employees/maintenance');
+    },
     //Add new employee
     addEmployee: async(formData) => {
         return await fetchAPI('/employees/add', formData, "POST", false);
@@ -76,11 +80,15 @@ export const api = {
     deleteStore: async(id)=>{
         return await fetchAPI(`/store/${id}`, null, "DELETE", false);
     },
-  
-    // //Get all the maintenance schedule
-    // getAllMaintenances: async() => {
-    //     return await fetchAPI('/maintenances');
-    // },
+    //Schedule a ride maintenance 
+    scheduleRideMaint: async(formData)=>{
+        return await fetchAPI(`/ride-maintenance`, formData, "POST",false);
+    },
+    //Get all the maintenance schedule
+    getAllMaintenances: async() => {
+        return await fetchAPI('/maintenances');
+    },
+    
     // //Get all inventory items
     // getAllInventories: async() => {
     //     return await fetchAPI('/inventories')

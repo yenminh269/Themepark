@@ -36,7 +36,6 @@ function RideLists() {
   }, []);
 
 
-
   const filteredData = useMemo(() => {
     if (!searchText) return rides;
     const normalizedSearch = searchText.toLowerCase().trim();
