@@ -75,8 +75,7 @@ function RideMaintenance() {
         {showForm && (
           <ScaleFade initialScale={0.8} in={showForm}>
             <div className="w-full">
-              <Form
-                className="flex flex-col p-3 rounded shadow-lg w-full max-w-md bg-transparent"
+              <Form className="flex flex-col p-3 rounded shadow-lg w-full max-w-md bg-transparent"
                 onSubmit={handleSubmit}
               >
                 <div className="flex justify-end items-center mb-3">

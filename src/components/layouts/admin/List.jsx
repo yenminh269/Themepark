@@ -4,7 +4,7 @@ import { Box, IconButton, HStack } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
 
 
-function List({ ride = false, store = false, schedule = false, onRideSelect, maintenance, onAddMaintenance }) {
+function List({ store = false, schedule = false, onRideSelect, maintenance, onAddMaintenance }) {
   const [searchText, setSearchText] = useState("");
   const [isSchedule, setSchedule] = useState(false);
   const [isAdd, setAdd] = useState(false);
@@ -13,8 +13,7 @@ function List({ ride = false, store = false, schedule = false, onRideSelect, mai
     setSchedule(schedule);
   }, [schedule])
 
-  // Table headers
-  const rideColumns = ['RideId', 'Name', 'Price', 'Capacity', 'Description', 'Status', 'Open Time', 'Close Time'];
+  // Table header
   const storeColumns = ['StoreId', 'Name', 'Type', 'Open Time', 'Close Time'];
 
   // Example hardcoded data
@@ -36,11 +35,7 @@ function List({ ride = false, store = false, schedule = false, onRideSelect, mai
   let data = [];
   let title = "";
 
-  if (ride) {
-    columns = rideColumns;
-    data = rideData;
-    title = "Ride List";
-  } else if (store) {
+  if (store) {
     columns = storeColumns;
     data = storeData;
     title = "Store List";
