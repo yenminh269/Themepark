@@ -29,7 +29,6 @@ export default function AddE({onClose}){
     const [ephone, setPhone] = useState('');
     const[essn, setSSN] = useState('');
     const[hireDate, setHireDate] = useState('');
-
     const [loading, setLoading] = useState(false);
     
     const handleSubmit = async (e) => {
@@ -63,14 +62,16 @@ export default function AddE({onClose}){
             setHireDate("");
 
             // Close form after successful submission
-            onClose(true);
+            onClose(true, `${newEmp.first_name} ${newEmp.last_name} has been added.`);
         } catch (err) {
             console.error("Failed to submit the new employee. Please make sure the backend server is running.");
         } finally {
             setLoading(false);
         }
         };
+
     if (loading) return <Loading isLoading={loading} />;
+    
     return(
     <div className="mt-2 flex justify-center items-start w-full">
         <Form onSubmit={handleSubmit}  style={{ boxShadow: '-8px -8px 12px rgba(0,0,0,0.25)' }}

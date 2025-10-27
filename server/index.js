@@ -248,20 +248,22 @@ app.get('/stores', async (req, res) => {
 //Update a store
 app.put('/store/:id', async (req, res) => {
   const {name, type, status, description, open_time, close_time} = req.body;
+  const openTime = open_time.length === 5 ? open_time + ':00' : open_time;
+  const closeTime = close_time.length === 5 ? close_time + ':00' : close_time;
   console.log(req.body);
   const id = req.params.id;
   const sql = `
-    UPDATE employee
+    UPDATE store
     SET 
       name = ?,
       type = ?,
       status = ?,
       description = ?,
       open_time = ?,
-      close_time = ?,
+      close_time = ?
     WHERE store_id = ?;
   `;
-  db.query(sql, [name, type, status, description, open_time, close_time, id],
+  db.query(sql, [name, type, status, description, openTime, closeTime, id],
      (err, result) => {
     if (err) {
       return res.status(500).json({
@@ -272,6 +274,7 @@ app.put('/store/:id', async (req, res) => {
     res.json({ message: "Store updated successfully", data: result });
   });
 });
+
 //Update a store
 app.delete('/store/:id', async (req, res) => {
   const id = req.params.id;

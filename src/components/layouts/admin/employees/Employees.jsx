@@ -2,8 +2,8 @@ import DataTable from '../../../data-table/DataTable';
 import { api } from '../../../../services/api';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Loading from '../loading/loading';
-import { Box, IconButton, HStack, ScaleFade,AlertDialog,AlertDialogBody,AlertDialogFooter,
-  AlertDialogHeader, AlertDialogContent, AlertDialogOverlay,Button,Text,useDisclosure, useToast
+import { Box, IconButton, HStack, ScaleFade, AlertDialog, AlertDialogBody, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, Button, Text, useDisclosure, useToast
 } from '@chakra-ui/react';
 import { AddIcon, WarningIcon } from '@chakra-ui/icons';
 import AddE from './AddE';
@@ -16,46 +16,57 @@ function Employees() {
   const [editedData, setEditedData] = useState({});
   const [addE, showAddE] = useState(false);
   const addFormRef = useRef(null);
-  
-  // For delete confirmation
+
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [deleteTarget, setDeleteTarget] = useState(null);
   const cancelRef = useRef();
+  const toast = useToast();
 
-  const EAttr = [
-    'Emp_Id', 'First Name', 'Last Name', 'Gender', 'Email',
-    'Job Title', 'Phone', 'SSN', 'Hire Date', 'Terminate Date'
-  ];
-
-  const columnKeys = [
-    'employee_id', 'first_name', 'last_name', 'gender', 'email',
-    'job_title', 'phone', 'ssn', 'hire_date', 'terminate_date'
-  ];
+  const EAttr = ['Emp_Id', 'First Name', 'Last Name', 'Gender', 'Email', 'Job Title', 'Phone', 'SSN', 'Hire Date', 'Terminate Date'];
+  const columnKeys = ['employee_id', 'first_name', 'last_name', 'gender', 'email', 'job_title', 'phone', 'ssn', 'hire_date', 'terminate_date'];
 
   useEffect(() => {
-    const fetchEmp = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getAllEmployees();
-        setEmp(data);
-      } catch (err) {
-        console.error('Failed to load employees:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchEmp();
+    fetchEmployees();
   }, []);
 
+  // Smooth scroll when showing add form
   useEffect(() => {
-  if (addE && addFormRef.current) {
-    const timer = setTimeout(() => {
-      addFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }, 300); // match ScaleFade animation duration
-    return () => clearTimeout(timer);
-  }
-}, [addE]);
+    if (addE && addFormRef.current) {
+      const timer = setTimeout(() => {
+        addFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [addE]);
 
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getAllEmployees();
+      setEmp(data);
+    } catch (err) {
+      console.error('Failed to load employees:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCloseAdd = async (refresh = false, message = null) => {
+    showAddE(false);
+    if (refresh) {
+      await fetchEmployees();
+      if (message) {
+        toast({
+          title: 'Employee added',
+          description: message,
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+          position: 'top',
+        });
+      }
+    }
+  };
 
   const filteredData = useMemo(() => {
     if (!searchText) return emp;
@@ -68,39 +79,31 @@ function Employees() {
     );
   }, [emp, searchText]);
 
-  const handleEdit = (id, row) => {
-    console.log('Edit clicked for ID:', id);
+  const handleEdit = (id) => {
     setEditingId(id);
     const employee = emp.find(e => e.employee_id === id);
-    if (employee) {
-      setEditedData({ ...employee });
-    }
+    if (employee) setEditedData({ ...employee });
   };
 
   const handleSave = async (id) => {
     try {
       setLoading(true);
-      const updateData = {
-        employee_id: id,
-        ...editedData
-      };
-      const response = await api.updateEmployee(updateData, id);
-      console.log(response.message);
-      const data = await api.getAllEmployees();
-      setEmp(data);
+      const updateData = { employee_id: id, ...editedData };
+      await api.updateEmployee(updateData, id);
+      await fetchEmployees();
       setEditingId(null);
       setEditedData({});
       toast({
         title: 'Employee updated',
-        description: `Store "${editedData.name}" has been updated.`,
+        description: `${editedData.first_name} ${editedData.last_name} has been updated.`,
         status: 'success',
         duration: 3000,
         isClosable: true,
         position: 'top',
       });
     } catch (err) {
-      console.error('Failed to update employee:', err);
-      alert('Failed to update employee. Please try again.');
+      console.error(err);
+      alert('Failed to update employee.');
     } finally {
       setLoading(false);
     }
@@ -112,31 +115,22 @@ function Employees() {
   };
 
   const handleInputChange = (key, value) => {
-    setEditedData(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    setEditedData(prev => ({ ...prev, [key]: value }));
   };
 
   const handleDelete = (id, row) => {
-    console.log('Delete clicked for ID:', id);
     setDeleteTarget({ id, name: `${row[1]} ${row[2]}` });
     onOpen();
   };
 
-  const toast = useToast();
-  // In confirmDelete
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    // close dialog first
     onClose();
     setDeleteTarget(null);
-
     try {
       setLoading(true);
       await api.deleteEmployee(deleteTarget.id);
-      const data = await api.getAllEmployees();
-      setEmp(data);
+      await fetchEmployees();
       toast({
         title: 'Employee deleted',
         description: `${deleteTarget.name} has been removed successfully.`,
@@ -148,7 +142,7 @@ function Employees() {
     } catch (err) {
       toast({
         title: 'Error',
-        description: 'Failed to delete employee. Please try again.',
+        description: 'Failed to delete employee.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -161,15 +155,10 @@ function Employees() {
 
   const renderEditableRow = (empObj) => {
     return columnKeys.map((key, index) => {
-      if (key === 'employee_id') {
-        return empObj[key];
-      }
-      
+      if (key === 'employee_id') return empObj[key];
       let inputWidth = '170px';
-      if (key === 'first_name' || key === 'last_name' || key === 'gender') {
-        inputWidth = '120px';
-      }
-      
+      if (key === 'first_name' || key === 'last_name' || key === 'gender') inputWidth = '120px';
+
       if (key === 'hire_date' || key === 'terminate_date') {
         return (
           <input
@@ -181,7 +170,7 @@ function Employees() {
           />
         );
       }
-      
+
       if (key === 'gender') {
         return (
           <select
@@ -196,7 +185,7 @@ function Employees() {
           </select>
         );
       }
-      
+
       return (
         <input
           type={key === 'email' ? 'email' : 'text'}
@@ -211,14 +200,9 @@ function Employees() {
   };
 
   const displayData = filteredData.map(empObj => {
-    if (editingId === empObj.employee_id) {
-      return renderEditableRow(empObj);
-    }
-    
+    if (editingId === empObj.employee_id) return renderEditableRow(empObj);
     return columnKeys.map(key => {
-      if ((key === 'hire_date' || key === 'terminate_date') && empObj[key]) {
-        return empObj[key]?.slice(0, 10);
-      }
+      if ((key === 'hire_date' || key === 'terminate_date') && empObj[key]) return empObj[key]?.slice(0, 10);
       return empObj[key] ?? '';
     });
   });
@@ -226,7 +210,7 @@ function Employees() {
   if (loading) return <Loading isLoading={loading} />;
 
   return (
-    <Box position="relative" p={4} >
+    <Box position="relative" p={4}>
       <input
         type="text"
         placeholder="Search employees..."
@@ -234,6 +218,7 @@ function Employees() {
         onChange={e => setSearchText(e.target.value)}
         className="border rounded px-3 py-1 w-full"
       />
+
       {!addE && (
         <HStack justify="flex-end" mt={4}>
           <IconButton 
@@ -246,13 +231,8 @@ function Employees() {
             boxShadow="lg"
             aria-label="Add Employee"
             onClick={() => showAddE(true)}
-            _hover={{ 
-              bg: "#2d5734",
-              transform: "scale(1.1)",
-            }}
-            _active={{ 
-              transform: "scale(0.95)",
-            }}
+            _hover={{ bg: "#2d5734", transform: "scale(1.1)" }}
+            _active={{ transform: "scale(0.95)" }}
             transition="all 0.2s"
           />
         </HStack>
@@ -272,12 +252,11 @@ function Employees() {
       {addE && (
         <ScaleFade initialScale={0.8} in={addE}>
           <div ref={addFormRef} className="w-full mt-4">
-            <AddE onClose={handleCloseAdd}/>
-          </div> 
+            <AddE onClose={handleCloseAdd} />
+          </div>
         </ScaleFade>
       )}
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog
         isOpen={isOpen}
         leastDestructiveRef={cancelRef}
@@ -291,7 +270,6 @@ function Employees() {
               <WarningIcon color="red.500" boxSize={5} />
               Delete Employee
             </AlertDialogHeader>
-
             <AlertDialogBody>
               <Text>
                 Are you sure you want to delete{' '}
@@ -300,27 +278,11 @@ function Employees() {
                 </Text>
                 ?
               </Text>
-              <Text mt={2} fontSize="sm" color="gray.600">
-                This action cannot be undone.
-              </Text>
+              <Text mt={2} fontSize="sm" color="gray.600">This action cannot be undone.</Text>
             </AlertDialogBody>
-
             <AlertDialogFooter>
-              <Button 
-                ref={cancelRef} 
-                onClick={onClose}
-                variant="ghost"
-              >
-                Cancel
-              </Button>
-              <Button 
-                colorScheme="red" 
-                onClick={confirmDelete} 
-                ml={3}
-                _hover={{ bg: 'red.600' }}
-              >
-                Delete
-              </Button>
+              <Button ref={cancelRef} onClick={onClose} variant="ghost">Cancel</Button>
+              <Button colorScheme="red" onClick={confirmDelete} ml={3} _hover={{ bg: 'red.600' }}>Delete</Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialogOverlay>

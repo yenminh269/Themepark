@@ -2,7 +2,7 @@ import DataTable from '../../../data-table/DataTable';
 import { Box, useToast, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, Button } from '@chakra-ui/react';
 import { api } from '../../../../services/api';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import {useDisclosure}from '@chakra-ui/react';
+import { useDisclosure } from '@chakra-ui/react';
 import Loading from '../loading/loading';
 import { WarningIcon } from '@chakra-ui/icons';
 
@@ -12,8 +12,7 @@ function StoreLists() {
   const [searchText, setSearchText] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editedData, setEditedData] = useState({});
-  
-  // Delete dialog
+
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [deleteTarget, setDeleteTarget] = useState(null);
   const cancelRef = useRef();
@@ -27,20 +26,25 @@ function StoreLists() {
     'store_id', 'name', 'type', 'status', 'description', 'open_time', 'close_time', 'created_at'
   ];
 
+  const storeTypeOptions = ['merchandise','food/drink'];
+  const storeStatusOptions = ['closed','open', 'maintenance'];
+
+  // Fetch all stores
+  const fetchStores = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getAllStores();
+      setStores(data);
+    } catch (err) {
+      console.error('Failed to load stores:', err);
+      alert('Failed to load stores. Please check backend connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchStore = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getAllStores();
-        setStores(data);
-      } catch (err) {
-        console.error('Failed to load stores:', err);
-        alert('Failed to load stores. Please check backend connection.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStore();
+    fetchStores();
   }, []);
 
   const filteredData = useMemo(() => {
@@ -68,8 +72,7 @@ function StoreLists() {
     })
   );
 
-  // --- Edit / Save / Cancel ---
-  const handleEdit = (id, row) => {
+  const handleEdit = (id) => {
     setEditingId(id);
     const store = stores.find(s => s.store_id === id);
     if (store) setEditedData({ ...store });
@@ -79,10 +82,8 @@ function StoreLists() {
     try {
       setLoading(true);
       const updateData = { store_id: id, ...editedData };
-      const response = await api.updateStore(updateData, id);
-      console.log(response.message);
-      const data = await api.getAllStores();
-      setStores(data);
+      await api.updateStore(updateData, id);
+      await fetchStores();
       setEditingId(null);
       setEditedData({});
       toast({
@@ -110,7 +111,6 @@ function StoreLists() {
     setEditedData(prev => ({ ...prev, [key]: value }));
   };
 
-  // --- Delete ---
   const handleDelete = (id, row) => {
     setDeleteTarget({ id, name: row[1] });
     onOpen();
@@ -119,13 +119,10 @@ function StoreLists() {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     onClose();
-    setDeleteTarget(null);
-
     try {
       setLoading(true);
       await api.deleteStore(deleteTarget.id);
-      const data = await api.getAllEmployees();
-      setEmp(data);
+      await fetchStores();
       toast({
         title: 'Store deleted',
         description: `${deleteTarget.name} has been removed successfully.`,
@@ -145,12 +142,43 @@ function StoreLists() {
       });
     } finally {
       setLoading(false);
+      setDeleteTarget(null);
     }
   };
 
   const renderEditableRow = (storeObj) => {
     return columnKeys.map((key, idx) => {
       if (key === 'store_id' || key === 'created_at') return storeObj[key];
+
+      if (key === 'type') {
+        return (
+          <select
+            value={editedData[key] ?? ''}
+            onChange={e => handleInputChange(key, e.target.value)}
+            className="border rounded px-3 py-2 text-sm md:text-base"
+            style={{ minWidth: '120px' }}
+          >
+            {storeTypeOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        );
+      }
+
+      if (key === 'status') {
+        return (
+          <select
+            value={editedData[key] ?? ''}
+            onChange={e => handleInputChange(key, e.target.value)}
+            className="border rounded px-3 py-2 text-sm md:text-base"
+            style={{ minWidth: '120px' }}
+          >
+            {storeStatusOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        );
+      }
 
       let inputType = 'text';
       if (key === 'open_time' || key === 'close_time') inputType = 'time';
