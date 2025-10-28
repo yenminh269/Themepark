@@ -48,9 +48,12 @@ function Login({setAdmin}){
                 // Redirect based on job title
                 const jobTitle = employeeData.job_title;
 
-                if (jobTitle === 'General Manager' || jobTitle === 'Manager') {
+                if (jobTitle === 'General Manager') {
                     alert(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/admin');
+                } else if (jobTitle === 'Store Manager') {
+                    alert(`Welcome back, ${employeeData.first_name}!`);
+                    navigate('/manager');
                 } else if (jobTitle === 'Mechanical Employee') {
                     alert(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/maintenance');

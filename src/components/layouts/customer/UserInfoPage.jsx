@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import PageFooter from "./PageFooter";
@@ -9,21 +9,101 @@ export default function UserInfoPage() {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("info");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [customerData, setCustomerData] = useState(null);
   const [form, setForm] = useState({
-    email: user?.email || "",
-    firstName: "FirstName",
-    lastName: "LastName",
-    phone: "(555) 555-5555",
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
+    gender: "",
+    dob: "",
   });
+
+  // Fetch customer data from backend
+  useEffect(() => {
+    const fetchCustomerData = async () => {
+      try {
+        setLoading(true);
+        const token = user?.token || localStorage.getItem("customer_token");
+
+        if (!token) {
+          setError("No authentication token found. Please log in.");
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch("http://localhost:3001/api/customer/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch customer data");
+        }
+
+        const result = await response.json();
+        setCustomerData(result.customer);
+        setForm({
+          first_name: result.customer.first_name || "",
+          last_name: result.customer.last_name || "",
+          email: result.customer.email || "",
+          phone: result.customer.phone || "",
+          gender: result.customer.gender || "",
+          dob: result.customer.dob ? result.customer.dob.split('T')[0] : "",
+        });
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching customer data:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomerData();
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    alert("Changes saved (mock).");
+
+    try {
+      const token = user?.token || localStorage.getItem("customer_token");
+
+      if (!token) {
+        alert("No authentication token found. Please log in again.");
+        return;
+      }
+
+      const response = await fetch(`http://localhost:3001/api/customer/${customerData.customer_id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update customer information");
+      }
+
+      const result = await response.json();
+      alert("Changes saved successfully!");
+
+      // Refresh the data
+      setCustomerData(result.customer);
+    } catch (err) {
+      console.error("Error saving customer data:", err);
+      alert(`Error saving changes: ${err.message}`);
+    }
   };
 
   const handleSignOut = () => {
@@ -91,67 +171,116 @@ export default function UserInfoPage() {
         {/* Right Content */}
         <section className="!flex-1 !bg-white/70 !rounded-xl !shadow !p-6">
           {activeTab === "info" ? (
-            <form onSubmit={handleSave} className="!space-y-4">
-              <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-4">
-                Personal Information
-              </h2>
-
-              <div className="!grid !grid-cols-1 md:!grid-cols-2 !gap-4">
-                <div>
-                  <label className="!block !text-sm !font-semibold !text-slate-700">
-                    First Name
-                  </label>
-                  <input
-                    name="firstName"
-                    value={form.firstName}
-                    onChange={handleChange}
-                    className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
-                  />
+            <>
+              {loading && (
+                <div className="!text-center !py-10">
+                  <p className="!text-lg !text-[#176B87]">Loading customer information...</p>
                 </div>
-                <div>
-                  <label className="!block !text-sm !font-semibold !text-slate-700">
-                    Last Name
-                  </label>
-                  <input
-                    name="lastName"
-                    value={form.lastName}
-                    onChange={handleChange}
-                    className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
-                  />
+              )}
+
+              {error && (
+                <div className="!bg-red-100 !border !border-red-400 !text-red-700 !px-4 !py-3 !rounded !mb-6">
+                  <p>Error: {error}</p>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label className="!block !text-sm !font-semibold !text-slate-700">
-                  Email
-                </label>
-                <input
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
-                />
-              </div>
+              {!loading && !error && (
+                <form onSubmit={handleSave} className="!space-y-4">
+                  <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-4">
+                    Personal Information
+                  </h2>
 
-              <div>
-                <label className="!block !text-sm !font-semibold !text-slate-700">
-                  Phone Number
-                </label>
-                <input
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
-                />
-              </div>
+                  <div className="!grid !grid-cols-1 md:!grid-cols-2 !gap-4">
+                    <div>
+                      <label className="!block !text-sm !font-semibold !text-slate-700">
+                        First Name
+                      </label>
+                      <input
+                        name="first_name"
+                        value={form.first_name}
+                        onChange={handleChange}
+                        className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
+                      />
+                    </div>
+                    <div>
+                      <label className="!block !text-sm !font-semibold !text-slate-700">
+                        Last Name
+                      </label>
+                      <input
+                        name="last_name"
+                        value={form.last_name}
+                        onChange={handleChange}
+                        className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
+                      />
+                    </div>
+                  </div>
 
-              <button
-                type="submit"
-                className="!mt-4 !px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
-              >
-                Save Changes
-              </button>
-            </form>
+                  <div>
+                    <label className="!block !text-sm !font-semibold !text-slate-700">
+                      Email
+                    </label>
+                    <input
+                      name="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      type="email"
+                      className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="!block !text-sm !font-semibold !text-slate-700">
+                      Phone Number
+                    </label>
+                    <input
+                      name="phone"
+                      value={form.phone}
+                      onChange={handleChange}
+                      type="tel"
+                      className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
+                    />
+                  </div>
+
+                  <div className="!grid !grid-cols-1 md:!grid-cols-2 !gap-4">
+                    <div>
+                      <label className="!block !text-sm !font-semibold !text-slate-700">
+                        Gender
+                      </label>
+                      <select
+                        name="gender"
+                        value={form.gender}
+                        onChange={handleChange}
+                        className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="!block !text-sm !font-semibold !text-slate-700">
+                        Date of Birth
+                      </label>
+                      <input
+                        name="dob"
+                        value={form.dob}
+                        onChange={handleChange}
+                        type="date"
+                        className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="!mt-4 !px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
+                  >
+                    Save Changes
+                  </button>
+                </form>
+              )}
+            </>
           ) : (
             <div>
               <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-4">

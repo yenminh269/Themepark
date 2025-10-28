@@ -261,6 +261,57 @@ app.get("/api/customer/me", requireCustomerAuth, (req, res) => {
   });
 });
 
+//UPDATE CUSTOMER INFO
+app.put("/api/customer/:id", requireCustomerAuth, (req, res) => {
+  const customerId = req.params.id;
+
+  // Ensure customer can only update their own information
+  if (parseInt(customerId) !== req.customer_id) {
+    return res.status(403).json({ error: "Unauthorized to update this customer" });
+  }
+
+  const { first_name, last_name, gender, email, dob, phone } = req.body;
+
+  // Validate required fields
+  if (!first_name || !last_name || !gender || !email || !dob || !phone) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  const sql = `
+    UPDATE customer
+    SET first_name = ?, last_name = ?, gender = ?, email = ?, dob = ?, phone = ?
+    WHERE customer_id = ?
+  `;
+
+  db.query(
+    sql,
+    [first_name, last_name, gender, email, dob, phone, customerId],
+    (err, result) => {
+      if (err) {
+        console.error("UPDATE customer error:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      return res.json({
+        message: "Customer information updated successfully",
+        customer: {
+          customer_id: parseInt(customerId),
+          first_name,
+          last_name,
+          gender,
+          email,
+          dob,
+          phone,
+        },
+      });
+    }
+  );
+});
+
 
 
 //ROUTES BY MINCY
