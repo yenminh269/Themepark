@@ -113,9 +113,34 @@ export const api = {
         return await fetchAPI('/maintenances-employee/id');
     },
 
+    // ===== MERCHANDISE =====
+    getAllMerchandise: async () => {
+        return await fetchAPI('/api/merchandise');
+    },
+    addMerchandise: async (formData) => {
+        return await fetchAPI('/api/merchandise', formData, "POST", false);
+    },
+    updateMerchandise: async (formData, id) => {
+        return await fetchAPI(`/api/merchandise/${id}`, formData, "PUT", false);
+    },
+    deleteMerchandise: async (id) => {
+        return await fetchAPI(`/api/merchandise/${id}`, null, "DELETE", false);
+    },
+
     // ===== INVENTORY =====
     getAllInventories: async () => {
-        return await fetchAPI('/inventories');
+        const result = await fetchAPI('/api/store-inventory');
+        return result.data || [];
+    },
+    getStoreInventory: async (storeId) => {
+        const result = await fetchAPI(`/api/store-inventory/${storeId}`);
+        return result.data || [];
+    },
+    updateInventory: async (storeId, itemId, formData) => {
+        return await fetchAPI(`/api/store-inventory/${storeId}/${itemId}`, formData, "PUT", false);
+    },
+    addToInventory: async (formData) => {
+        return await fetchAPI('/api/store-inventory', formData, "POST", false);
     },
 
     // ===== RIDE ORDERS =====
@@ -158,6 +183,53 @@ export const api = {
 
         const body = await res.json();
         return body.order;
+    },
+
+    // ===== STORE ORDERS =====
+    getStoreOrders: async () => {
+        const token = getCustomerToken();
+        if (!token) throw new Error('No authentication token');
+
+        const res = await fetch(`${SERVER_URL}/api/store-orders`, {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (!res.ok) {
+            throw new Error('Failed to fetch store orders');
+        }
+
+        const body = await res.json();
+        return body.data || [];
+    },
+
+    createStoreOrder: async (orderData) => {
+        const token = getCustomerToken();
+        if (!token) throw new Error('No authentication token');
+
+        const res = await fetch(`${SERVER_URL}/api/store-orders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(orderData),
+        });
+
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || 'Failed to create store order');
+        }
+
+        const body = await res.json();
+        return body;
+    },
+
+    // ===== MANAGER DASHBOARD =====
+    getManagerDashboard: async (department) => {
+        return await fetchAPI(`/api/manager/dashboard/${department}`);
     },
 };
 

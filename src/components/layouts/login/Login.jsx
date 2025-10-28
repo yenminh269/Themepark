@@ -2,11 +2,11 @@ import {  useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Form from 'react-bootstrap/Form';
 import { toast } from 'react-toastify';
-import CustomButton from '../../button/CustomButton';
 
 import './Login.css';
 import InputLogin from '../../input/InputLogin';
 import { api } from '../../../services/api';
+import carnivalImg from '../../../assets/carnival.jpg';
 
 function Login({setAdmin}){
     const [isE,setIsE] = useState(false);
@@ -91,11 +91,7 @@ function Login({setAdmin}){
     <div className="!min-h-screen !bg-gradient-to-br !from-[#EEF5FF] !via-[#B4D4FF] !to-[#86B6F6] !flex !items-center !justify-center !p-6">
         {/* Background Image */}
         <div className="!absolute !inset-0 !opacity-20">
-            <img
-                src="https://images.unsplash.com/photo-1594739584670-1e9be48f6ec3?w=1920&h=1080&fit=crop&q=80"
-                alt="Background"
-                className="!w-full !h-full !object-cover"
-            />
+            
         </div>
 
         <div className="!relative !z-10 !w-full !max-w-6xl !grid md:!grid-cols-2 !gap-8 !items-center">
@@ -111,10 +107,11 @@ function Login({setAdmin}){
                         </p>
                     </div>
                     <img
-                        src="https://images.unsplash.com/photo-1570993492903-ba4c3088f100?w=800&h=600&fit=crop&q=80"
+                        src={carnivalImg}
                         alt="Theme Park"
-                        className="!w-full !h-80 !object-cover !rounded-2xl !shadow-lg"
-                    />
+                        className="!w-full !h-80 !object-cover !rounded-2xl !shadow-lg !border-4 !border-[#749BC2]"
+                        />
+
                     <div className="!mt-6 !grid !grid-cols-3 !gap-4 !text-center">
                         <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
                             <div className="!text-2xl !font-black !text-[#176B87]">50+</div>

@@ -72,7 +72,7 @@ export default function CheckoutPage() {
             </p>
           ) : (
             <table className="!w-full !border !border-[#B4D4FF] !text-left !rounded-md !overflow-hidden">
-              <thead className="!bg-[#B4D4FF] !text-white">
+              <thead className="!bg-[#749BC2] !text-white">
                 <tr>
                   <th className="!px-4 !py-2">Ride</th>
                   <th className="!px-4 !py-2">Price</th>

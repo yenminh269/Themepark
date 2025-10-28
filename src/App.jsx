@@ -15,7 +15,12 @@ import TicketsPage from './components/layouts/customer/TicketsPage.jsx';
 import CheckoutPage from './components/layouts/customer/CheckoutPage.jsx';
 import ConfirmationPage from './components/layouts/customer/ConfirmationPage.jsx';
 import UserInfoPage from './components/layouts/customer/UserInfoPage.jsx';
+import StoresPage from './components/layouts/customer/StoresPage.jsx';
+import StorePage from './components/layouts/customer/StorePage.jsx';
+import StoreCheckoutPage from './components/layouts/customer/StoreCheckoutPage.jsx';
 import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
+import EmployeeRouter from './components/EmployeeRouter.jsx';
+import EmployeeDashboard from './components/layouts/employee/EmployeeDashboard.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 // Component to conditionally render Navbar based on route
@@ -26,41 +31,48 @@ function AppContent() {
  return (
     <>
       {!hideNavbar && <Navbar />}
-<Routes>
+      <Routes>
+        {/* ===== PUBLIC ROUTES (No Authentication Required) ===== */}
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
 
-        {/*Customer routes - Protected */}
+        {/* ===== CUSTOMER ROUTES (Require Customer Authentication) ===== */}
+        {/* Store browsing (public) */}
+        <Route path="/stores" element={<StoresPage />} />
+        <Route path="/store/:storeId" element={<StorePage />} />
+
+        {/* Protected customer features */}
         <Route path="/tickets" element={<ProtectedRoute><TicketsPage /></ProtectedRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
         <Route path="/confirmation" element={<ProtectedRoute><ConfirmationPage /></ProtectedRoute>} />
         <Route path="/userinfo" element={<ProtectedRoute><UserInfoPage /></ProtectedRoute>} />
+        <Route path="/store-checkout" element={<ProtectedRoute><StoreCheckoutPage /></ProtectedRoute>} />
 
-        {/*Maintenance employee route */}
-        <Route path="/maintenance" element={<Maintenance />} />
+        {/* ===== EMPLOYEE ROUTES (Require Employee Authentication) ===== */}
+        <Route path="/employee" element={<ProtectedRoute type="employee"><EmployeeRouter /></ProtectedRoute>} />
+        <Route path="/employee-dashboard" element={<ProtectedRoute type="employee"><EmployeeDashboard /></ProtectedRoute>} />
+        <Route path="/maintenance" element={<ProtectedRoute type="employee" allowedRoles={['Mechanical Employee']}><Maintenance /></ProtectedRoute>} />
+        <Route path="/manager" element={<ProtectedRoute type="employee" allowedRoles={['Store Manager', 'General Manager']}><ManagerPage /></ProtectedRoute>} />
 
-        {/* Admin routes */}
-        <Route path="/admin/*" element={<AdminMain />} />
+        {/* ===== ADMIN ROUTES (Protected by AdminMain component internally) ===== */}
+        <Route path="/admin/*" element={<ProtectedRoute type="employee" allowedRoles={['General Manager']}><AdminMain /></ProtectedRoute>} />
 
-        {/*Maintenance employee route */}
-        <Route path="/manager" element={<ManagerPage />} />
-
-        {/* Catch-all redirect */}
+        {/* ===== CATCH-ALL ===== */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    <ToastContainer
-  position="top-right"
-autoClose={3000}
-hideProgressBar={false}
-newestOnTop={false}
-closeOnClick
-rtl={false}
-pauseOnFocusLoss
-draggable
-pauseOnHover
-theme="colored"
-/>
+        <ToastContainer
+      position="top-right"
+    autoClose={3000}
+    hideProgressBar={false}
+    newestOnTop={false}
+    closeOnClick
+    rtl={false}
+    pauseOnFocusLoss
+    draggable
+    pauseOnHover
+    theme="colored"
+    />
 </>
 );
 }

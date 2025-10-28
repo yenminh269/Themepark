@@ -47,38 +47,44 @@ function ProtectedRoute({ children, type = 'customer', allowedRoles = [] }) {
 
   // Check employee authentication
   if (type === 'employee') {
-    // Employee stores: 'employee' (object with job_title)
-    const employeeData = localStorage.getItem('employee');
+  // Employee stores: 'employee' (object with job_title)
+  const employeeData = localStorage.getItem('employee');
+    console.log('ProtectedRoute: Checking employee auth for path:', window.location.pathname);
+  console.log('ProtectedRoute: employeeData:', employeeData);
 
-    // Not logged in as employee
-    if (!employeeData) {
+  // Not logged in as employee
+  if (!employeeData) {
+      console.log('ProtectedRoute: No employee data, redirecting to login');
       return <Navigate to="/login" replace />;
     }
 
     // If specific roles are required, check job_title
     if (allowedRoles.length > 0) {
-      let employee = {};
-      try {
-        employee = JSON.parse(employeeData);
-      } catch (e) {
-        console.error('Error parsing employee data:', e);
-        return <Navigate to="/login" replace />;
-      }
+    let employee = {};
+    try {
+    employee = JSON.parse(employeeData);
+    } catch (e) {
+    console.error('Error parsing employee data:', e);
+    return <Navigate to="/login" replace />;
+    }
 
-      const jobTitle = employee.job_title;
+    const jobTitle = employee.job_title;
+      console.log('ProtectedRoute: Checking role - jobTitle:', jobTitle, 'allowedRoles:', allowedRoles);
 
-      // Check if employee's job_title is in the allowed roles
-      if (!allowedRoles.includes(jobTitle)) {
-        // Redirect based on job title
-        if (jobTitle === 'Mechanical Employee') {
-          return <Navigate to="/maintenance" replace />;
-        } else if (jobTitle === 'Manager' || jobTitle === 'General Manager') {
-          return <Navigate to="/admin" replace />;
-        } else {
-          return <Navigate to="/" replace />;
+    // Check if employee's job_title is in the allowed roles
+    if (!allowedRoles.includes(jobTitle)) {
+    console.log('ProtectedRoute: Role not allowed, redirecting based on job title');
+    // Redirect based on job title
+    if (jobTitle === 'Mechanical Employee') {
+    return <Navigate to="/maintenance" replace />;
+    } else if (jobTitle === 'Manager' || jobTitle === 'General Manager') {
+    return <Navigate to="/admin" replace />;
+    } else {
+        return <Navigate to="/" replace />;
         }
       }
     }
+    console.log('ProtectedRoute: Employee authentication passed');
 
     return children;
   }

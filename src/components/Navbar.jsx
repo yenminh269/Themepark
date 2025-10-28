@@ -1,13 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "./layouts/customer/AuthContext";
 import { useCart } from "./layouts/customer/CartContext";
+import { getImageUrl } from "../services/api";
 
 export default function Navbar() {
   const { user, signout } = useAuth();
-  const { cart } = useCart();
+  const { cart, removeFromCart, addToCart, total } = useCart();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [cartDropdownOpen, setCartDropdownOpen] = useState(false);
+  const cartDropdownRef = useRef(null);
 
   const handleGetTickets = () => {
     if (user) navigate("/tickets");
@@ -19,6 +22,23 @@ export default function Navbar() {
     navigate("/");
     setMobileMenuOpen(false);
   };
+
+  // Close cart dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (cartDropdownRef.current && !cartDropdownRef.current.contains(event.target)) {
+        setCartDropdownOpen(false);
+      }
+    };
+
+    if (cartDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [cartDropdownOpen]);
 
   return (
     <nav className="!sticky !top-0 !z-50 !bg-white/90 backdrop-blur-lg !border-b !border-[#B4D4FF]/30 !shadow-sm">
@@ -32,9 +52,13 @@ export default function Navbar() {
             }}
             className="!flex !items-center !gap-2 !text-2xl !font-bold !text-[#176B87] hover:!scale-105 !transition-transform !bg-transparent !border-none"
           >
-            <span className="!text-3xl">🎢</span>
+            <img 
+              src="https://cdn-icons-png.flaticon.com/512/14023/14023195.png" 
+              alt="Velocity icon" 
+              className="!h-[1em] !w-[1em] object-contain inline-block"
+            /> 
             <span className="!bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !bg-clip-text !text-transparent">
-              VelocityValley
+              Velocity Valley
             </span>
           </button>
 
@@ -50,10 +74,19 @@ export default function Navbar() {
               Home
             </button>
             <button
-              onClick={handleGetTickets}
+            onClick={handleGetTickets}
+            className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
+            >
+            🎟️ Get Tickets
+            </button>
+            <button
+              onClick={() => {
+                navigate("/stores");
+                setMobileMenuOpen(false);
+              }}
               className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
             >
-              🎟️ Get Tickets
+              🛍️ Shop
             </button>
             {user && (
               <button
@@ -73,17 +106,86 @@ export default function Navbar() {
             {user ? (
               <>
                 {cart.length > 0 && (
-                  <button
-                    onClick={() => navigate("/tickets")}
-                    className="!relative !p-2 !text-[#176B87] hover:!bg-[#EEF5FF] !rounded-full !transition !bg-transparent !border-none"
-                  >
-                    <span className="!text-2xl">🛒</span>
-                    <span className="!absolute -!top-1 -!right-1 !bg-red-500 !text-white !text-xs !w-5 !h-5 !rounded-full !flex !items-center !justify-center !font-bold">
-                      {cart.length}
-                    </span>
-                  </button>
+                  <div className="!relative" ref={cartDropdownRef}>
+                    <button
+                      onClick={() => setCartDropdownOpen(!cartDropdownOpen)}
+                      className="!relative !p-2 !text-[#176B87] hover:!bg-[#EEF5FF] !rounded-full !transition !bg-transparent !border-none"
+                    >
+                      <span className="!text-2xl">🛒</span>
+                      <span className="!absolute -!top-1 -!right-1 !bg-red-500 !text-white !text-xs !w-5 !h-5 !rounded-full !flex !items-center !justify-center !font-bold">
+                        {cart.length}
+                      </span>
+                    </button>
+
+                    {/* Cart Dropdown */}
+                    {cartDropdownOpen && (
+                      <div className="!absolute !right-0 !mt-2 !w-96 !bg-white !rounded-xl !shadow-2xl !border !border-[#B4D4FF] !z-50 !max-h-[500px] !overflow-hidden !flex !flex-col">
+                        <div className="!p-4 !border-b !border-[#B4D4FF] !bg-gradient-to-r !from-[#EEF5FF] !to-[#B4D4FF]/20">
+                          <h3 className="!text-lg !font-bold !text-[#176B87]">Your Cart</h3>
+                          <p className="!text-xs !text-gray-600">{cart.length} ride{cart.length !== 1 ? 's' : ''} selected</p>
+                        </div>
+
+                        <div className="!overflow-y-auto !max-h-[300px] !p-2">
+                          {cart.map((item) => (
+                            <div
+                              key={item.id}
+                              className="!flex !gap-3 !p-3 !mb-2 !bg-[#EEF5FF]/50 hover:!bg-[#EEF5FF] !rounded-lg !transition"
+                            >
+                              <img
+                                src={getImageUrl(item.photo_path, item.name)}
+                                alt={item.name}
+                                className="!w-16 !h-16 !object-cover !rounded-lg !border !border-[#B4D4FF]"
+                              />
+                              <div className="!flex-1">
+                                <h4 className="!font-semibold !text-[#176B87] !text-sm">{item.name}</h4>
+                                <p className="!text-xs !text-gray-600">${item.price.toFixed(2)} each</p>
+                                <div className="!flex !gap-2 !items-center !mt-1">
+                                  <button
+                                    onClick={() => removeFromCart(item.id)}
+                                    className="!px-2 !py-1 !bg-white !border !border-[#176B87] !text-[#176B87] !rounded !text-xs hover:!bg-[#176B87] hover:!text-white !transition"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="!text-xs !font-semibold !text-[#176B87]">
+                                    {item.quantity}
+                                  </span>
+                                  <button
+                                    onClick={() => addToCart(item)}
+                                    className="!px-2 !py-1 !bg-[#176B87] !text-white !rounded !text-xs hover:!opacity-90 !transition !border-none"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="!text-right">
+                                <p className="!font-bold !text-[#176B87] !text-sm">
+                                  ${(item.price * item.quantity).toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="!p-4 !border-t !border-[#B4D4FF] !bg-gradient-to-r !from-[#EEF5FF] !to-[#B4D4FF]/20">
+                          <div className="!flex !justify-between !items-center !mb-3">
+                            <span className="!font-bold !text-[#176B87]">Total:</span>
+                            <span className="!font-bold !text-[#176B87] !text-xl">${total.toFixed(2)}</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              navigate("/tickets");
+                              setCartDropdownOpen(false);
+                            }}
+                            className="!w-full !px-4 !py-2 !bg-[#176B87] !text-white !rounded-lg !font-semibold hover:!opacity-90 !transition !border-none"
+                          >
+                            View Full Cart & Checkout
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
-                <span className="!text-sm !text-gray-600">
+                <span className="!text-lg !text-gray-600 mt-3">
                   Hi, <strong>{user.first_name || user.email?.split('@')[0]}</strong>
                 </span>
                 <button
@@ -140,13 +242,22 @@ export default function Navbar() {
               Home
             </button>
             <button
+            onClick={() => {
+            handleGetTickets();
+            setMobileMenuOpen(false);
+            }}
+            className="!block !w-full !text-left !px-4 !py-2 !text-gray-700 hover:!bg-[#EEF5FF] !rounded-lg !bg-transparent !border-none"
+            >
+            🎟️ Get Tickets
+            </button>
+            <button
               onClick={() => {
-                handleGetTickets();
+                navigate("/stores");
                 setMobileMenuOpen(false);
               }}
               className="!block !w-full !text-left !px-4 !py-2 !text-gray-700 hover:!bg-[#EEF5FF] !rounded-lg !bg-transparent !border-none"
             >
-              🎟️ Get Tickets
+              🛍️ Shop
             </button>
             {user ? (
               <>
