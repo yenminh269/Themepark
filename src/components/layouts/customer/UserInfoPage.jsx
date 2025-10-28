@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import PageFooter from "./PageFooter";
 import "./Homepage.css";
+import { fetchCurrentCustomer, updateCustomer } from "../../../services/api";
 
 export default function UserInfoPage() {
   const { user, signout } = useAuth();
@@ -26,33 +27,22 @@ export default function UserInfoPage() {
     const fetchCustomerData = async () => {
       try {
         setLoading(true);
-        const token = user?.token || localStorage.getItem("customer_token");
+        const customer = await fetchCurrentCustomer();
 
-        if (!token) {
+        if (!customer) {
           setError("No authentication token found. Please log in.");
           setLoading(false);
           return;
         }
 
-        const response = await fetch("http://localhost:3001/api/customer/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch customer data");
-        }
-
-        const result = await response.json();
-        setCustomerData(result.customer);
+        setCustomerData(customer);
         setForm({
-          first_name: result.customer.first_name || "",
-          last_name: result.customer.last_name || "",
-          email: result.customer.email || "",
-          phone: result.customer.phone || "",
-          gender: result.customer.gender || "",
-          dob: result.customer.dob ? result.customer.dob.split('T')[0] : "",
+          first_name: customer.first_name || "",
+          last_name: customer.last_name || "",
+          email: customer.email || "",
+          phone: customer.phone || "",
+          gender: customer.gender || "",
+          dob: customer.dob ? customer.dob.split('T')[0] : "",
         });
         setError(null);
       } catch (err) {
@@ -75,31 +65,11 @@ export default function UserInfoPage() {
     e.preventDefault();
 
     try {
-      const token = user?.token || localStorage.getItem("customer_token");
-
-      if (!token) {
-        alert("No authentication token found. Please log in again.");
-        return;
-      }
-
-      const response = await fetch(`http://localhost:3001/api/customer/${customerData.customer_id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update customer information");
-      }
-
-      const result = await response.json();
+      const updatedCustomer = await updateCustomer(customerData.customer_id, form);
       alert("Changes saved successfully!");
 
       // Refresh the data
-      setCustomerData(result.customer);
+      setCustomerData(updatedCustomer);
     } catch (err) {
       console.error("Error saving customer data:", err);
       alert(`Error saving changes: ${err.message}`);

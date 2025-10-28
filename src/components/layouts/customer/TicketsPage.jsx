@@ -4,6 +4,7 @@ import { useCart } from "./CartContext";
 import PageFooter from "./PageFooter";
 import "./Homepage.css";
 import { useState, useEffect } from "react";
+import { api, getImageUrl } from "../../../services/api";
 
 export default function TicketsPage() {
   const { user, signout } = useAuth();
@@ -18,13 +19,9 @@ export default function TicketsPage() {
     const fetchRides = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:3001/rides');
-        if (!response.ok) {
-          throw new Error('Failed to fetch rides');
-        }
-        const result = await response.json();
+        const result = await api.getAllRides();
         // Map backend data to match cart structure (id instead of ride_id)
-        const ridesData = result.data.map(ride => ({
+        const ridesData = result.map(ride => ({
           id: ride.ride_id,
           name: ride.name,
           price: parseFloat(ride.price),
@@ -124,9 +121,7 @@ export default function TicketsPage() {
               {ride.photo_path && (
                 <div className="!w-full !h-48 !overflow-hidden !bg-gray-100">
                   <img
-                    src={ride.photo_path.startsWith('http')
-                      ? ride.photo_path
-                      : `http://localhost:3001${ride.photo_path}`}
+                    src={getImageUrl(ride.photo_path)}
                     alt={ride.name}
                     className="!w-full !h-full !object-cover"
                     onError={(e) => {

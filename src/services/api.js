@@ -1,4 +1,4 @@
-const SERVER_URL =
+export const SERVER_URL =
   import.meta.env.PROD
     ? import.meta.env.VITE_API_URL
     : 'http://localhost:3001';
@@ -196,6 +196,29 @@ export async function fetchCurrentCustomer() {
     if (!res.ok) {
         setCustomerToken(null);
         return null;
+    }
+
+    const body = await res.json();
+    return body.customer;
+}
+
+// UPDATE CUSTOMER
+export async function updateCustomer(customerId, customerData) {
+    const token = getCustomerToken();
+    if (!token) throw new Error('No authentication token');
+
+    const res = await fetch(`${SERVER_URL}/api/customer/${customerId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(customerData),
+    });
+
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Update failed');
     }
 
     const body = await res.json();
