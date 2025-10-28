@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import db from './config/db.js';
 import { fileURLToPath } from 'url';
+import "dotenv/config";
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
