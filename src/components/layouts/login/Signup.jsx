@@ -1,22 +1,55 @@
 import {  useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
 import Row from 'react-bootstrap/Row';
-import FloatingLabel from 'react-bootstrap/FloatingLabel'; 
+import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import InputLogin from '../../input/InputLogin';
 import CustomButton from '../../button/CustomButton';
+import { api } from '../../../services/api';
 
 function SignUp() {
   const [validated, setValidated] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     const form = event.currentTarget;
     if (form.checkValidity() === false) {
-      event.preventDefault();
-      event.stopPropagation();
+      setValidated(true);
+      return;
     }
 
     setValidated(true);
+    setLoading(true);
+
+    try {
+      // Extract form data
+      const formData = {
+        email: form.elements[0].value,
+        password: form.elements[1].value,
+        first_name: form.elements[2].value,
+        last_name: form.elements[3].value,
+        dob: form.elements[4].value,
+        phone: form.elements[5].value,
+        gender: form.elements[6].value
+      };
+
+      // Call signup API
+      await api.customerSignup(formData);
+
+      alert('Account created successfully! Please log in.');
+      navigate('/login');
+
+    } catch (error) {
+      console.error('Signup error:', error);
+      alert(error.message || 'Failed to create account. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,7 +71,7 @@ function SignUp() {
 
       <Row className='w-230 gap-4 flex mt-5 '>
             <InputLogin className="" size="2" type="date" label="Date of birth" feedback="Please provide a valid birthdate." />
-            <InputLogin size="3" type="tel" label="Phone Number" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number (123-456-7890)" />
+            <InputLogin size="4" type="tel" label="Phone Number (000-000-0000)" placeholder="123-456-7890" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number in format: 000-000-0000" />
           
           <Form.Group as={Col} md="3" controlId="validationCustom07">
             <FloatingLabel label="Gender">
@@ -64,7 +97,7 @@ function SignUp() {
               feedbackType="invalid"/>
         </Form.Group>
 
-        <div><CustomButton text="Sign Up"/></div>
+        <div><CustomButton text={loading ? "Signing Up..." : "Sign Up"} disabled={loading}/></div>
       </div>
     </Form>
   </div>

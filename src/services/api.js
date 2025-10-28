@@ -88,20 +88,11 @@ export const api = {
     getAllMaintenances: async() => {
         return await fetchAPI('/maintenances');
     },
-    
-    // //Get all inventory items
-    // getAllInventories: async() => {
-    //     return await fetchAPI('/inventories')
-    // },
-    // //Get maintenance schedule by employee Id
-    // getEmployeeMaintenances: async() => {
-    //     return await fetchAPI('/maintenances-employee/id');
-    // },
-    // //Get ride orders based on customer Id
-    // getRideOrders: async() => {
-    //     return await fetchAPI('/rideorders/id');
-    // },
-    //Get customer info based on customer Id
 
     
+    //Employee login
+    employeeLogin: async(formData) => {
+        return await fetchAPI('/employee/login', formData, "POST", false);
+    },
+
 }

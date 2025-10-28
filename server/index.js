@@ -4,6 +4,7 @@ import env from "dotenv";
 import mysql from 'mysql'
 import multer from 'multer';
 import path from 'path';
+import bcrypt from 'bcryptjs';
 
 const app = express();
 const PORT = 3001;
@@ -445,50 +446,71 @@ app.delete('/store/:id', async (req, res) => {
     res.json({ message: "Store marked as deleted successfully", data: result});
   });
 });
-// //Get all the maintenance schedule
-// app.get('/maintenances', (req, res) => {
-//     try{
-//         res.json({success: true})
 
-//     }catch(error){
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error fetching rides',
-//             error: error.message
-//         })
-//     }
-// })
 
-// //Get all inventory items
-// app.get('/inventories', (req, res) => {
-//     try{
-//         res.json({success: true})
 
-//     }catch(error){
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error fetching rides',
-//             error: error.message
-//         })
-//     }
-// })
 
-// //Get maintenance schedule by employee Id
-// app.get('/maintenances-employee/id', (req, res) => {
-//     try{
-//         res.json({success: true})
+// Employee Login
+app.post('/employee/login', async (req, res) => {
+  const { email, password } = req.body;
 
-//     }catch(error){
-//         res.status(500).json({
-//             success: false,
-//             message: 'Error fetching rides',
-//             error: error.message
-//         })
-//     }
-// })
-// //Get ride orders based on customer Id
-// //Get customer info based on customer Id
-// //.....
+  // Validate required fields
+  if (!email || !password) {
+    return res.status(400).json({
+      message: 'Email and password are required'
+    });
+  }
+
+  try {
+    // Find employee by email and check if not terminated or deleted
+    const sql = `SELECT employee_id, email, password, first_name, last_name, job_title
+                 FROM employee
+                 WHERE email = ? AND deleted_at IS NULL AND terminate_date IS NULL`;
+    const employees = await new Promise((resolve, reject) => {
+      db.query(sql, [email], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+
+    if (employees.length === 0) {
+      return res.status(401).json({
+        message: 'Invalid email or password'
+      });
+    }
+
+    const employee = employees[0];
+
+    // Compare password with hashed password
+    const isPasswordValid = await bcrypt.compare(password, employee.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: 'Invalid email or password'
+      });
+    }
+
+    // Return employee info (excluding password)
+    res.json({
+      message: 'Login successful',
+      data: {
+        employee_id: employee.employee_id,
+        email: employee.email,
+        first_name: employee.first_name,
+        last_name: employee.last_name,
+        job_title: employee.job_title,
+        is_employee: true
+      }
+    });
+
+  } catch (err) {
+    console.error('Error during employee login:', err);
+    return res.status(500).json({
+      message: 'Error during login',
+      error: err.message
+    });
+  }
+});
 
 
 app.listen(PORT, () => {
