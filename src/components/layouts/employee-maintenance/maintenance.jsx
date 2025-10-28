@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./maintenance.css";
-import { api, SERVER_URL } from "../services/api";
+import { api, SERVER_URL } from "../../../services/api";
 
 export default function Maintenance() {
   const [maintenanceData, setMaintenanceData] = useState([]);

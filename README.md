@@ -1,16 +1,82 @@
-# React + Vite
+# Theme Park Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack web application for managing theme park operations, built with React, Express, and MySQL.
 
-Currently, two official plugins are available:
+## Setup Instructions
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Prerequisites
+- Node.js (v16 or higher)
+- MySQL Server
+- npm or yarn
 
-## React Compiler
+### Database Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Install MySQL** (if not already installed):
+   - Download from https://dev.mysql.com/downloads/mysql/
+   - Or use XAMPP/WAMP for Windows
 
-## Expanding the ESLint configuration
+2. **Configure Environment Variables**:
+   - Copy the `.env` file and update with your MySQL credentials:
+   ```env
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=your_mysql_password
+   DB_NAME=themepark
+   ```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+3. **Set up the Database**:
+   ```bash
+   # Run the database setup script
+   node setup-db.js
+   ```
+   This will:
+   - Create the `themepark` database
+   - Import the schema from `src.sql`
+   - Add sample employee data
+
+### Running the Application
+
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   cd server && npm install
+   ```
+
+2. **Start the Backend Server**:
+   ```bash
+   cd server
+   node index.js
+   ```
+   Server will run on http://localhost:3001
+
+3. **Start the Frontend** (in a new terminal):
+   ```bash
+   npm run dev
+   ```
+   Frontend will run on http://localhost:5173
+
+### Testing the Application
+
+- Visit http://localhost:5173
+- Admin login credentials (sample data):
+  - Email: john.doe@themepark.com
+  - Password: password123
+- Check admin employees page at http://localhost:5173/admin/employees
+
+## Features
+
+- Customer authentication and registration
+- Admin dashboard for managing employees, rides, and stores
+- Employee management system
+- Ride and store management
+- Order management for ride tickets
+- Responsive UI with modern design
+
+## Tech Stack
+
+- **Frontend**: React, Vite, Tailwind CSS, Chakra UI
+- **Backend**: Node.js, Express.js
+- **Database**: MySQL
+- **Authentication**: JWT tokens
+- **State Management**: React Context
