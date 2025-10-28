@@ -240,7 +240,7 @@ function requireCustomerAuth(req, res, next) {
   let decoded;
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET || "dev-secret");
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: "Invalid token" });
   }
 
@@ -491,9 +491,9 @@ app.post('/ride-maintenance', async (req, res) => {
     const scheduleSql = `INSERT INTO employee_maintenance_job(employee_id, maintenance_id, work_date, worked_hour)
       VALUES(?, ?, ?, ?)`;
     
-    const scheduleResult = await new Promise((resolve, reject) => {
-      db.query(scheduleSql, [employee_id, maintenance_id, date, hour], (err, results) => {
-        if (err) reject(err);
+    await new Promise((resolve, reject) => {
+      db.query(scheduleSql, [employee_id, maintenance_id, date, hour], (scheduleErr, results) => {
+        if (scheduleErr) reject(scheduleErr);
         else resolve(results);
       });
     });
@@ -816,6 +816,744 @@ app.post('/employee/login', async (req, res) => {
       message: 'Error during login',
       error: err.message
     });
+  }
+});
+
+// ==================== MERCHANDISE MANAGEMENT ====================
+// Get all merchandise
+app.get('/api/merchandise', (req, res) => {
+  const sql = 'SELECT * FROM merchandise WHERE deleted_at IS NULL ORDER BY created_at DESC';
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching merchandise:', err);
+      return res.status(500).json({ error: 'Failed to fetch merchandise' });
+    }
+    res.json({ data: results });
+  });
+});
+
+// Add new merchandise
+app.post('/api/merchandise', (req, res) => {
+  const { name, price, quantity, description, type } = req.body;
+
+  if (!name || !price || !quantity || !description || !type) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
+
+  const sql = `
+    INSERT INTO merchandise (name, price, quantity, description, type)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+
+  db.query(sql, [name, price, quantity, description, type], (err, result) => {
+    if (err) {
+      console.error('Error adding merchandise:', err);
+      return res.status(500).json({ error: 'Failed to add merchandise', message: err.message });
+    }
+    res.json({
+      message: 'Merchandise added successfully',
+      item_id: result.insertId
+    });
+  });
+});
+
+// Update merchandise
+app.put('/api/merchandise/:id', (req, res) => {
+  const { name, price, quantity, description, type } = req.body;
+  const itemId = req.params.id;
+
+  const sql = `
+    UPDATE merchandise
+    SET name = ?, price = ?, quantity = ?, description = ?, type = ?
+    WHERE item_id = ?
+  `;
+
+  db.query(sql, [name, price, quantity, description, type, itemId], (err, result) => {
+    if (err) {
+      console.error('Error updating merchandise:', err);
+      return res.status(500).json({ error: 'Failed to update merchandise' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Merchandise not found' });
+    }
+    res.json({ message: 'Merchandise updated successfully' });
+  });
+});
+
+// Delete merchandise (soft delete)
+app.delete('/api/merchandise/:id', (req, res) => {
+  const itemId = req.params.id;
+  const sql = 'UPDATE merchandise SET deleted_at = NOW() WHERE item_id = ?';
+
+  db.query(sql, [itemId], (err, result) => {
+    if (err) {
+      console.error('Error deleting merchandise:', err);
+      return res.status(500).json({ error: 'Failed to delete merchandise' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Merchandise not found' });
+    }
+    res.json({ message: 'Merchandise deleted successfully' });
+  });
+});
+
+// ==================== STORE INVENTORY MANAGEMENT ====================
+// Get inventory for all stores
+app.get('/api/store-inventory', (req, res) => {
+  // First check if store_inventory table has any data
+  const checkSql = 'SELECT COUNT(*) as count FROM store_inventory';
+
+  db.query(checkSql, (checkErr, checkResults) => {
+    if (checkErr) {
+      console.error('Error checking store_inventory:', checkErr);
+      return res.status(500).json({ error: 'Failed to check inventory table' });
+    }
+
+    console.log('Store inventory count:', checkResults[0].count);
+
+    if (checkResults[0].count === 0) {
+      return res.json({ data: [] });
+    }
+
+    const sql = `
+      SELECT si.store_id, si.item_id, si.stock_quantity, si.created_at, si.updated_at,
+             s.name as store_name, s.type as store_type,
+             m.name as item_name, m.price, m.description, m.type as item_type
+      FROM store_inventory si
+      JOIN store s ON si.store_id = s.store_id
+      JOIN merchandise m ON si.item_id = m.item_id
+      WHERE s.deleted_at IS NULL AND m.deleted_at IS NULL
+      ORDER BY s.name, m.name
+    `;
+
+    console.log('Executing inventory SQL');
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching store inventory:', err);
+        return res.status(500).json({ error: 'Failed to fetch inventory', details: err.message });
+      }
+      console.log('Inventory results:', results ? results.length : 'null');
+      res.json({ data: results || [] });
+    });
+  });
+});
+
+// Get inventory for a specific store
+app.get('/api/store-inventory/:storeId', (req, res) => {
+  const storeId = req.params.storeId;
+  const sql = `
+    SELECT si.store_id, si.item_id, si.stock_quantity, si.created_at, si.updated_at,
+           m.name as item_name, m.price, m.description, m.type as item_type, m.quantity as total_quantity
+    FROM store_inventory si
+    JOIN merchandise m ON si.item_id = m.item_id
+    WHERE si.store_id = ? AND m.deleted_at IS NULL
+    ORDER BY m.name
+  `;
+
+  db.query(sql, [storeId], (err, results) => {
+    if (err) {
+      console.error('Error fetching store inventory:', err);
+      return res.status(500).json({ error: 'Failed to fetch inventory' });
+    }
+    res.json({ data: results });
+  });
+});
+
+// Update stock quantity for a store-item combination
+app.put('/api/store-inventory/:storeId/:itemId', (req, res) => {
+  const { storeId, itemId } = req.params;
+  const { stock_quantity } = req.body;
+
+  if (stock_quantity < 0) {
+    return res.status(400).json({ error: 'Stock quantity cannot be negative' });
+  }
+
+  const sql = `
+    UPDATE store_inventory
+    SET stock_quantity = ?
+    WHERE store_id = ? AND item_id = ?
+  `;
+
+  db.query(sql, [stock_quantity, storeId, itemId], (err, result) => {
+    if (err) {
+      console.error('Error updating inventory:', err);
+      return res.status(500).json({ error: 'Failed to update inventory' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Inventory item not found' });
+    }
+    res.json({ message: 'Inventory updated successfully' });
+  });
+});
+
+// Add item to store inventory
+app.post('/api/store-inventory', (req, res) => {
+  const { store_id, item_id, stock_quantity } = req.body;
+
+  if (!store_id || !item_id || stock_quantity === undefined) {
+    return res.status(400).json({ error: 'Store ID, item ID, and stock quantity are required' });
+  }
+
+  if (stock_quantity < 0) {
+    return res.status(400).json({ error: 'Stock quantity cannot be negative' });
+  }
+
+  const sql = `
+    INSERT INTO store_inventory (store_id, item_id, stock_quantity)
+    VALUES (?, ?, ?)
+    ON DUPLICATE KEY UPDATE stock_quantity = VALUES(stock_quantity)
+  `;
+
+  db.query(sql, [store_id, item_id, stock_quantity], (invErr) => {
+    if (invErr) {
+      console.error('Error adding to inventory:', invErr);
+      return res.status(500).json({ error: 'Failed to add to inventory', message: invErr.message });
+    }
+    res.json({ message: 'Item added to inventory successfully' });
+  });
+});
+
+// ==================== STORE ORDERS ====================
+// Create a new store order (customer purchasing merchandise)
+app.post('/api/store-orders', requireCustomerAuth, async (req, res) => {
+  try {
+    const { cart, total, payment_method, store_id } = req.body;
+    const customer_id = req.customer_id;
+
+    if (!cart || cart.length === 0) {
+      return res.status(400).json({ error: 'Cart is empty' });
+    }
+
+    if (!payment_method || !store_id) {
+      return res.status(400).json({ error: 'Payment method and store ID are required' });
+    }
+
+    // Verify all items are available in the selected store
+    for (const item of cart) {
+      const checkSql = `
+        SELECT si.stock_quantity, m.quantity as total_quantity
+        FROM store_inventory si
+        JOIN merchandise m ON si.item_id = m.item_id
+        WHERE si.store_id = ? AND si.item_id = ? AND m.deleted_at IS NULL
+      `;
+      const inventory = await new Promise((resolve, reject) => {
+        db.query(checkSql, [store_id, item.id], (err, results) => {
+          if (err) reject(err);
+          else resolve(results);
+        });
+      });
+
+      if (inventory.length === 0) {
+        return res.status(400).json({ error: `Item ${item.name} is not available in this store` });
+      }
+
+      if (inventory[0].stock_quantity < item.quantity) {
+        return res.status(400).json({ error: `Insufficient stock for ${item.name}. Available: ${inventory[0].stock_quantity}` });
+      }
+    }
+
+    // Create the store_order
+    const orderSql = `
+      INSERT INTO store_order (store_id, customer_id, order_date, total_amount, status, payment_method)
+      VALUES (?, ?, CURDATE(), ?, 'completed', ?)
+    `;
+
+    const orderResult = await new Promise((resolve, reject) => {
+      db.query(orderSql, [store_id, customer_id, total, payment_method], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    const store_order_id = orderResult.insertId;
+
+    // Insert order details and update inventory
+    const detailPromises = cart.map((item) => {
+      const detailSql = `
+        INSERT INTO store_order_detail (store_order_id, item_id, quantity, price_per_item, subtotal)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+      const subtotal = item.price * item.quantity;
+
+      return new Promise((resolve, reject) => {
+        db.query(
+          detailSql,
+          [store_order_id, item.id, item.quantity, item.price, subtotal],
+          (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+          }
+        );
+      });
+    });
+
+    // Update inventory quantities
+    const inventoryPromises = cart.map((item) => {
+      const updateSql = `
+        UPDATE store_inventory
+        SET stock_quantity = stock_quantity - ?
+        WHERE store_id = ? AND item_id = ?
+      `;
+
+      return new Promise((resolve, reject) => {
+        db.query(updateSql, [item.quantity, store_id, item.id], (err, result) => {
+          if (err) reject(err);
+          else resolve(result);
+        });
+      });
+    });
+
+    await Promise.all([...detailPromises, ...inventoryPromises]);
+
+    res.json({
+      message: 'Store order created successfully',
+      order: {
+        store_order_id,
+        store_id,
+        customer_id,
+        total_amount: total,
+        payment_method,
+        status: 'completed',
+        order_date: new Date().toISOString().split('T')[0],
+      },
+    });
+  } catch (err) {
+    console.error('Error creating store order:', err);
+    res.status(500).json({ error: 'Failed to create order', message: err.message });
+  }
+});
+
+// Get customer's store orders
+app.get('/api/store-orders', requireCustomerAuth, async (req, res) => {
+  try {
+    const customer_id = req.customer_id;
+
+    const sql = `
+      SELECT so.store_order_id, so.store_id, s.name as store_name, so.order_date,
+             so.total_amount, so.status, so.payment_method,
+             sod.item_id, m.name as item_name, sod.quantity, sod.price_per_item, sod.subtotal
+      FROM store_order so
+      LEFT JOIN store_order_detail sod ON so.store_order_id = sod.store_order_id
+      LEFT JOIN merchandise m ON sod.item_id = m.item_id
+      LEFT JOIN store s ON so.store_id = s.store_id
+      WHERE so.customer_id = ?
+      ORDER BY so.order_date DESC, so.store_order_id DESC
+    `;
+
+    db.query(sql, [customer_id], (err, results) => {
+      if (err) {
+        console.error('Error fetching store orders:', err);
+        return res.status(500).json({ error: 'Failed to fetch orders' });
+      }
+
+      // Group order details by order_id
+      const ordersMap = {};
+      results.forEach((row) => {
+        if (!ordersMap[row.store_order_id]) {
+          ordersMap[row.store_order_id] = {
+            store_order_id: row.store_order_id,
+            store_id: row.store_id,
+            store_name: row.store_name,
+            order_date: row.order_date,
+            total_amount: row.total_amount,
+            status: row.status,
+            payment_method: row.payment_method,
+            items: [],
+          };
+        }
+        if (row.item_id) {
+          ordersMap[row.store_order_id].items.push({
+            item_id: row.item_id,
+            item_name: row.item_name,
+            quantity: row.quantity,
+            price_per_item: row.price_per_item,
+            subtotal: row.subtotal,
+          });
+        }
+      });
+
+      const orders = Object.values(ordersMap);
+      res.json({ data: orders });
+    });
+  } catch (err) {
+    console.error('Error fetching store orders:', err);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+// ==================== EMPLOYEE SCHEDULING ====================
+// Get employee schedules
+app.get('/api/employee-schedules', (req, res) => {
+  const { employee_id, work_date } = req.query;
+  let sql = `
+    SELECT es.schedule_id, es.employee_id, es.store_id, es.work_date,
+           es.shift_start, es.shift_end, es.status, es.created_at, es.updated_at,
+           e.first_name, e.last_name, e.job_title,
+           s.name as store_name, s.type as store_type
+    FROM employee_schedule es
+    JOIN employee e ON es.employee_id = e.employee_id
+    JOIN store s ON es.store_id = s.store_id
+    WHERE e.deleted_at IS NULL AND s.deleted_at IS NULL
+  `;
+  const params = [];
+
+  if (employee_id) {
+    sql += ' AND es.employee_id = ?';
+    params.push(employee_id);
+  }
+
+  if (work_date) {
+    sql += ' AND es.work_date = ?';
+    params.push(work_date);
+  }
+
+  sql += ' ORDER BY es.work_date DESC, es.shift_start ASC';
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching employee schedules:', err);
+      return res.status(500).json({ error: 'Failed to fetch schedules' });
+    }
+    res.json({ data: results });
+  });
+});
+
+// Create employee schedule
+app.post('/api/employee-schedules', (req, res) => {
+  const { employee_id, store_id, work_date, shift_start, shift_end, status = 'scheduled' } = req.body;
+
+  if (!employee_id || !store_id || !work_date || !shift_start || !shift_end) {
+    return res.status(400).json({ error: 'All schedule fields are required' });
+  }
+
+  const sql = `
+    INSERT INTO employee_schedule (employee_id, store_id, work_date, shift_start, shift_end, status)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  db.query(sql, [employee_id, store_id, work_date, shift_start, shift_end, status], (err, result) => {
+    if (err) {
+      console.error('Error creating schedule:', err);
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'Schedule already exists for this employee on this date and time' });
+      }
+      return res.status(500).json({ error: 'Failed to create schedule', message: err.message });
+    }
+    res.json({
+      message: 'Schedule created successfully',
+      schedule_id: result.insertId
+    });
+  });
+});
+
+// Update employee schedule
+app.put('/api/employee-schedules/:id', (req, res) => {
+  const scheduleId = req.params.id;
+  const { employee_id, store_id, work_date, shift_start, shift_end, status } = req.body;
+
+  const sql = `
+    UPDATE employee_schedule
+    SET employee_id = ?, store_id = ?, work_date = ?, shift_start = ?, shift_end = ?, status = ?
+    WHERE schedule_id = ?
+  `;
+
+  db.query(sql, [employee_id, store_id, work_date, shift_start, shift_end, status, scheduleId], (err, result) => {
+    if (err) {
+      console.error('Error updating schedule:', err);
+      return res.status(500).json({ error: 'Failed to update schedule' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Schedule not found' });
+    }
+    res.json({ message: 'Schedule updated successfully' });
+  });
+});
+
+// Delete employee schedule
+app.delete('/api/employee-schedules/:id', (req, res) => {
+  const scheduleId = req.params.id;
+  const sql = 'DELETE FROM employee_schedule WHERE schedule_id = ?';
+
+  db.query(sql, [scheduleId], (err, result) => {
+    if (err) {
+      console.error('Error deleting schedule:', err);
+      return res.status(500).json({ error: 'Failed to delete schedule' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Schedule not found' });
+    }
+    res.json({ message: 'Schedule deleted successfully' });
+  });
+});
+
+// ==================== RAIN OUT MANAGEMENT ====================
+// Get rain out records
+app.get('/api/rain-outs', (req, res) => {
+  const sql = 'SELECT * FROM rain_out ORDER BY rain_out_date DESC';
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching rain outs:', err);
+      return res.status(500).json({ error: 'Failed to fetch rain outs' });
+    }
+    res.json({ data: results });
+  });
+});
+
+// Create rain out record
+app.post('/api/rain-outs', (req, res) => {
+  const { rain_out_date, note } = req.body;
+
+  if (!rain_out_date) {
+    return res.status(400).json({ error: 'Rain out date is required' });
+  }
+
+  const sql = `
+    INSERT INTO rain_out (rain_out_date, note, status)
+    VALUES (?, ?, 'active')
+  `;
+
+  db.query(sql, [rain_out_date, note], (err, result) => {
+    if (err) {
+      console.error('Error creating rain out:', err);
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'Rain out already exists for this date' });
+      }
+      return res.status(500).json({ error: 'Failed to create rain out', message: err.message });
+    }
+    res.json({
+      message: 'Rain out recorded successfully',
+      rain_out_id: result.insertId
+    });
+  });
+});
+
+// Update rain out status
+app.put('/api/rain-outs/:id', (req, res) => {
+  const rainOutId = req.params.id;
+  const { status, note } = req.body;
+
+  let sql, params;
+  if (note !== undefined) {
+    sql = 'UPDATE rain_out SET status = ?, note = ? WHERE rain_out_id = ?';
+    params = [status, note, rainOutId];
+  } else {
+    sql = 'UPDATE rain_out SET status = ? WHERE rain_out_id = ?';
+    params = [status, rainOutId];
+  }
+
+  db.query(sql, params, (err, result) => {
+    if (err) {
+      console.error('Error updating rain out:', err);
+      return res.status(500).json({ error: 'Failed to update rain out' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Rain out not found' });
+    }
+    res.json({ message: 'Rain out updated successfully' });
+  });
+});
+
+// ==================== MANAGER DASHBOARD DATA ====================
+// Get manager dashboard data by department
+app.get('/api/manager/dashboard/:department', (req, res) => {
+  const department = req.params.department;
+
+  try {
+    // Get store IDs for this department (assuming department maps to store types)
+    const storeType = department === 'giftshop' ? 'merchandise' :
+                     department === 'foodanddrinks' ? 'food/drink' : null;
+
+    if (!storeType) {
+      return res.status(400).json({ error: 'Invalid department' });
+    }
+
+    // Get stores for this manager
+    const storesSql = 'SELECT store_id, name FROM store WHERE type = ? AND deleted_at IS NULL';
+    db.query(storesSql, [storeType], (storesErr, stores) => {
+      if (storesErr) {
+        console.error('Error fetching stores:', storesErr);
+        return res.status(500).json({ error: 'Failed to fetch dashboard data' });
+      }
+
+      if (stores.length === 0) {
+        return res.json({
+          staff: [],
+          inventory: [],
+          sales: { today: 0, week: 0, month: 0 },
+          transactions: [],
+          lowStock: [],
+          topItems: []
+        });
+      }
+
+      const storeIds = stores.map(s => s.store_id);
+
+      // Get staff for these stores
+      const staffSql = `
+        SELECT DISTINCT e.employee_id, e.first_name, e.last_name, e.job_title,
+               GROUP_CONCAT(DISTINCT s.name) as store_names,
+               COUNT(DISTINCT s.store_id) as stores_assigned
+        FROM employee e
+        LEFT JOIN employee_schedule es ON e.employee_id = es.employee_id
+        LEFT JOIN store s ON es.store_id = s.store_id
+        WHERE e.deleted_at IS NULL AND e.job_title IN ('Sales Associate', 'Cashier', 'Stock Clerk', 'Supervisor')
+        AND s.store_id IN (${storeIds.map(() => '?').join(',')})
+        GROUP BY e.employee_id, e.first_name, e.last_name, e.job_title
+      `;
+
+      // Get inventory for these stores
+      const inventorySql = `
+        SELECT m.item_id, m.name as item_name, m.price, m.type as item_type,
+               si.stock_quantity, s.name as store_name
+        FROM merchandise m
+        JOIN store_inventory si ON m.item_id = si.item_id
+        JOIN store s ON si.store_id = s.store_id
+        WHERE si.store_id IN (${storeIds.map(() => '?').join(',')})
+        AND m.deleted_at IS NULL
+        ORDER BY m.name
+      `;
+
+      // Get sales data for today/week/month
+      const today = new Date().toISOString().split('T')[0];
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const salesSql = `
+        SELECT
+          SUM(CASE WHEN so.order_date = ? THEN so.total_amount ELSE 0 END) as today_sales,
+          SUM(CASE WHEN so.order_date >= ? THEN so.total_amount ELSE 0 END) as week_sales,
+          SUM(CASE WHEN so.order_date >= ? THEN so.total_amount ELSE 0 END) as month_sales
+        FROM store_order so
+        WHERE so.store_id IN (${storeIds.map(() => '?').join(',')})
+      `;
+
+      // Get recent transactions
+      const transactionsSql = `
+        SELECT so.store_order_id, so.order_date, so.total_amount,
+               s.name as store_name, COUNT(sod.item_id) as item_count
+        FROM store_order so
+        JOIN store s ON so.store_id = s.store_id
+        LEFT JOIN store_order_detail sod ON so.store_order_id = sod.store_order_id
+        WHERE so.store_id IN (${storeIds.map(() => '?').join(',')})
+        GROUP BY so.store_order_id, so.order_date, so.total_amount, s.name
+        ORDER BY so.order_date DESC
+        LIMIT 10
+      `;
+
+      // Get low stock items (less than 10)
+      const lowStockSql = `
+        SELECT m.name, s.name as store_name, si.stock_quantity
+        FROM merchandise m
+        JOIN store_inventory si ON m.item_id = si.item_id
+        JOIN store s ON si.store_id = s.store_id
+        WHERE si.store_id IN (${storeIds.map(() => '?').join(',')})
+        AND si.stock_quantity < 10
+        AND m.deleted_at IS NULL
+        ORDER BY si.stock_quantity ASC
+      `;
+
+      // Get top selling items
+      const topItemsSql = `
+        SELECT m.name, SUM(sod.quantity) as total_sold,
+               SUM(sod.subtotal) as revenue
+        FROM merchandise m
+        JOIN store_order_detail sod ON m.item_id = sod.item_id
+        JOIN store_order so ON sod.store_order_id = so.store_order_id
+        WHERE so.store_id IN (${storeIds.map(() => '?').join(',')})
+        GROUP BY m.item_id, m.name
+        ORDER BY total_sold DESC
+        LIMIT 5
+      `;
+
+      // Execute all queries
+
+      Promise.all([
+        new Promise((resolve, reject) => {
+          db.query(staffSql, storeIds, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(inventorySql, storeIds, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(salesSql, [today, weekAgo, monthAgo, ...storeIds], (err, results) => {
+            if (err) reject(err);
+            else resolve(results[0]);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(transactionsSql, storeIds, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(lowStockSql, storeIds, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        }),
+        new Promise((resolve, reject) => {
+          db.query(topItemsSql, storeIds, (err, results) => {
+            if (err) reject(err);
+            else resolve(results);
+          });
+        })
+      ]).then(([staff, inventory, sales, transactions, lowStock, topItems]) => {
+        res.json({
+          staff: staff.map(s => ({
+            employee_id: s.employee_id,
+            first_name: s.first_name,
+            last_name: s.last_name,
+            job_title: s.job_title,
+            stores_assigned: s.stores_assigned,
+            store_names: s.store_names
+          })),
+          inventory: inventory.map(i => ({
+            item_id: i.item_id,
+            item_name: i.item_name,
+            store_name: i.store_name,
+            quantity: i.stock_quantity,
+            price: parseFloat(i.price),
+            type: i.item_type
+          })),
+          sales: {
+            today: parseFloat(sales.today_sales || 0),
+            week: parseFloat(sales.week_sales || 0),
+            month: parseFloat(sales.month_sales || 0)
+          },
+          transactions: transactions.map(t => ({
+            store_order_id: t.store_order_id,
+            order_date: t.order_date,
+            store_name: t.store_name,
+            total_amount: parseFloat(t.total_amount),
+            item_count: t.item_count
+          })),
+          lowStock: lowStock.map(l => ({
+            name: l.name,
+            store_name: l.store_name,
+            quantity: l.stock_quantity
+          })),
+          topItems: topItems.map(t => ({
+            name: t.name,
+            total_sold: t.total_sold,
+            revenue: parseFloat(t.revenue)
+          }))
+        });
+      }).catch(err => {
+        console.error('Error fetching dashboard data:', err);
+        res.status(500).json({ error: 'Failed to fetch dashboard data' });
+      });
+    });
+  } catch (error) {
+    console.error('Manager dashboard error:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
 });
 

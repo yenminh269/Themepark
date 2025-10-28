@@ -15,7 +15,12 @@ import TicketsPage from './components/layouts/customer/TicketsPage.jsx';
 import CheckoutPage from './components/layouts/customer/CheckoutPage.jsx';
 import ConfirmationPage from './components/layouts/customer/ConfirmationPage.jsx';
 import UserInfoPage from './components/layouts/customer/UserInfoPage.jsx';
+import StoresPage from './components/layouts/customer/StoresPage.jsx';
+import StorePage from './components/layouts/customer/StorePage.jsx';
+import StoreCheckoutPage from './components/layouts/customer/StoreCheckoutPage.jsx';
 import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
+import EmployeeRouter from './components/EmployeeRouter.jsx';
+import EmployeeDashboard from './components/layouts/employee/EmployeeDashboard.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 // Component to conditionally render Navbar based on route
@@ -37,14 +42,19 @@ function AppContent() {
         <Route path="/confirmation" element={<ProtectedRoute><ConfirmationPage /></ProtectedRoute>} />
         <Route path="/userinfo" element={<ProtectedRoute><UserInfoPage /></ProtectedRoute>} />
 
-        {/*Maintenance employee route */}
+        {/* Store routes */}
+        <Route path="/stores" element={<StoresPage />} />
+        <Route path="/store/:storeId" element={<StorePage />} />
+        <Route path="/store-checkout" element={<ProtectedRoute><StoreCheckoutPage /></ProtectedRoute>} />
+
+        {/* Employee routes - will redirect based on job title */}
+        <Route path="/employee" element={<EmployeeRouter />} />
+        <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
         <Route path="/maintenance" element={<EMaintenance />} />
+        <Route path="/manager" element={<ManagerPage />} />
 
         {/* Admin routes */}
         <Route path="/admin/*" element={<AdminMain />} />
-
-        {/*Maintenance employee route */}
-        <Route path="/manager" element={<ManagerPage />} />
 
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
