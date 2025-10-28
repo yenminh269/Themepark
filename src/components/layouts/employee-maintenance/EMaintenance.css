@@ -1,0 +1,107 @@
+
+/* Main container */
+
+.card {
+  background-color: white !important;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.card h2 {
+  color: #3e4b2b;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.table {
+  width: 900px; /* fixed width */
+  border-collapse: separate;
+  border-spacing: 0 10px;
+}
+
+.table th {
+  background-color: #e3e3e3;
+  padding: 12px;
+  text-align: left;
+  color: #555;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 12px;
+  vertical-align: middle;
+  white-space: nowrap;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.edit-button {
+  background-color: #8da679;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.save-button {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 5px;
+}
+
+.cancel-button {
+  background-color: #f44336;
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.search-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.search-bar select,
+.search-bar input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 20px;
+}
+
+.pagination button {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  background-color: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.pagination button.active {
+  background-color: #8da679;
+  color: white;
+  border-color: #8da679;
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

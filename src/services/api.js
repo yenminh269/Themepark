@@ -130,11 +130,11 @@ export const api = {
     // ===== INVENTORY =====
     getAllInventories: async () => {
         const result = await fetchAPI('/api/store-inventory');
-        return result.data || [];
+        return result || [];
     },
     getStoreInventory: async (storeId) => {
         const result = await fetchAPI(`/api/store-inventory/${storeId}`);
-        return result.data || [];
+        return result || [];
     },
     updateInventory: async (storeId, itemId, formData) => {
         return await fetchAPI(`/api/store-inventory/${storeId}/${itemId}`, formData, "PUT", false);
@@ -397,6 +397,20 @@ try {
     api.logoutCustomer = () => {
         return logoutCustomer();
     };
+
+    // ===== RAIN OUT MANAGEMENT =====
+    api.getAllRainOuts = async () => {
+        return await fetchAPI('/api/rain-outs');
+    };
+
+    api.createRainOut = async (rainOutData) => {
+        return await fetchAPI('/api/rain-outs', rainOutData, "POST", false);
+    };
+
+    api.updateRainOut = async (id, rainOutData) => {
+        return await fetchAPI(`/api/rain-outs/${id}`, rainOutData, "PUT", false);
+    };
+
 } catch (e) {
     // In unusual bundling cases `api` might not be writable yet — fail silently and let
     // named exports be used instead.

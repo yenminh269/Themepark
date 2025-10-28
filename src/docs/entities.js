@@ -1,4 +1,4 @@
-import { MdDashboard, MdAdd, MdList, MdBuild, MdPeople, MdOutlineLogout, MdOutlineReviews } from "react-icons/md"
+import { MdDashboard, MdAdd, MdList, MdBuild, MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud } from "react-icons/md"
 
 const entities = [
     {
@@ -25,12 +25,9 @@ const entities = [
       icon: MdList
     },
     {
-      category: 'MAINTENANCE'
-    },
-    {
-      name: 'Schedule Ride Maintenance',
-      path: '/admin/add/maintenance',
-      icon: MdBuild
+      name: 'Rain Out Management',
+      path: '/admin/rain-out',
+      icon: MdCloud
     },
     {
       category: 'STORES'

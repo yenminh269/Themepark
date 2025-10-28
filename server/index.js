@@ -514,24 +514,23 @@ app.post('/ride-maintenance', async (req, res) => {
 
 // Get all maintenance schedules with details
 app.get('/maintenances', async (req, res) => {
-  const sql = `
-    SELECT 
-      m.maintenance_id,
-      m.ride_id,
-      r.name as ride_name,
-      m.description,
-      m.scheduled_date,
-      m.status,
-      emj.employee_id,
-      e.first_name,
-      e.last_name,
-      emj.work_date,
-      emj.worked_hour
-    FROM maintenance m
-    INNER JOIN employee_maintenance_job emj ON m.maintenance_id = emj.maintenance_id
-    INNER JOIN employee e ON emj.employee_id = e.employee_id
-    INNER JOIN ride r ON m.ride_id = r.ride_id
-    ORDER BY m.scheduled_date DESC
+const sql = `
+SELECT
+m.maintenance_id,
+m.ride_id,
+r.name as ride_name,
+m.description,
+DATE(m.scheduled_date) as scheduled_date,
+m.status,
+m.created_at,
+m.updated_at,
+COALESCE(GROUP_CONCAT(DISTINCT CONCAT(e.first_name, ' ', e.last_name) SEPARATOR ', '), 'No employees assigned') as assigned_employees
+FROM maintenance m
+LEFT JOIN employee_maintenance_job emj ON m.maintenance_id = emj.maintenance_id
+LEFT JOIN employee e ON emj.employee_id = e.employee_id
+LEFT JOIN ride r ON m.ride_id = r.ride_id
+GROUP BY m.maintenance_id
+ORDER BY m.scheduled_date DESC
   `;
   
   try {
@@ -541,10 +540,11 @@ app.get('/maintenances', async (req, res) => {
         else resolve(results);
       });
     });
-    
+
     res.json({
       message: 'Maintenance schedules retrieved successfully',
-      data: results
+      data: results,
+      count: results.length
     });
   } catch (err) {
     console.error('Error fetching maintenance schedules:', err);
@@ -814,7 +814,7 @@ app.post('/employee/login', async (req, res) => {
 // ==================== MERCHANDISE MANAGEMENT ====================
 // Get all merchandise
 app.get('/api/merchandise', (req, res) => {
-  const sql = 'SELECT * FROM merchandise WHERE deleted_at IS NULL ORDER BY created_at DESC';
+  const sql = 'SELECT * FROM merchandise ORDER BY created_at DESC';
   db.query(sql, (err, results) => {
     if (err) {
       console.error('Error fetching merchandise:', err);
@@ -872,10 +872,10 @@ app.put('/api/merchandise/:id', (req, res) => {
   });
 });
 
-// Delete merchandise (soft delete)
+// Delete merchandise (hard delete since no deleted_at column)
 app.delete('/api/merchandise/:id', (req, res) => {
   const itemId = req.params.id;
-  const sql = 'UPDATE merchandise SET deleted_at = NOW() WHERE item_id = ?';
+  const sql = 'DELETE FROM merchandise WHERE item_id = ?';
 
   db.query(sql, [itemId], (err, result) => {
     if (err) {
@@ -914,7 +914,7 @@ app.get('/api/store-inventory', (req, res) => {
       FROM store_inventory si
       JOIN store s ON si.store_id = s.store_id
       JOIN merchandise m ON si.item_id = m.item_id
-      WHERE s.deleted_at IS NULL AND m.deleted_at IS NULL
+      WHERE s.deleted_at IS NULL
       ORDER BY s.name, m.name
     `;
 
@@ -936,10 +936,10 @@ app.get('/api/store-inventory/:storeId', (req, res) => {
   const storeId = req.params.storeId;
   const sql = `
     SELECT si.store_id, si.item_id, si.stock_quantity, si.created_at, si.updated_at,
-           m.name as item_name, m.price, m.description, m.type as item_type, m.quantity as total_quantity
+           m.name as item_name, m.price, m.description, m.type as item_type, m.quantity as total_quantity, m.image_url
     FROM store_inventory si
     JOIN merchandise m ON si.item_id = m.item_id
-    WHERE si.store_id = ? AND m.deleted_at IS NULL
+    WHERE si.store_id = ?
     ORDER BY m.name
   `;
 
@@ -1027,7 +1027,7 @@ app.post('/api/store-orders', requireCustomerAuth, async (req, res) => {
         SELECT si.stock_quantity, m.quantity as total_quantity
         FROM store_inventory si
         JOIN merchandise m ON si.item_id = m.item_id
-        WHERE si.store_id = ? AND si.item_id = ? AND m.deleted_at IS NULL
+        WHERE si.store_id = ? AND si.item_id = ?
       `;
       const inventory = await new Promise((resolve, reject) => {
         db.query(checkSql, [store_id, item.id], (err, results) => {
@@ -1402,7 +1402,6 @@ app.get('/api/manager/dashboard/:department', (req, res) => {
         JOIN store_inventory si ON m.item_id = si.item_id
         JOIN store s ON si.store_id = s.store_id
         WHERE si.store_id IN (${storeIds.map(() => '?').join(',')})
-        AND m.deleted_at IS NULL
         ORDER BY m.name
       `;
 
@@ -1441,7 +1440,6 @@ app.get('/api/manager/dashboard/:department', (req, res) => {
         JOIN store s ON si.store_id = s.store_id
         WHERE si.store_id IN (${storeIds.map(() => '?').join(',')})
         AND si.stock_quantity < 10
-        AND m.deleted_at IS NULL
         ORDER BY si.stock_quantity ASC
       `;
 

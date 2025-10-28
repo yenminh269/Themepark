@@ -111,15 +111,28 @@ export default function StoresPage() {
                     </p>
                   )}
 
-                  <div className="!text-sm !text-gray-500 !mb-4">
+                  <div className="!text-sm !text-gray-500 !mb-4 !space-y-2">
                     <div className="!flex !items-center !gap-2">
                       <span>🕐</span>
                       <span>{store.open_time} - {store.close_time}</span>
                     </div>
+
+                    {/* Online/In-Park Badge */}
+                    <div className="!flex !items-center !gap-2">
+                      {store.available_online ? (
+                        <span className="!inline-flex !items-center !gap-1 !px-2 !py-1 !bg-green-100 !text-green-700 !rounded-md !text-xs !font-semibold">
+                          🌐 Shop Online
+                        </span>
+                      ) : (
+                        <span className="!inline-flex !items-center !gap-1 !px-2 !py-1 !bg-blue-100 !text-blue-700 !rounded-md !text-xs !font-semibold">
+                          🎢 In-Park Only
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <button className="!w-full !px-4 !py-2 !bg-[#176B87] !text-white !rounded-lg !font-semibold hover:!opacity-90 !transition !border-none">
-                    Browse Store
+                    {store.available_online ? 'Browse Store' : 'View Menu (Visit Park to Order)'}
                   </button>
                 </div>
               </div>
