@@ -1,6 +1,7 @@
 import {  useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Form from 'react-bootstrap/Form';
+import { toast } from 'react-toastify';
 import CustomButton from '../../button/CustomButton';
 
 import './Login.css';
@@ -49,13 +50,13 @@ function Login({setAdmin}){
                 const jobTitle = employeeData.job_title;
 
                 if (jobTitle === 'General Manager' || jobTitle === 'Manager') {
-                    alert(`Welcome back, ${employeeData.first_name}!`);
+                    toast.success(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/admin');
                 } else if (jobTitle === 'Mechanical Employee') {
-                    alert(`Welcome back, ${employeeData.first_name}!`);
+                    toast.success(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/maintenance');
                 } else {
-                    alert(`Welcome back, ${employeeData.first_name}!`);
+                    toast.success(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/admin');
                 }
             } else {
@@ -74,13 +75,13 @@ function Login({setAdmin}){
                     // ignore if running in environments without CustomEvent
                 }
 
-                alert(`Welcome back, ${customer.first_name || customer.firstName || 'Customer'}!`);
+                toast.success(`Welcome back, ${customer.first_name || customer.firstName || 'Customer'}!`);
                 // Navigate to customer home page
                 navigate('/');
             }
         } catch (error) {
             console.error('Login error:', error);
-            alert('Invalid email or password. Please try again.');
+            toast.error('Invalid email or password. Please try again.');
         } finally {
             setLoading(false);
         }

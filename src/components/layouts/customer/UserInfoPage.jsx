@@ -6,7 +6,7 @@ import "./Homepage.css";
 import { fetchCurrentCustomer, updateCustomer, api } from "../../../services/api";
 
 export default function UserInfoPage() {
-  const { user } = useAuth();
+const { user, signout } = useAuth();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("info");
@@ -33,6 +33,8 @@ export default function UserInfoPage() {
 
         if (!customer) {
           setError("No authentication token found. Please log in.");
+          // Clear AuthContext user state as well
+          signout();
           setLoading(false);
           return;
         }
@@ -50,13 +52,17 @@ export default function UserInfoPage() {
       } catch (err) {
         console.error("Error fetching customer data:", err);
         setError(err.message);
+        // If there's an authentication error, sign out
+        if (err.message.includes("token") || err.message.includes("authentication")) {
+          signout();
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchCustomerData();
-  }, [user]);
+  }, [user, signout]);
 
   // Fetch orders when Orders tab is active
   useEffect(() => {
@@ -68,13 +74,17 @@ export default function UserInfoPage() {
           setOrders(orderData);
         } catch (err) {
           console.error('Error fetching orders:', err);
+          // If authentication error, sign out
+          if (err.message.includes("token") || err.message.includes("authentication")) {
+            signout();
+          }
         } finally {
           setOrdersLoading(false);
         }
       };
       fetchOrders();
     }
-  }, [activeTab]);
+  }, [activeTab, signout]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -92,7 +102,13 @@ export default function UserInfoPage() {
       setCustomerData(updatedCustomer);
     } catch (err) {
       console.error("Error saving customer data:", err);
-      alert(`Error saving changes: ${err.message}`);
+      // If authentication error, sign out
+      if (err.message.includes("token") || err.message.includes("authentication")) {
+        signout();
+        alert("Your session has expired. Please log in again.");
+      } else {
+        alert(`Error saving changes: ${err.message}`);
+      }
     }
   };
 

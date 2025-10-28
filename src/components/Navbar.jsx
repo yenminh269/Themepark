@@ -88,10 +88,11 @@ export default function Navbar() {
                 </span>
                 <button
                   onClick={handleSignOut}
-                  className="!px-4 !py-2 !rounded-lg !font-semibold !bg-gradient-to-r !from-red-500 !to-pink-500 !text-white hover:!shadow-lg hover:!scale-105 !transition !border-none"
+                  className="!px-4 !py-2 !rounded-lg !font-semibold !bg-[#176B87] !text-white hover:!shadow-lg hover:!scale-105 !transition !border-none"
                 >
                   Sign Out
                 </button>
+
               </>
             ) : (
               <>

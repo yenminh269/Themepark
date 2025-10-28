@@ -236,7 +236,15 @@ export async function loginCustomer({ email, password }) {
 // RESTORE SESSION / WHO AM I
 export async function fetchCurrentCustomer() {
     const token = getCustomerToken();
-    if (!token) return null;
+    if (!token) {
+        // Dispatch logout event to clear AuthContext
+        try {
+            window.dispatchEvent(new CustomEvent('themepark:auth', { detail: null }));
+        } catch {
+            // ignore if running in environments without CustomEvent
+        }
+        return null;
+    }
 
     const res = await fetch(`${SERVER_URL}/api/customer/me`, {
         method: 'GET',
@@ -247,6 +255,12 @@ export async function fetchCurrentCustomer() {
 
     if (!res.ok) {
         setCustomerToken(null);
+        // Dispatch logout event to clear AuthContext
+        try {
+            window.dispatchEvent(new CustomEvent('themepark:auth', { detail: null }));
+        } catch {
+            // ignore if running in environments without CustomEvent
+        }
         return null;
     }
 
@@ -280,6 +294,12 @@ export async function updateCustomer(customerId, customerData) {
 // LOG OUT
 export function logoutCustomer() {
     setCustomerToken(null);
+    // Dispatch logout event to clear AuthContext
+    try {
+        window.dispatchEvent(new CustomEvent('themepark:auth', { detail: null }));
+    } catch {
+        // ignore if running in environments without CustomEvent
+    }
 }
 
 // Backwards-compatible wrapper methods for components that call `api.customerSignup` / `api.customerLogin`
