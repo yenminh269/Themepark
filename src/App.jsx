@@ -4,12 +4,13 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from "./components/layouts/customer/AuthContext.jsx";
 import { CartProvider } from "./components/layouts/customer/CartContext.jsx";
-import Navbar from "./components/Navbar.jsx";
+import Navbar from './components/layouts/public/Navbar.jsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import SignUp from './components/layouts/login/Signup.jsx';
-import Login from './components/layouts/login/Login.jsx';
+import SignUp from './components/layouts/public/Signup.jsx';
+import Login from './components/layouts/public/Login.jsx';
+import Logout from './components/layouts/public/Logout.jsx';
 import AdminMain from './components/layouts/admin/AdminMain.jsx';
-import Maintenance from './components/layouts/employee-maintenance/maintenance.jsx';
+import EMaintenance from './components/layouts/employee-maintenance/EMaintenance.jsx';
 import HomePage from './components/layouts/customer/HomePage.jsx';
 import TicketsPage from './components/layouts/customer/TicketsPage.jsx';
 import CheckoutPage from './components/layouts/customer/CheckoutPage.jsx';
@@ -19,9 +20,9 @@ import StoresPage from './components/layouts/customer/StoresPage.jsx';
 import StorePage from './components/layouts/customer/StorePage.jsx';
 import StoreCheckoutPage from './components/layouts/customer/StoreCheckoutPage.jsx';
 import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
-import EmployeeRouter from './components/EmployeeRouter.jsx';
+import EmployeeRouter from './components/layouts/public/EmployeeRouter.jsx';
 import EmployeeDashboard from './components/layouts/employee/EmployeeDashboard.jsx';
-import ProtectedRoute from './components/ProtectedRoute.jsx';
+import ProtectedRoute from './components/layouts/public/ProtectedRoute.jsx';
 
 // Component to conditionally render Navbar based on route
 function AppContent() {
@@ -36,6 +37,7 @@ function AppContent() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/logout" element={<Logout />} />
 
         {/* ===== CUSTOMER ROUTES (Require Customer Authentication) ===== */}
         {/* Store browsing (public) */}
@@ -51,28 +53,28 @@ function AppContent() {
 
         {/* ===== EMPLOYEE ROUTES (Require Employee Authentication) ===== */}
         <Route path="/employee" element={<ProtectedRoute type="employee"><EmployeeRouter /></ProtectedRoute>} />
-        <Route path="/employee-dashboard" element={<ProtectedRoute type="employee"><EmployeeDashboard /></ProtectedRoute>} />
-        <Route path="/maintenance" element={<ProtectedRoute type="employee" allowedRoles={['Mechanical Employee']}><Maintenance /></ProtectedRoute>} />
+        <Route path="/employee-dashboard" element={<ProtectedRoute type="employee" allowedRoles={['Sales Employee']}><EmployeeDashboard /></ProtectedRoute>} />
+        <Route path="/maintenance" element={<ProtectedRoute type="employee" allowedRoles={['Mechanical Employee']}><EMaintenance /></ProtectedRoute>} />
         <Route path="/manager" element={<ProtectedRoute type="employee" allowedRoles={['Store Manager', 'General Manager']}><ManagerPage /></ProtectedRoute>} />
 
-        {/* ===== ADMIN ROUTES (Protected by AdminMain component internally) ===== */}
+        {/* ===== General Manager ROUTES (Protected by AdminMain component internally) ===== */}
         <Route path="/admin/*" element={<ProtectedRoute type="employee" allowedRoles={['General Manager']}><AdminMain /></ProtectedRoute>} />
 
         {/* ===== CATCH-ALL ===== */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-        <ToastContainer
-      position="top-right"
-    autoClose={3000}
-    hideProgressBar={false}
-    newestOnTop={false}
-    closeOnClick
-    rtl={false}
-    pauseOnFocusLoss
-    draggable
-    pauseOnHover
-    theme="colored"
-    />
+      <ToastContainer
+            position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+          />
 </>
 );
 }

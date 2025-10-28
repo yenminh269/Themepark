@@ -1,4 +1,4 @@
-import db from './config/db.js';
+import db from '../config/db.js';
 
 // Real photo URLs for theme park stores
 const storePhotos = {

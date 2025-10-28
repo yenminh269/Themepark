@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { useCart } from "./CartContext";
@@ -36,7 +36,8 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
-      // Create the order in the database
+      // Create unified order with all items (rides and store items together)
+      // The backend will handle separating them if needed
       const order = await api.createRideOrder(cart, total);
 
       // Clear cart after successful order
@@ -64,27 +65,40 @@ export default function CheckoutPage() {
         {/* Cart Summary */}
         <div className="!mb-3">
           <h3 className="!text-xl !font-semibold !mb-3 !text-[#176B87]">
-            Your Tickets
+            Order Summary
           </h3>
           {cart.length === 0 ? (
             <p className="!text-slate-600">
-              No tickets selected. Go back and add some rides!
+              Your cart is empty. Add some rides or store items!
             </p>
           ) : (
             <table className="!w-full !border !border-[#B4D4FF] !text-left !rounded-md !overflow-hidden">
               <thead className="!bg-[#749BC2] !text-white">
                 <tr>
-                  <th className="!px-4 !py-2">Ride</th>
+                  <th className="!px-4 !py-2">Item</th>
+                  <th className="!px-4 !py-2">Type</th>
                   <th className="!px-4 !py-2">Price</th>
                   <th className="!px-4 !py-2">Quantity</th>
                   <th className="!px-4 !py-2">Subtotal</th>
                 </tr>
               </thead>
               <tbody>
-                {cart.map((item) => (
-                  <tr key={item.id} className="!bg-white/80">
-                    <td className="!px-4 !py-2">{item.name}</td>
-                    <td className="!px-4 !py-2">${item.price}</td>
+                {cart.map((item, index) => (
+                  <tr key={`${item.type}-${item.id}-${index}`} className="!bg-white/80">
+                    <td className="!px-4 !py-2">
+                      {item.name}
+                      {item.storeName && <div className="!text-xs !text-gray-500">from {item.storeName}</div>}
+                    </td>
+                    <td className="!px-4 !py-2">
+                      <span className={`!px-2 !py-1 !rounded !text-xs !font-semibold ${
+                        item.type === 'ride'
+                          ? '!bg-blue-100 !text-blue-700'
+                          : '!bg-green-100 !text-green-700'
+                      }`}>
+                        {item.type === 'ride' ? '🎢 Ride' : '🛍️ Store'}
+                      </span>
+                    </td>
+                    <td className="!px-4 !py-2">${item.price.toFixed(2)}</td>
                     <td className="!px-4 !py-2">{item.quantity}</td>
                     <td className="!px-4 !py-2">
                       ${(item.price * item.quantity).toFixed(2)}

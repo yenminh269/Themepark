@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "./layouts/customer/AuthContext";
-import { useCart } from "./layouts/customer/CartContext";
-import { getImageUrl } from "../services/api";
+import { useAuth } from "../customer/AuthContext";
+import { useCart } from "../customer/CartContext";
+import { getImageUrl } from "../../../services/api";
 
 export default function Navbar() {
   const { user, signout } = useAuth();

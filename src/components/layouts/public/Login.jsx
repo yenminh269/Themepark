@@ -40,6 +40,7 @@ function Login({setAdmin}){
 
                 // Store employee info in localStorage
                 localStorage.setItem('employee', JSON.stringify(employeeData));
+                localStorage.setItem('employee_info', JSON.stringify(employeeData));
 
                 // Set admin state if setAdmin function is provided
                 if (setAdmin) {
@@ -49,15 +50,20 @@ function Login({setAdmin}){
                 // Redirect based on job title
                 const jobTitle = employeeData.job_title;
 
-                if (jobTitle === 'General Manager' || jobTitle === 'Manager') {
+                if (jobTitle === 'General Manager') {
                     toast.success(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/admin');
+                } else if (jobTitle === 'Store Manager') {
+                    // Set department for Store Manager
+                    localStorage.setItem('manager_department', 'giftshop');
+                    toast.success(`Welcome back, ${employeeData.first_name}!`);
+                    navigate('/manager');
                 } else if (jobTitle === 'Mechanical Employee') {
                     toast.success(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/maintenance');
                 } else {
                     toast.success(`Welcome back, ${employeeData.first_name}!`);
-                    navigate('/admin');
+                    navigate('/employee-dashboard');
                 }
             } else {
                 // Customer login

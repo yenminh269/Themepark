@@ -3,46 +3,70 @@ import React, { createContext, useContext, useState } from "react";
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState([]); // Ride tickets cart
-  const [storeCart, setStoreCart] = useState([]); // Store merchandise cart
+  // Unified cart for both rides and online store items
+  const [cart, setCart] = useState([]); // Contains both rides and store merchandise
+  const [storeCart, setStoreCart] = useState([]); // Legacy: for in-park only stores
 
-  // Ride cart functions
-  const addToCart = (ride) => {
+  // Unified cart functions (for rides and online-available store items)
+  const addToCart = (item) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.id === ride.id);
+      // For rides: match by id only
+      // For store items: match by id AND storeId
+      const existing = prev.find((cartItem) => {
+        if (item.type === 'store' && cartItem.type === 'store') {
+          return cartItem.id === item.id && cartItem.storeId === item.storeId;
+        }
+        return cartItem.id === item.id;
+      });
+
       if (existing) {
-        return prev.map((item) =>
-          item.id === ride.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+        return prev.map((cartItem) =>
+          (cartItem.type === 'store' && item.type === 'store')
+            ? (cartItem.id === item.id && cartItem.storeId === item.storeId
+                ? { ...cartItem, quantity: cartItem.quantity + 1 }
+                : cartItem)
+            : (cartItem.id === item.id
+                ? { ...cartItem, quantity: cartItem.quantity + 1 }
+                : cartItem)
         );
       } else {
-        return [...prev, { ...ride, quantity: 1 }];
+        return [...prev, { ...item, quantity: 1 }];
       }
     });
   };
 
-  const removeFromCart = (rideId) => {
+  const removeFromCart = (itemId, storeId = null) => {
     setCart((prev) =>
       prev
-        .map((item) =>
-          item.id === rideId
+        .map((item) => {
+          // For store items, match both id and storeId
+          if (storeId && item.storeId) {
+            return item.id === itemId && item.storeId === storeId
+              ? { ...item, quantity: Math.max(item.quantity - 1, 0) }
+              : item;
+          }
+          // For rides, match id only
+          return item.id === itemId
             ? { ...item, quantity: Math.max(item.quantity - 1, 0) }
-            : item
-        )
+            : item;
+        })
         .filter((item) => item.quantity > 0)
     );
   };
 
   const clearCart = () => setCart([]);
 
-  // Calculate ride cart total
+  // Calculate unified cart total
   const total = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  // Store cart functions
+  // Get items by type from unified cart
+  const getRideItems = () => cart.filter(item => item.type === 'ride' || !item.type);
+  const getStoreItems = () => cart.filter(item => item.type === 'store');
+
+  // Legacy store cart functions (for in-park only stores - food/beverage)
   const addToStoreCart = (item) => {
     setStoreCart((prev) => {
       const existing = prev.find((i) => i.id === item.id && i.storeId === item.storeId);
@@ -81,13 +105,15 @@ export function CartProvider({ children }) {
   return (
     <CartContext.Provider
       value={{
-        // Ride cart
+        // Unified cart (for rides and online store items)
         cart,
         addToCart,
         removeFromCart,
         clearCart,
         total,
-        // Store cart
+        getRideItems,
+        getStoreItems,
+        // Legacy store cart (for in-park only stores)
         storeCart,
         addToStoreCart,
         removeFromStoreCart,

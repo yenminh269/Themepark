@@ -1,4 +1,4 @@
-import db from './config/db.js';
+import db from '../config/db.js';
 
 // Photos that actually match the store descriptions
 const storePhotos = {

@@ -127,7 +127,7 @@ export default function TicketsPage() {
                     {getQuantity(ride.id)}
                   </span>
                   <button
-                    onClick={() => addToCart(ride)}
+                    onClick={() => addToCart({ ...ride, type: 'ride' })}
                     className="!px-3 !py-2 !bg-[#176B87] !text-white !rounded-lg hover:!opacity-90 !transition !border-none"
                   >
                     +

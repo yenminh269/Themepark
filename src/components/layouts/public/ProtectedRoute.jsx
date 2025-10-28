@@ -11,14 +11,6 @@ import { Navigate } from 'react-router-dom';
  * @param {string} type - 'customer' or 'employee' - which type of user can access
  * @param {array} allowedRoles - (Optional) For employees, specific job titles allowed ['Manager', 'General Manager', 'Mechanical Employee']
  * 
- * Usage Examples:
- * <ProtectedRoute type="customer">
- *   <HomePage />
- * </ProtectedRoute>
- * 
- * <ProtectedRoute type="employee" allowedRoles={['Manager', 'General Manager']}>
- *   <AdminDashboard />
- * </ProtectedRoute>
  * 
  * localStorage Structure:
  * ========================
@@ -74,18 +66,20 @@ function ProtectedRoute({ children, type = 'customer', allowedRoles = [] }) {
     // Check if employee's job_title is in the allowed roles
     if (!allowedRoles.includes(jobTitle)) {
     console.log('ProtectedRoute: Role not allowed, redirecting based on job title');
+   
     // Redirect based on job title
-    if (jobTitle === 'Mechanical Employee') {
-    return <Navigate to="/maintenance" replace />;
-    } else if (jobTitle === 'Manager' || jobTitle === 'General Manager') {
-    return <Navigate to="/admin" replace />;
-    } else {
-        return <Navigate to="/" replace />;
+      if (jobTitle === 'Mechanical Employee') {
+        return <Navigate to="/maintenance" replace />;
+      } else if (jobTitle === 'General Manager') {
+        return <Navigate to="/admin" replace />;
+      } else if (jobTitle === 'Sales Employee') {
+        return <Navigate to="/employee-dashboard" replace />;
+      } else {
+          return <Navigate to="/" replace />;
         }
-      }
+    }
     }
     console.log('ProtectedRoute: Employee authentication passed');
-
     return children;
   }
 

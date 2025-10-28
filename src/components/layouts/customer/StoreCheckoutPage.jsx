@@ -159,29 +159,26 @@ export default function StoreCheckoutPage() {
             <div className="!bg-white !rounded-2xl !p-6 !shadow-lg">
               <h2 className="!text-xl !font-bold !text-[#176B87] !mb-4">Payment Method</h2>
 
-              <div className="!space-y-3">
-                <label className="!flex !items-center">
+              <div className="!flex justify-between">
+                <label>
                   <input
                     type="radio"
                     name="payment"
                     value="cash"
                     checked={paymentMethod === 'cash'}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="!mr-3"
-                  />
-                  <span className="!text-gray-700">💵 Cash</span>
+                    className=""
+                  /> <span className="!text-gray-700">💵 Cash</span>
                 </label>
 
-                <label className="!flex !items-center">
+                <label >
                   <input
                     type="radio"
                     name="payment"
                     value="credit_card"
                     checked={paymentMethod === 'credit_card'}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="!mr-3"
-                  />
-                  <span className="!text-gray-700">💳 Credit Card</span>
+                  /><span className="!text-gray-700">💳 Credit Card</span>
                 </label>
               </div>
             </div>

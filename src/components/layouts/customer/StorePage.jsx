@@ -8,7 +8,7 @@ import { api, getImageUrl } from "../../../services/api";
 export default function StorePage() {
   const { storeId } = useParams();
   const navigate = useNavigate();
-  const { storeCart, addToStoreCart, removeFromStoreCart, storeTotal, clearStoreCart } = useCart();
+  const { cart, addToCart, removeFromCart, total, storeCart, addToStoreCart, removeFromStoreCart, storeTotal, clearStoreCart } = useCart();
 
   const [store, setStore] = useState(null);
   const [merchandise, setMerchandise] = useState([]);
@@ -48,12 +48,73 @@ export default function StorePage() {
   }, [storeId]);
 
   const getQuantity = (itemId) => {
-    const item = storeCart.find((i) => i.id === itemId);
-    return item ? item.quantity : 0;
+    // For online stores, check unified cart; for in-park stores, check storeCart
+    if (store?.available_online) {
+      const item = cart.find((i) => i.id === itemId && i.storeId === parseInt(storeId) && i.type === 'store');
+      return item ? item.quantity : 0;
+    } else {
+      const item = storeCart.find((i) => i.id === itemId);
+      return item ? item.quantity : 0;
+    }
+  };
+
+  const handleAddItem = (item) => {
+    if (store?.available_online) {
+      // Add to unified cart with type 'store'
+      addToCart({
+        id: item.item_id,
+        name: item.item_name,
+        price: parseFloat(item.price),
+        storeId: parseInt(storeId),
+        storeName: store.name,
+        type: 'store'
+      });
+    } else {
+      // Add to legacy storeCart for in-park only stores
+      addToStoreCart({
+        id: item.item_id,
+        name: item.item_name,
+        price: parseFloat(item.price),
+        storeId: parseInt(storeId)
+      });
+    }
+  };
+
+  const handleRemoveItem = (itemId) => {
+    if (store?.available_online) {
+      // Remove from unified cart
+      removeFromCart(itemId, parseInt(storeId));
+    } else {
+      // Remove from legacy storeCart
+      removeFromStoreCart(itemId);
+    }
   };
 
   const handleCheckout = () => {
-    navigate('/store-checkout', { state: { storeId: parseInt(storeId), storeName: store?.name } });
+    if (store?.available_online) {
+      navigate('/checkout'); // Go to unified checkout
+    } else {
+      navigate('/store-checkout', { state: { storeId: parseInt(storeId), storeName: store?.name } });
+    }
+  };
+
+  // Get current store cart items and total
+  const getCurrentStoreCart = () => {
+    if (store?.available_online) {
+      return cart.filter(item => item.type === 'store' && item.storeId === parseInt(storeId));
+    } else {
+      return storeCart;
+    }
+  };
+
+  const getCurrentStoreTotal = () => {
+    if (store?.available_online) {
+      return cart
+        .filter(item => item.type === 'store' && item.storeId === parseInt(storeId))
+        .reduce((sum, item) => sum + item.price * item.quantity, 0);
+    } else {
+      return storeTotal;
+    }
   };
 
   if (loading) {
@@ -223,7 +284,7 @@ export default function StorePage() {
                     </div>
                     <div className="!flex !gap-2 !items-center">
                       <button
-                        onClick={() => removeFromStoreCart(item.item_id)}
+                        onClick={() => handleRemoveItem(item.item_id)}
                         disabled={getQuantity(item.item_id) === 0}
                         className="!px-3 !py-1 !bg-white !border !border-[#176B87] !text-[#176B87] !rounded-lg hover:!bg-[#EEF5FF] !transition !disabled:opacity-50 !disabled:cursor-not-allowed"
                       >
@@ -233,12 +294,7 @@ export default function StorePage() {
                         {getQuantity(item.item_id)}
                       </span>
                       <button
-                        onClick={() => addToStoreCart({
-                          id: item.item_id,
-                          name: item.item_name,
-                          price: parseFloat(item.price),
-                          storeId: parseInt(storeId)
-                        })}
+                        onClick={() => handleAddItem(item)}
                         disabled={item.stock_quantity === 0 || getQuantity(item.item_id) >= item.stock_quantity}
                         className="!px-3 !py-1 !bg-[#176B87] !text-white !rounded-lg hover:!opacity-90 !transition !disabled:opacity-50 !disabled:cursor-not-allowed"
                       >
@@ -253,15 +309,15 @@ export default function StorePage() {
         )}
 
         {/* Store Cart Summary */}
-        {storeCart.length > 0 && (
+        {getCurrentStoreCart().length > 0 && (
           <div className="!mt-10 !bg-white/70 !p-6 !rounded-xl !shadow">
             <div className="!flex !justify-between !items-center !mb-4">
               <div>
                 <p className="!text-lg !font-semibold !text-[#176B87]">
-                  Store Total: ${storeTotal.toFixed(2)}
+                  Store Total: ${getCurrentStoreTotal().toFixed(2)}
                 </p>
                 <p className="!text-sm !text-gray-600">
-                  {storeCart.reduce((sum, item) => sum + item.quantity, 0)} items from {store.name}
+                  {getCurrentStoreCart().reduce((sum, item) => sum + item.quantity, 0)} items from {store.name}
                 </p>
               </div>
               {store.available_online ? (
@@ -269,7 +325,7 @@ export default function StorePage() {
                   onClick={handleCheckout}
                   className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
                 >
-                  Checkout Online
+                  Go to Checkout
                 </button>
               ) : (
                 <button
