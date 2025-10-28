@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@chakra-ui/react";
 import { useAuth } from "./AuthContext";
 import PageFooter from "./PageFooter";
 import "./Homepage.css";
@@ -8,6 +9,7 @@ import { fetchCurrentCustomer, updateCustomer, api } from "../../../services/api
 export default function UserInfoPage() {
 const { user, signout } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [activeTab, setActiveTab] = useState("info");
   const [loading, setLoading] = useState(true);
@@ -96,7 +98,14 @@ const { user, signout } = useAuth();
 
     try {
       const updatedCustomer = await updateCustomer(customerData.customer_id, form);
-      alert("Changes saved successfully!");
+      toast({
+        title: 'Changes saved successfully!',
+        description: 'Your personal information has been updated.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
 
       // Refresh the data
       setCustomerData(updatedCustomer);
@@ -105,9 +114,23 @@ const { user, signout } = useAuth();
       // If authentication error, sign out
       if (err.message.includes("token") || err.message.includes("authentication")) {
         signout();
-        alert("Your session has expired. Please log in again.");
+        toast({
+          title: 'Session Expired',
+          description: 'Your session has expired. Please log in again.',
+          status: 'error',
+          duration: 4000,
+          isClosable: true,
+          position: 'top',
+        });
       } else {
-        alert(`Error saving changes: ${err.message}`);
+        toast({
+          title: 'Error saving changes',
+          description: err.message,
+          status: 'error',
+          duration: 4000,
+          isClosable: true,
+          position: 'top',
+        });
       }
     }
   };

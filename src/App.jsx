@@ -9,7 +9,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import SignUp from './components/layouts/login/Signup.jsx';
 import Login from './components/layouts/login/Login.jsx';
 import AdminMain from './components/layouts/admin/AdminMain.jsx';
-import EMaintenance from './components/layouts/employee-maintenance/EMaintenance.jsx';
+import Maintenance from './components/layouts/employee-maintenance/maintenance.jsx';
 import HomePage from './components/layouts/customer/HomePage.jsx';
 import TicketsPage from './components/layouts/customer/TicketsPage.jsx';
 import CheckoutPage from './components/layouts/customer/CheckoutPage.jsx';
@@ -38,7 +38,7 @@ function AppContent() {
         <Route path="/userinfo" element={<ProtectedRoute><UserInfoPage /></ProtectedRoute>} />
 
         {/*Maintenance employee route */}
-        <Route path="/maintenance" element={<EMaintenance />} />
+        <Route path="/maintenance" element={<Maintenance />} />
 
         {/* Admin routes */}
         <Route path="/admin/*" element={<AdminMain />} />

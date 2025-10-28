@@ -112,7 +112,7 @@ export default function TicketsPage() {
                 </div>
 
                 {ride.description && (
-                  <p className="!text-sm !text-gray-600 !mb-4 !line-clamp-2 !leading-relaxed">
+                  <p className="!text-sm !text-gray-600 !mb-4 !leading-relaxed">
                     {ride.description}
                   </p>
                 )}
