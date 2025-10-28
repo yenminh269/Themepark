@@ -50,10 +50,19 @@ export default function Navbar() {
               Home
             </button>
             <button
-              onClick={handleGetTickets}
+            onClick={handleGetTickets}
+            className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
+            >
+            🎟️ Get Tickets
+            </button>
+            <button
+              onClick={() => {
+                navigate("/stores");
+                setMobileMenuOpen(false);
+              }}
               className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
             >
-              🎟️ Get Tickets
+              🛍️ Shop
             </button>
             {user && (
               <button
@@ -140,13 +149,22 @@ export default function Navbar() {
               Home
             </button>
             <button
+            onClick={() => {
+            handleGetTickets();
+            setMobileMenuOpen(false);
+            }}
+            className="!block !w-full !text-left !px-4 !py-2 !text-gray-700 hover:!bg-[#EEF5FF] !rounded-lg !bg-transparent !border-none"
+            >
+            🎟️ Get Tickets
+            </button>
+            <button
               onClick={() => {
-                handleGetTickets();
+                navigate("/stores");
                 setMobileMenuOpen(false);
               }}
               className="!block !w-full !text-left !px-4 !py-2 !text-gray-700 hover:!bg-[#EEF5FF] !rounded-lg !bg-transparent !border-none"
             >
-              🎟️ Get Tickets
+              🛍️ Shop
             </button>
             {user ? (
               <>

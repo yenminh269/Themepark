@@ -6,68 +6,33 @@ import DashboardCard from "./DashboardCard";
 import EditableTable from "./EditableTable";
 import TransactionTable from "./TransactionTable";
 import "./ManagerPage.css";
+import { api } from "../../../services/api";
 
 const ManagerPage = () => {
   const navigate = useNavigate();
   
-  // Hardcoded manager info - NO BACKEND NEEDED
-  const [managerInfo] = useState({
-    first_name: "Sarah",
-    last_name: "Johnson",
-    job_title: "Manager",
-    department: "giftshop",
-    email: "sarah.johnson@themepark.com"
+  // Get manager info from localStorage
+  const [managerInfo, setManagerInfo] = useState({
+    first_name: "",
+    last_name: "",
+    job_title: "",
+    department: "",
+    email: ""
   });
   
   const [activeTab, setActiveTab] = useState("overview");
-  
-  // Hardcoded dashboard data
-  const [dashboardData] = useState({
+  const [dashboardData, setDashboardData] = useState({
     staff: [],
-    inventory: [
-      { item_id: 1, item_name: "Theme Park T-Shirt", store_name: "Main Gift Shop", quantity: 45, price: 24.99, type: "Apparel" },
-      { item_id: 2, item_name: "Plush Mascot", store_name: "Main Gift Shop", quantity: 15, price: 34.99, type: "Toys" },
-      { item_id: 3, item_name: "Water Bottle", store_name: "West Gift Shop", quantity: 78, price: 12.99, type: "Accessories" },
-      { item_id: 4, item_name: "Keychain Set", store_name: "Main Gift Shop", quantity: 5, price: 8.99, type: "Accessories" },
-      { item_id: 5, item_name: "Baseball Cap", store_name: "East Gift Shop", quantity: 32, price: 22.00, type: "Apparel" },
-      { item_id: 6, item_name: "Souvenir Mug", store_name: "Main Gift Shop", quantity: 67, price: 15.99, type: "Drinkware" },
-    ],
-    sales: { today: 2847.50, week: 18290.75, month: 74382.20 }
+    inventory: [],
+    sales: { today: 0, week: 0, month: 0 }
   });
+
+  const [staffDetails, setStaffDetails] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [lowStock, setLowStock] = useState([]);
+  const [topItems, setTopItems] = useState([]);
   
-  const [staffDetails] = useState([
-    { employee_id: 1, first_name: "Emily", last_name: "Chen", job_title: "Sales Associate", stores_assigned: 2, store_names: "Main Gift Shop, West Gift Shop" },
-    { employee_id: 2, first_name: "Michael", last_name: "Brown", job_title: "Cashier", stores_assigned: 1, store_names: "Main Gift Shop" },
-    { employee_id: 3, first_name: "Jessica", last_name: "Davis", job_title: "Stock Clerk", stores_assigned: 3, store_names: "Main Gift Shop, West Gift Shop, East Gift Shop" },
-    { employee_id: 4, first_name: "David", last_name: "Wilson", job_title: "Sales Associate", stores_assigned: 1, store_names: "East Gift Shop" },
-    { employee_id: 5, first_name: "Amanda", last_name: "Taylor", job_title: "Supervisor", stores_assigned: 2, store_names: "Main Gift Shop, West Gift Shop" },
-    { employee_id: 6, first_name: "Ryan", last_name: "Martinez", job_title: "Cashier", stores_assigned: 1, store_names: "West Gift Shop" },
-    { employee_id: 7, first_name: "Sophie", last_name: "Anderson", job_title: "Sales Associate", stores_assigned: 2, store_names: "East Gift Shop, Main Gift Shop" },
-  ]);
-  
-  const [recentTransactions] = useState([
-    { store_order_id: 1001, order_date: "2025-10-22", store_name: "Main Gift Shop", total_amount: 89.97, item_count: 3 },
-    { store_order_id: 1002, order_date: "2025-10-22", store_name: "West Gift Shop", total_amount: 124.50, item_count: 5 },
-    { store_order_id: 1003, order_date: "2025-10-23", store_name: "Main Gift Shop", total_amount: 45.98, item_count: 2 },
-    { store_order_id: 1004, order_date: "2025-10-23", store_name: "East Gift Shop", total_amount: 67.95, item_count: 4 },
-    { store_order_id: 1005, order_date: "2025-10-23", store_name: "Main Gift Shop", total_amount: 156.89, item_count: 7 },
-    { store_order_id: 1006, order_date: "2025-10-23", store_name: "West Gift Shop", total_amount: 78.45, item_count: 3 },
-  ]);
-  
-  const [lowStock] = useState([
-    { name: "Keychain Set", store_name: "Main Gift Shop", quantity: 5 },
-    { name: "Plush Mascot", store_name: "Main Gift Shop", quantity: 15 },
-  ]);
-  
-  const [topItems] = useState([
-    { name: "Theme Park T-Shirt", total_sold: 342, revenue: 8544.58 },
-    { name: "Plush Mascot", total_sold: 189, revenue: 6608.11 },
-    { name: "Water Bottle", total_sold: 267, revenue: 3468.33 },
-    { name: "Baseball Cap", total_sold: 156, revenue: 3432.00 },
-    { name: "Keychain Set", total_sold: 423, revenue: 3802.77 },
-  ]);
-  
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [staffSearchQuery, setStaffSearchQuery] = useState("");
   
   // Modal states
@@ -76,6 +41,64 @@ const ManagerPage = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [reportType, setReportType] = useState("");
+
+  // Load manager info and department from localStorage
+  useEffect(() => {
+    const employeeData = localStorage.getItem('employee_info');
+    const department = localStorage.getItem('manager_department');
+
+    if (employeeData && department) {
+      try {
+        const parsedEmployee = JSON.parse(employeeData);
+        setManagerInfo({
+          first_name: parsedEmployee.first_name,
+          last_name: parsedEmployee.last_name,
+          job_title: parsedEmployee.job_title,
+          department: department,
+          email: parsedEmployee.email
+        });
+      } catch (error) {
+        console.error('Error parsing employee data:', error);
+        navigate('/login');
+      }
+    } else {
+      navigate('/login');
+    }
+  }, [navigate]);
+
+  // Fetch dashboard data when department is set
+  useEffect(() => {
+    if (!managerInfo.department) return; // Wait for department to be set
+
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const result = await api.getManagerDashboard(managerInfo.department);
+        setDashboardData({
+          staff: result.staff,
+          inventory: result.inventory,
+          sales: result.sales
+        });
+        setStaffDetails(result.staff);
+        setRecentTransactions(result.transactions);
+        setLowStock(result.lowStock);
+        setTopItems(result.topItems);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        // Keep some fallback data for development
+        setStaffDetails([
+          { employee_id: 1, first_name: "Emily", last_name: "Chen", job_title: "Sales Associate", stores_assigned: 2, store_names: "Main Gift Shop, West Gift Shop" },
+        ]);
+        setRecentTransactions([]);
+        setLowStock([]);
+        setTopItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [managerInfo.department]);
 
   const getDepartmentName = () => {
     if (!managerInfo) return "";

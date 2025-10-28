@@ -6,7 +6,7 @@ import CustomButton from '../../button/CustomButton';
 
 import './Login.css';
 import InputLogin from '../../input/InputLogin';
-import { api } from '../../../services/api';
+import { api, SERVER_URL } from '../../../services/api';
 
 function Login({setAdmin}){
     const [isE,setIsE] = useState(false);
@@ -38,27 +38,19 @@ function Login({setAdmin}){
                 // api.employeeLogin returns the employee data directly (fetchAPI extracts .data)
                 const employeeData = await api.employeeLogin(formData);
 
-                // Store employee info in localStorage
-                localStorage.setItem('employee', JSON.stringify(employeeData));
+                // Store employee info in localStorage with proper key
+                localStorage.setItem('employee_info', JSON.stringify(employeeData));
 
                 // Set admin state if setAdmin function is provided
                 if (setAdmin) {
                     setAdmin(true);
                 }
 
-                // Redirect based on job title
-                const jobTitle = employeeData.job_title;
+                // Show success message
+                toast.success(`Welcome back, ${employeeData.first_name}!`);
 
-                if (jobTitle === 'General Manager' || jobTitle === 'Manager') {
-                    toast.success(`Welcome back, ${employeeData.first_name}!`);
-                    navigate('/admin');
-                } else if (jobTitle === 'Mechanical Employee') {
-                    toast.success(`Welcome back, ${employeeData.first_name}!`);
-                    navigate('/maintenance');
-                } else {
-                    toast.success(`Welcome back, ${employeeData.first_name}!`);
-                    navigate('/admin');
-                }
+                // Use EmployeeRouter to handle proper redirection based on job title
+                navigate('/employee');
             } else {
                 // Customer login
                 const response = await api.customerLogin(formData);
@@ -92,7 +84,7 @@ function Login({setAdmin}){
         {/* Background Image */}
         <div className="!absolute !inset-0 !opacity-20">
             <img
-                src="https://images.unsplash.com/photo-1594739584670-1e9be48f6ec3?w=1920&h=1080&fit=crop&q=80"
+                src=""
                 alt="Background"
                 className="!w-full !h-full !object-cover"
             />
@@ -111,7 +103,7 @@ function Login({setAdmin}){
                         </p>
                     </div>
                     <img
-                        src="https://images.unsplash.com/photo-1570993492903-ba4c3088f100?w=800&h=600&fit=crop&q=80"
+                        src={`${SERVER_URL}/uploads/ride_photos/1761498879527.jpg`}
                         alt="Theme Park"
                         className="!w-full !h-80 !object-cover !rounded-2xl !shadow-lg"
                     />
