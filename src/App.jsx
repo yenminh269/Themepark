@@ -13,6 +13,7 @@ import CheckoutPage from './components/layouts/customer/CheckoutPage.jsx';
 import ConfirmationPage from './components/layouts/customer/ConfirmationPage.jsx';
 import UserInfoPage from './components/layouts/customer/UserInfoPage.jsx';
 import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 function App() {
   return (
@@ -25,11 +26,11 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<SignUp />} />
               
-              {/*Customer route */}
-              <Route path="/tickets" element={<TicketsPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/confirmation" element={<ConfirmationPage />} />
-              <Route path="/userinfo" element={<UserInfoPage />} />
+              {/*Customer routes - Protected */}
+              <Route path="/tickets" element={<ProtectedRoute><TicketsPage /></ProtectedRoute>} />
+              <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+              <Route path="/confirmation" element={<ProtectedRoute><ConfirmationPage /></ProtectedRoute>} />
+              <Route path="/userinfo" element={<ProtectedRoute><UserInfoPage /></ProtectedRoute>} />
 
               {/*Maintenance employee route */}
               <Route path="/maintenance" element={<EMaintenance />} />
