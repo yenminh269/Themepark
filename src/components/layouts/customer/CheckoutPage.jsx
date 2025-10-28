@@ -4,9 +4,10 @@ import { useAuth } from "./AuthContext";
 import { useCart } from "./CartContext";
 import PageFooter from "./PageFooter";
 import "./Homepage.css";
+import { api } from "../../../services/api";
 
 export default function CheckoutPage() {
-  const { user, signout } = useAuth();
+  const { user } = useAuth();
   const { cart, total, clearCart } = useCart();
   const navigate = useNavigate();
 
@@ -17,54 +18,43 @@ export default function CheckoutPage() {
     email: user?.email || "",
   });
 
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleConfirm = (e) => {
+  const handleConfirm = async (e) => {
     e.preventDefault();
-    clearCart();
-    navigate("/confirmation");
-  };
 
-  const handleSignOut = () => {
-    signout();
-    navigate("/");
+    if (!user) {
+      alert('Please log in to complete your purchase');
+      navigate('/login');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Create the order in the database
+      const order = await api.createRideOrder(cart, total);
+
+      // Clear cart after successful order
+      clearCart();
+
+      // Navigate to confirmation with order info
+      navigate("/confirmation", { state: { order } });
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to complete your order. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
-      {/* Navbar */}
-      <nav className="!sticky !top-0 !z-50 !bg-[#EEF5FF] !border-b !border-[#B4D4FF] backdrop-blur-md">
-        <div className="!mx-auto !max-w-6xl !px-6 !py-4 !flex !items-center !justify-between">
-          <button
-            onClick={() => navigate("/")}
-            className="!text-2xl !font-extrabold !tracking-wide !text-[#176B87] hover:!opacity-80 !transition !bg-transparent !border-none"
-          >
-            🎢 ThemePark
-          </button>
-          <div className="!flex !items-center !gap-3">
-            {user && (
-              <span className="!hidden sm:!inline !text-sm !text-slate-700">
-                Signed in as <strong>{user.email}</strong>
-              </span>
-            )}
-            <button
-              onClick={() => navigate("/userinfo")}
-              className="!px-4 !py-2 !rounded-lg !font-semibold !border !border-[#176B87] !text-[#176B87] hover:!bg-[#B4D4FF] !transition !bg-transparent"
-            >
-              User Info
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="!px-4 !py-2 !rounded-lg !font-semibold !border !border-[#176B87] !text-[#176B87] hover:!bg-[#B4D4FF] !transition !bg-transparent"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </nav>
+      {/* Navbar is now global in App.jsx */}
 
       <main className=" !mb-5 !flex-1 !max-w-4xl !mx-auto !p-6 !mt-6 !bg-white/80 !rounded-xl !shadow">
         <h2 className="!text-3xl !font-bold !text-[#176B87] !mb-6 !text-center">
@@ -182,9 +172,10 @@ export default function CheckoutPage() {
             </button>
             <button
               type="submit"
-              className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
+              disabled={loading}
+              className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none disabled:!opacity-50 disabled:!cursor-not-allowed"
             >
-              Confirm Payment
+              {loading ? 'Processing...' : 'Confirm Payment'}
             </button>
           </div>
         </form>

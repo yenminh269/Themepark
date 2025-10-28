@@ -15,9 +15,29 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 //Middlewares
-app.use(cors({ 
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-    credentials: true
+// CORS configuration - allow multiple origins
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://thethemepark.vercel.app',
+    process.env.CORS_ORIGIN
+].filter(Boolean);
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or Postman)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.log('Blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -111,7 +131,8 @@ app.post("/api/customer/signup", async (req, res) => {
           (err2, result) => {
             if (err2) {
               console.error("SIGNUP insert error:", err2);
-              return res.status(500).json({ error: "Signup failed" });
+              // Return the DB error message in development to aid debugging
+              return res.status(500).json({ error: "Signup failed", detail: err2.message });
             }
 
             // build object to return
@@ -795,6 +816,131 @@ app.post('/employee/login', async (req, res) => {
       message: 'Error during login',
       error: err.message
     });
+  }
+});
+
+// ==================== RIDE ORDERS ====================
+// Create a new ride order (checkout)
+app.post('/api/ride-orders', requireCustomerAuth, async (req, res) => {
+  try {
+    const { cart, total } = req.body;
+    const customer_id = req.customer_id;
+
+    if (!cart || cart.length === 0) {
+      return res.status(400).json({ error: 'Cart is empty' });
+    }
+
+    // Create the ride_order
+    const orderSql = `
+      INSERT INTO ride_order (customer_id, order_date, total_amount, status)
+      VALUES (?, CURDATE(), ?, 'completed')
+    `;
+
+    const orderResult = await new Promise((resolve, reject) => {
+      db.query(orderSql, [customer_id, total], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    const order_id = orderResult.insertId;
+
+    // Insert order details for each ride in cart
+    const detailPromises = cart.map((item) => {
+      const detailSql = `
+        INSERT INTO ride_order_detail (order_id, ride_id, number_of_tickets, price_per_ticket, subtotal)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+      const subtotal = item.price * item.quantity;
+
+      return new Promise((resolve, reject) => {
+        db.query(
+          detailSql,
+          [order_id, item.id, item.quantity, item.price, subtotal],
+          (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+          }
+        );
+      });
+    });
+
+    await Promise.all(detailPromises);
+
+    res.json({
+      message: 'Order created successfully',
+      order: {
+        order_id,
+        customer_id,
+        total_amount: total,
+        status: 'completed',
+        order_date: new Date().toISOString().split('T')[0],
+      },
+    });
+  } catch (err) {
+    console.error('Error creating ride order:', err);
+    res.status(500).json({ error: 'Failed to create order', message: err.message });
+  }
+});
+
+// Get customer's ride orders
+app.get('/api/ride-orders', requireCustomerAuth, async (req, res) => {
+  try {
+    const customer_id = req.customer_id;
+
+    const sql = `
+      SELECT
+        ro.order_id,
+        ro.order_date,
+        ro.total_amount,
+        ro.status,
+        rod.ride_id,
+        r.name as ride_name,
+        rod.number_of_tickets,
+        rod.price_per_ticket,
+        rod.subtotal
+      FROM ride_order ro
+      LEFT JOIN ride_order_detail rod ON ro.order_id = rod.order_id
+      LEFT JOIN ride r ON rod.ride_id = r.ride_id
+      WHERE ro.customer_id = ?
+      ORDER BY ro.order_date DESC, ro.order_id DESC
+    `;
+
+    db.query(sql, [customer_id], (err, results) => {
+      if (err) {
+        console.error('Error fetching ride orders:', err);
+        return res.status(500).json({ error: 'Failed to fetch orders' });
+      }
+
+      // Group order details by order_id
+      const ordersMap = {};
+      results.forEach((row) => {
+        if (!ordersMap[row.order_id]) {
+          ordersMap[row.order_id] = {
+            order_id: row.order_id,
+            order_date: row.order_date,
+            total_amount: row.total_amount,
+            status: row.status,
+            items: [],
+          };
+        }
+        if (row.ride_id) {
+          ordersMap[row.order_id].items.push({
+            ride_id: row.ride_id,
+            ride_name: row.ride_name,
+            number_of_tickets: row.number_of_tickets,
+            price_per_ticket: row.price_per_ticket,
+            subtotal: row.subtotal,
+          });
+        }
+      });
+
+      const orders = Object.values(ordersMap);
+      res.json({ data: orders });
+    });
+  } catch (err) {
+    console.error('Error fetching ride orders:', err);
+    res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });
 

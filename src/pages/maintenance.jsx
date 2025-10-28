@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./maintenance.css";
+import { api, SERVER_URL } from "../services/api";
 
 export default function Maintenance() {
   const [maintenanceData, setMaintenanceData] = useState([]);
@@ -16,8 +17,7 @@ export default function Maintenance() {
 
   // ✅ Fetch maintenance tasks
   useEffect(() => {
-    fetch("http://localhost:3001/api/maintenance")
-      .then((res) => res.json())
+    api.getAllMaintenances()
       .then((data) => {
         setMaintenanceData(data);
         setFilteredData(data);
@@ -27,8 +27,7 @@ export default function Maintenance() {
 
   // ✅ Fetch rides list for sidebar
   useEffect(() => {
-    fetch("http://localhost:3001/api/rides")
-      .then((res) => res.json())
+    api.getAllRides()
       .then((data) => setRides(data))
       .catch((err) => console.error("Error fetching rides:", err));
   }, []);
@@ -62,14 +61,12 @@ export default function Maintenance() {
   // ✅ Save edits to DB
   const handleSaveClick = async () => {
     try {
-      await fetch(`http://localhost:3001/api/maintenance/${editId}`, {
+      await fetch(`${SERVER_URL}/api/maintenance/${editId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editFormData),
       });
-      const updated = await fetch("http://localhost:3001/api/maintenance").then((r) =>
-        r.json()
-      );
+      const updated = await api.getAllMaintenances();
       setMaintenanceData(updated);
       setEditId(null);
       setEditFormData({});

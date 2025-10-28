@@ -3,15 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import PageFooter from "./PageFooter";
 import "./Homepage.css";
+import { fetchCurrentCustomer, updateCustomer, api } from "../../../services/api";
 
 export default function UserInfoPage() {
-  const { user, signout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("info");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [customerData, setCustomerData] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -26,33 +29,22 @@ export default function UserInfoPage() {
     const fetchCustomerData = async () => {
       try {
         setLoading(true);
-        const token = user?.token || localStorage.getItem("customer_token");
+        const customer = await fetchCurrentCustomer();
 
-        if (!token) {
+        if (!customer) {
           setError("No authentication token found. Please log in.");
           setLoading(false);
           return;
         }
 
-        const response = await fetch("http://localhost:3001/api/customer/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch customer data");
-        }
-
-        const result = await response.json();
-        setCustomerData(result.customer);
+        setCustomerData(customer);
         setForm({
-          first_name: result.customer.first_name || "",
-          last_name: result.customer.last_name || "",
-          email: result.customer.email || "",
-          phone: result.customer.phone || "",
-          gender: result.customer.gender || "",
-          dob: result.customer.dob ? result.customer.dob.split('T')[0] : "",
+          first_name: customer.first_name || "",
+          last_name: customer.last_name || "",
+          email: customer.email || "",
+          phone: customer.phone || "",
+          gender: customer.gender || "",
+          dob: customer.dob ? customer.dob.split('T')[0] : "",
         });
         setError(null);
       } catch (err) {
@@ -66,6 +58,24 @@ export default function UserInfoPage() {
     fetchCustomerData();
   }, [user]);
 
+  // Fetch orders when Orders tab is active
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      const fetchOrders = async () => {
+        setOrdersLoading(true);
+        try {
+          const orderData = await api.getRideOrders();
+          setOrders(orderData);
+        } catch (err) {
+          console.error('Error fetching orders:', err);
+        } finally {
+          setOrdersLoading(false);
+        }
+      };
+      fetchOrders();
+    }
+  }, [activeTab]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -75,72 +85,20 @@ export default function UserInfoPage() {
     e.preventDefault();
 
     try {
-      const token = user?.token || localStorage.getItem("customer_token");
-
-      if (!token) {
-        alert("No authentication token found. Please log in again.");
-        return;
-      }
-
-      const response = await fetch(`http://localhost:3001/api/customer/${customerData.customer_id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update customer information");
-      }
-
-      const result = await response.json();
+      const updatedCustomer = await updateCustomer(customerData.customer_id, form);
       alert("Changes saved successfully!");
 
       // Refresh the data
-      setCustomerData(result.customer);
+      setCustomerData(updatedCustomer);
     } catch (err) {
       console.error("Error saving customer data:", err);
       alert(`Error saving changes: ${err.message}`);
     }
   };
 
-  const handleSignOut = () => {
-    signout();
-    navigate("/");
-  };
-
   return (
     <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
-      {/* Navbar */}
-      <nav className="!sticky !top-0 !z-50 !bg-[#EEF5FF] !border-b !border-[#B4D4FF] backdrop-blur-md">
-        <div className="!mx-auto !max-w-6xl !px-6 !py-4 !flex !items-center !justify-between">
-          <button
-            onClick={() => navigate("/")}
-            className="!text-2xl !font-extrabold !tracking-wide !text-[#176B87] hover:!opacity-80 !transition !bg-transparent !border-none"
-          >
-            🎢 ThemePark
-          </button>
-          <div className="!flex !items-center !gap-3">
-            <span className="!hidden sm:!inline !text-sm !text-slate-700">
-              Signed in as <strong>{user?.email}</strong>
-            </span>
-            <button
-              onClick={() => navigate("/userinfo")}
-              className="!px-4 !py-2 !rounded-lg !font-semibold !border !border-[#176B87] !text-[#176B87] hover:!bg-[#B4D4FF] !transition !bg-transparent"
-            >
-              User Info
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="!px-4 !py-2 !rounded-lg !font-semibold !border !border-[#176B87] !text-[#176B87] hover:!bg-[#B4D4FF] !transition !bg-transparent"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </nav>
+      {/* Navbar is now global in App.jsx */}
 
       {/* Content */}
       <main className="!flex !flex-1 !max-w-6xl !mx-auto !w-full !p-6 !gap-6">
@@ -283,33 +241,79 @@ export default function UserInfoPage() {
             </>
           ) : (
             <div>
-              <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-4">
-                Order History
+              <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-6">
+                🎢 Order History
               </h2>
-              <table className="!w-full !border !border-[#B4D4FF] !text-left !rounded-md !overflow-hidden">
-                <thead className="!bg-[#B4D4FF] !text-white">
-                  <tr>
-                    <th className="!px-4 !py-2">Order ID</th>
-                    <th className="!px-4 !py-2">Date</th>
-                    <th className="!px-4 !py-2">Total</th>
-                    <th className="!px-4 !py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="!bg-white/80">
-                    <td className="!px-4 !py-2">#0001</td>
-                    <td className="!px-4 !py-2">2025-10-20</td>
-                    <td className="!px-4 !py-2">$42.50</td>
-                    <td className="!px-4 !py-2">Completed</td>
-                  </tr>
-                  <tr className="!bg-white">
-                    <td className="!px-4 !py-2">#0002</td>
-                    <td className="!px-4 !py-2">2025-10-10</td>
-                    <td className="!px-4 !py-2">$15.00</td>
-                    <td className="!px-4 !py-2">Completed</td>
-                  </tr>
-                </tbody>
-              </table>
+
+              {ordersLoading ? (
+                <div className="!text-center !py-10">
+                  <p className="!text-lg !text-[#176B87]">Loading orders...</p>
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="!text-center !py-10 !bg-white/50 !rounded-xl">
+                  <p className="!text-lg !text-gray-500 !mb-4">No orders yet!</p>
+                  <button
+                    onClick={() => navigate('/tickets')}
+                    className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
+                  >
+                    Browse Rides
+                  </button>
+                </div>
+              ) : (
+                <div className="!space-y-4">
+                  {orders.map((order) => (
+                    <div
+                      key={order.order_id}
+                      className="!bg-white !rounded-xl !shadow-md !p-6 !border !border-[#B4D4FF] hover:!shadow-lg !transition"
+                    >
+                      <div className="!flex !justify-between !items-start !mb-4">
+                        <div>
+                          <h3 className="!text-lg !font-bold !text-[#176B87]">
+                            Order #{order.order_id}
+                          </h3>
+                          <p className="!text-sm !text-gray-600">
+                            {new Date(order.order_date).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                        <div className="!text-right">
+                          <p className="!text-2xl !font-bold !text-[#176B87]">
+                            ${parseFloat(order.total_amount).toFixed(2)}
+                          </p>
+                          <span className={`!inline-block !px-3 !py-1 !rounded-full !text-sm !font-semibold ${
+                            order.status === 'completed'
+                              ? '!bg-green-100 !text-green-800'
+                              : order.status === 'pending'
+                              ? '!bg-yellow-100 !text-yellow-800'
+                              : '!bg-red-100 !text-red-800'
+                          }`}>
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="!border-t !border-gray-200 !pt-4">
+                        <h4 className="!font-semibold !text-gray-700 !mb-2">Items:</h4>
+                        <ul className="!space-y-2">
+                          {order.items.map((item, idx) => (
+                            <li key={idx} className="!flex !justify-between !text-sm">
+                              <span className="!text-gray-700">
+                                {item.ride_name} × {item.number_of_tickets}
+                              </span>
+                              <span className="!font-semibold !text-[#176B87]">
+                                ${parseFloat(item.subtotal).toFixed(2)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </section>
