@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ChakraProvider } from '@chakra-ui/react';
 import { AuthProvider } from "./components/layouts/customer/AuthContext.jsx";
 import { CartProvider } from "./components/layouts/customer/CartContext.jsx";
+import Navbar from "./components/Navbar.jsx";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import SignUp from './components/layouts/login/Signup.jsx';
 import Login from './components/layouts/login/Login.jsx';
@@ -20,6 +21,7 @@ function App() {
       <AuthProvider>
         <CartProvider>
           <Router>
+            <Navbar />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<Login />} />

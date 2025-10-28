@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "./AuthContext";
 import { useCart } from "./CartContext";
 import PageFooter from "./PageFooter";
 import "./Homepage.css";
@@ -7,7 +6,6 @@ import { useState, useEffect } from "react";
 import { api, getImageUrl } from "../../../services/api";
 
 export default function TicketsPage() {
-  const { user, signout } = useAuth();
   const { cart, addToCart, removeFromCart, total } = useCart();
   const navigate = useNavigate();
   const [rides, setRides] = useState([]);
@@ -47,45 +45,9 @@ export default function TicketsPage() {
     return item ? item.quantity : 0;
   };
 
-  const handleSignOut = () => {
-    signout();
-    navigate("/");
-  };
-
   return (
     <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
-      {/* Navbar */}
-      <nav className="!sticky !top-0 !z-50 !bg-[#EEF5FF] !border-b !border-[#B4D4FF] backdrop-blur-md">
-        <div className="!mx-auto !max-w-6xl !px-6 !py-4 !flex !items-center !justify-between">
-          {/* Logo */}
-          <button
-            onClick={() => navigate("/")}
-            className="!text-2xl !font-bold !tracking-wide !text-[#176B87] hover:!opacity-80 !transition !bg-transparent !border-none"
-          >
-            🎢 ThemePark
-          </button>
-
-          <div className="!flex !items-center !gap-3">
-            {user && (
-              <span className="!hidden sm:!inline !text-sm !text-slate-700">
-                Signed in as <strong>{user.email}</strong>
-              </span>
-            )}
-            <button
-              onClick={() => navigate("/userinfo")}
-              className="!px-4 !py-2 !rounded-lg !font-semibold !border !border-[#176B87] !text-[#176B87] hover:!bg-[#B4D4FF] !transition !bg-transparent"
-            >
-              User Info
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="!px-4 !py-2 !rounded-lg !font-semibold !border !border-[#176B87] !text-[#176B87] hover:!bg-[#B4D4FF] !transition !bg-transparent"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </nav>
+      {/* Navbar is now global in App.jsx */}
 
       {/* Ticket Selection */}
       <main className="!flex-1 !max-w-6xl !mx-auto !p-6">
@@ -116,33 +78,44 @@ export default function TicketsPage() {
           {rides.map((ride) => (
             <div
               key={ride.id}
-              className="!bg-white/80 !rounded-xl !shadow !overflow-hidden !border !border-[#B4D4FF]"
+              className="!bg-white !rounded-2xl !shadow-lg hover:!shadow-2xl !overflow-hidden !border !border-[#B4D4FF] !transition-all hover:!scale-[1.02] !group"
             >
-              {ride.photo_path && (
-                <div className="!w-full !h-48 !overflow-hidden !bg-gray-100">
-                  <img
-                    src={getImageUrl(ride.photo_path)}
-                    alt={ride.name}
-                    className="!w-full !h-full !object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML = '<div class="!w-full !h-full !flex !items-center !justify-center !text-gray-400">No Image</div>';
-                    }}
-                  />
+              <div className="!relative !w-full !h-56 !overflow-hidden !bg-gradient-to-br !from-[#176B87] !to-[#86B6F6]">
+                <img
+                  src={getImageUrl(ride.photo_path, ride.name)}
+                  alt={ride.name}
+                  className="!w-full !h-full !object-cover group-hover:!scale-110 !transition-transform !duration-500"
+                />
+                {/* Overlay gradient for better text contrast */}
+                <div className="!absolute !inset-0 !bg-gradient-to-t !from-black/30 !to-transparent !pointer-events-none"></div>
+
+                {/* Status Badge */}
+                <div className="!absolute !top-3 !right-3 !px-3 !py-1 !bg-white/95 backdrop-blur-sm !rounded-full !text-xs !font-bold !shadow-lg">
+                  {ride.status === 'open' ? (
+                    <span className="!text-green-600">✅ Open</span>
+                  ) : ride.status === 'maintenance' ? (
+                    <span className="!text-orange-600">🔧 Maintenance</span>
+                  ) : (
+                    <span className="!text-red-600">🔒 Closed</span>
+                  )}
                 </div>
-              )}
+              </div>
+
               <div className="!p-6">
-                <h3 className="!text-xl !font-bold !text-[#176B87] !mb-2">
-                  {ride.name}
-                </h3>
+                <div className="!flex !items-start !justify-between !mb-3">
+                  <h3 className="!text-xl !font-bold !text-[#176B87] !leading-tight">
+                    {ride.name}
+                  </h3>
+                  <span className="!text-2xl !font-black !text-[#176B87] !ml-2">
+                    ${ride.price.toFixed(2)}
+                  </span>
+                </div>
+
                 {ride.description && (
-                  <p className="!text-sm !text-slate-600 !mb-2 !line-clamp-2">
+                  <p className="!text-sm !text-gray-600 !mb-4 !line-clamp-2 !leading-relaxed">
                     {ride.description}
                   </p>
                 )}
-                <p className="!text-lg !font-semibold !text-slate-700 !mb-4">
-                  ${ride.price.toFixed(2)}
-                </p>
                 <div className="!flex !gap-2 !items-center">
                   <button
                     onClick={() => removeFromCart(ride.id)}

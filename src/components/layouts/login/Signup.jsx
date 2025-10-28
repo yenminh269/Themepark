@@ -64,54 +64,101 @@ function SignUp() {
   };
 
   return (
-  <div className="min-h-screen bg-[#FFFBDE] flex items-center justify-center">
-    <Form className='ml-20'noValidate validated={validated} onSubmit={handleSubmit}>
-      <div  className='flex flex-col items-center'>
-        <h1 className='text-[#176B87] p-4'>Sign up now to reserve tickets and skip the lines!</h1>  
+    <div className="!min-h-screen !bg-gradient-to-br !from-[#EEF5FF] !via-[#B4D4FF] !to-[#86B6F6] !flex !items-center !justify-center !p-6">
+      {/* Decorative background image */}
+      <div className="!absolute !inset-0 !opacity-20">
+        <img
+          src="https://images.unsplash.com/photo-1570993492903-ba4c3088f100?w=1920&h=1080&fit=crop&q=80"
+          alt="Theme Park"
+          className="!w-full !h-full !object-cover"
+        />
+      </div>
 
-        <Row className="mb-3">
-          <InputLogin size="5" type="text" label="Email" name="email" feedback="Please provide a valid email." />
-          <InputLogin size="5" type="password" label="Password" name="password" feedback="Password is required." />
-          <p className='text-left text-[#176B87]'>This email and password will be used to log into your account.</p>
-        </Row>
-
-        <div className='w-225 gap-4 flex '>
-          <InputLogin size="4" type="text" label="First Name" name="firstName" feedback="Please provide a valid first name." />
-          <InputLogin size="4" type="text" label="Last Name" name="lastName" feedback="Please provide a valid last name." />
+      <div className="!relative !z-10 !w-full !max-w-6xl !grid md:!grid-cols-2 !gap-8 !items-center">
+        {/* Left info panel (hidden on small screens) */}
+        <div className="!hidden md:!block">
+          <div className="!bg-white/90 backdrop-blur-md !rounded-3xl !p-8 !shadow-2xl">
+            <h1 className="!text-3xl !font-black !text-[#176B87] !mb-4">Join the Fun</h1>
+            <p className="!text-gray-700 !mb-6">Create an account to reserve tickets, manage orders, and skip the lines!</p>
+            <img
+              src="https://images.unsplash.com/photo-1594739584670-1e9be48f6ec3?w=800&h=600&fit=crop&q=80"
+              alt="Rides"
+              className="!w-full !h-64 !object-cover !rounded-2xl !shadow-lg"
+            />
+            <div className="!mt-6 !grid !grid-cols-3 !gap-4 !text-center">
+              <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
+                <div className="!text-2xl !font-black !text-[#176B87]">Access</div>
+                <div className="!text-sm !text-gray-600">Exclusive deals</div>
+              </div>
+              <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
+                <div className="!text-2xl !font-black !text-[#176B87]">Fast</div>
+                <div className="!text-sm !text-gray-600">Skip the lines</div>
+              </div>
+              <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
+                <div className="!text-2xl !font-black !text-[#176B87]">Secure</div>
+                <div className="!text-sm !text-gray-600">Safe payments</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-      <Row className='w-230 gap-4 flex mt-5 '>
-            <InputLogin className="" size="2" type="date" label="Date of birth" name="dob" feedback="Please provide a valid birthdate." />
-            <InputLogin size="4" type="tel" label="Phone Number (000-000-0000)" name="phone" placeholder="123-456-7890" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number in format: 000-000-0000" />
+        {/* Right - Signup Form */}
+        <div className="!bg-white/95 backdrop-blur-md !rounded-3xl !shadow-2xl !p-8 md:!p-12">
+          <Form noValidate validated={validated} onSubmit={handleSubmit}>
+            <div className='!flex !flex-col !gap-6'>
+              <div className="!text-center md:!text-left">
+                <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-2">Create Account</h2>
+                <p className="!text-gray-600">Sign up now to reserve tickets and skip the lines!</p>
+              </div>
 
-          <Form.Group as={Col} md="3" controlId="validationCustom07">
-            <FloatingLabel label="Gender">
-              <Form.Select className='select-hover' name="gender" required>
-                  <option value="">Select your gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-              </Form.Select>
-              <Form.Control.Feedback type="invalid">
-                    Please pick a valid option
-              </Form.Control.Feedback>
-            </FloatingLabel>
-          </Form.Group>
-          <p className='text-left text-[#176B87]'>Your date of birth is used to calculate your age.</p>
-        </Row>
-      
-        <Form.Group className="my-3">
-            <Form.Check className='text-[#176B87]'
-              required
-              label="Agree to terms and conditions"
-              feedback="You must agree before submitting."
-              feedbackType="invalid"/>
-        </Form.Group>
+              <div>
+                <InputLogin size="15" type="text" label="Email" name="email" feedback="Please provide a valid email." />
+              </div>
 
-        <div><CustomButton text={loading ? "Signing Up..." : "Sign Up"} disabled={loading}/></div>
+              <div>
+                <InputLogin size="15" type="password" label="Password" name="password" feedback="Password is required." />
+              </div>
+
+              <div className='!w-full !flex !gap-4'>
+                <InputLogin size="6" type="text" label="First Name" name="firstName" feedback="Please provide a valid first name." />
+                <InputLogin size="6" type="text" label="Last Name" name="lastName" feedback="Please provide a valid last name." />
+              </div>
+
+              <div className='!w-full !flex !gap-4'>
+                <InputLogin size="6" type="date" label="Date of birth" name="dob" feedback="Please provide a valid birthdate." />
+                <InputLogin size="6" type="tel" label="Phone Number" name="phone" placeholder="123-456-7890" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number in format: 000-000-0000" />
+              </div>
+
+              <Form.Group>
+                <FloatingLabel label="Gender">
+                  <Form.Select className='select-hover' name="gender" required>
+                      <option value="">Select your gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                  </Form.Select>
+                  <Form.Control.Feedback type="invalid">Please pick a valid option</Form.Control.Feedback>
+                </FloatingLabel>
+              </Form.Group>
+
+              <Form.Group className="my-3">
+                <Form.Check className='text-[#176B87]' required label="Agree to terms and conditions" feedback="You must agree before submitting." feedbackType="invalid" />
+              </Form.Group>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="!w-full !py-4 !bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !text-white !text-lg !font-bold !rounded-xl hover:!shadow-2xl hover:!scale-[1.02] !transition-all disabled:!opacity-50 disabled:!cursor-not-allowed !border-none"
+                >
+                  {loading ? '🔄 Signing Up...' : '🎟️ Create Account'}
+                </button>
+              </div>
+            </div>
+          </Form>
+        </div>
       </div>
-    </Form>
-  </div>
+    </div>
   );
 }
 

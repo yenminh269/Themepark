@@ -36,9 +36,24 @@ async function fetchAPI(endpoint, data = null, fetchMethod = "GET", isFormData =
     }
 }
 
-// Get full img url
-export const getImageUrl = (path) => {
-    if (!path) return '';
+// Get beautiful placeholder images for rides
+export const getRidePlaceholderImage = (rideName = '') => {
+    const images = [
+        'https://images.unsplash.com/photo-1594739584670-1e9be48f6ec3?w=800&h=600&fit=crop&q=80', // Roller coaster
+        'https://images.unsplash.com/photo-1570993492903-ba4c3088f100?w=800&h=600&fit=crop&q=80', // Ferris wheel
+        'https://images.unsplash.com/photo-1583416750470-965b2707b355?w=800&h=600&fit=crop&q=80', // Amusement park
+        'https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=800&h=600&fit=crop&q=80', // Theme park rides
+        'https://images.unsplash.com/photo-1575550959106-5a7defe28b56?w=800&h=600&fit=crop&q=80', // Carousel
+        'https://images.unsplash.com/photo-1486299267070-83823f5448dd?w=800&h=600&fit=crop&q=80', // Park view
+    ];
+    // Use ride name to consistently pick an image
+    const index = rideName ? rideName.length % images.length : Math.floor(Math.random() * images.length);
+    return images[index];
+};
+
+// Get full img url with fallback
+export const getImageUrl = (path, rideName = '') => {
+    if (!path) return getRidePlaceholderImage(rideName);
     if (path.startsWith('http')) return path;
     return `${SERVER_URL}${path}`;
 };
@@ -105,7 +120,44 @@ export const api = {
 
     // ===== RIDE ORDERS =====
     getRideOrders: async () => {
-        return await fetchAPI('/rideorders/id');
+        const token = getCustomerToken();
+        if (!token) throw new Error('No authentication token');
+
+        const res = await fetch(`${SERVER_URL}/api/ride-orders`, {
+            method: 'GET',
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (!res.ok) {
+            throw new Error('Failed to fetch orders');
+        }
+
+        const body = await res.json();
+        return body.data || [];
+    },
+
+    createRideOrder: async (cart, total) => {
+        const token = getCustomerToken();
+        if (!token) throw new Error('No authentication token');
+
+        const res = await fetch(`${SERVER_URL}/api/ride-orders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ cart, total }),
+        });
+
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || 'Failed to create order');
+        }
+
+        const body = await res.json();
+        return body.order;
     },
 };
 
