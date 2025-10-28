@@ -27,15 +27,15 @@ function SignUp() {
     setLoading(true);
 
     try {
-      // Extract form data
+      // Extract form data using named elements
       const formData = {
-        email: form.elements[0].value,
-        password: form.elements[1].value,
-        first_name: form.elements[2].value,
-        last_name: form.elements[3].value,
-        dob: form.elements[4].value,
-        phone: form.elements[5].value,
-        gender: form.elements[6].value
+        email: form.elements.email.value,
+        password: form.elements.password.value,
+        first_name: form.elements.firstName.value,
+        last_name: form.elements.lastName.value,
+        dob: form.elements.dob.value,
+        phone: form.elements.phone.value,
+        gender: form.elements.gender.value
       };
 
       // Call signup API - returns { data: customer }
@@ -70,23 +70,23 @@ function SignUp() {
         <h1 className='text-[#176B87] p-4'>Sign up now to reserve tickets and skip the lines!</h1>  
 
         <Row className="mb-3">
-          <InputLogin size="5" type="text" label="Email" feedback="Please provide a valid email." />
-          <InputLogin size="5" type="password" label="Password" feedback="Password is required." />
+          <InputLogin size="5" type="text" label="Email" name="email" feedback="Please provide a valid email." />
+          <InputLogin size="5" type="password" label="Password" name="password" feedback="Password is required." />
           <p className='text-left text-[#176B87]'>This email and password will be used to log into your account.</p>
         </Row>
 
         <div className='w-225 gap-4 flex '>
-          <InputLogin size="4" type="text" label="First Name" feedback="Please provide a valid first name." />
-          <InputLogin size="4" type="text" label="Last Name" feedback="Please provide a valid last name." />
+          <InputLogin size="4" type="text" label="First Name" name="firstName" feedback="Please provide a valid first name." />
+          <InputLogin size="4" type="text" label="Last Name" name="lastName" feedback="Please provide a valid last name." />
         </div>
 
       <Row className='w-230 gap-4 flex mt-5 '>
-            <InputLogin className="" size="2" type="date" label="Date of birth" feedback="Please provide a valid birthdate." />
-            <InputLogin size="4" type="tel" label="Phone Number (000-000-0000)" placeholder="123-456-7890" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number in format: 000-000-0000" />
-          
+            <InputLogin className="" size="2" type="date" label="Date of birth" name="dob" feedback="Please provide a valid birthdate." />
+            <InputLogin size="4" type="tel" label="Phone Number (000-000-0000)" name="phone" placeholder="123-456-7890" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number in format: 000-000-0000" />
+
           <Form.Group as={Col} md="3" controlId="validationCustom07">
             <FloatingLabel label="Gender">
-              <Form.Select className='select-hover' required>
+              <Form.Select className='select-hover' name="gender" required>
                   <option value="">Select your gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
