@@ -38,11 +38,22 @@ function SignUp() {
         gender: form.elements[6].value
       };
 
-      // Call signup API
-      await api.customerSignup(formData);
+      // Call signup API - returns { data: customer }
+      const response = await api.customerSignup(formData);
+      const customer = response.data;
 
-      alert('Account created successfully! Please log in.');
-      navigate('/login');
+      // Auto-login: store customer info and token
+      localStorage.setItem('themepark_user', JSON.stringify(customer));
+
+      // Notify AuthContext
+      try {
+        window.dispatchEvent(new CustomEvent('themepark:auth', { detail: customer }));
+      } catch {
+        // ignore if running in environments without CustomEvent
+      }
+
+      alert(`Welcome, ${customer.first_name}! Your account has been created successfully.`);
+      navigate('/');
 
     } catch (error) {
       console.error('Signup error:', error);

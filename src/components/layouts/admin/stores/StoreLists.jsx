@@ -3,7 +3,7 @@ import { Box, useToast, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDi
 import { api } from '../../../../services/api';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useDisclosure } from '@chakra-ui/react';
-import Loading from '../loading/loading';
+  import Loading from '../loading/Loading';
 import { WarningIcon } from '@chakra-ui/icons';
 
 function StoreLists() {

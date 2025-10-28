@@ -28,29 +28,54 @@ function Login({setAdmin}){
 
         try {
             const formData = {
-                email: form.elements[0].value,
-                password: form.elements[1].value
+                email: form.elements.email.value,
+                password: form.elements.password.value
             };
 
             if(isE) {
                 // Employee login with database check
-                const response = await api.employeeLogin(formData);
+                // api.employeeLogin returns the employee data directly (fetchAPI extracts .data)
+                const employeeData = await api.employeeLogin(formData);
 
                 // Store employee info in localStorage
-                localStorage.setItem('employee', JSON.stringify(response.data));
+                localStorage.setItem('employee', JSON.stringify(employeeData));
 
-                alert(`Welcome back, ${response.data.first_name}!`);
-                // Set admin state and navigate to admin dashboard
-                setAdmin(true);
+                // Set admin state if setAdmin function is provided
+                if (setAdmin) {
+                    setAdmin(true);
+                }
+
+                // Redirect based on job title
+                const jobTitle = employeeData.job_title;
+
+                if (jobTitle === 'General Manager' || jobTitle === 'Manager') {
+                    alert(`Welcome back, ${employeeData.first_name}!`);
+                    navigate('/admin');
+                } else if (jobTitle === 'Mechanical Employee') {
+                    alert(`Welcome back, ${employeeData.first_name}!`);
+                    navigate('/maintenance');
+                } else {
+                    alert(`Welcome back, ${employeeData.first_name}!`);
+                    navigate('/admin');
+                }
             } else {
                 // Customer login
                 const response = await api.customerLogin(formData);
 
-                // Store customer info in localStorage
-                localStorage.setItem('customer', JSON.stringify(response.data));
+                // api.customerLogin returns { data: customer }
+                const customer = response.data;
 
-                alert(`Welcome back, ${response.data.first_name}!`);
-                // Navigate to customer dashboard or home page
+                // Store customer info in localStorage using the key AuthContext expects
+                localStorage.setItem('themepark_user', JSON.stringify(customer));
+                // Notify AuthContext (and other listeners) so UI updates immediately
+                try {
+                    window.dispatchEvent(new CustomEvent('themepark:auth', { detail: customer }));
+                } catch {
+                    // ignore if running in environments without CustomEvent
+                }
+
+                alert(`Welcome back, ${customer.first_name || customer.firstName || 'Customer'}!`);
+                // Navigate to customer home page
                 navigate('/');
             }
         } catch (error) {
@@ -68,11 +93,11 @@ function Login({setAdmin}){
                 <h1>Welcome to our Theme Park</h1>
                <p>Log In or <Link to="/signup" className='!no-underline'><span className='hover:outline-dashed font-bold'>Create an account</span></Link></p>
                 <div>
-                    <InputLogin size="15" type="text" label="Email" feedback="Please provide a valid email." />
+                    <InputLogin size="15" type="text" label="Email" feedback="Please provide a valid email." name="email" />
                 </div>
 
                 <div>
-                    <InputLogin size="15" type="password" label="Password" feedback="Password is required." />
+                    <InputLogin size="15" type="password" label="Password" feedback="Password is required." name="password" />
                 </div>
                 <div>
                     <input type="checkbox" className="accent-[#176B87]"  checked={isE}

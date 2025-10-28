@@ -1,7 +1,7 @@
 import DataTable from '../../../data-table/DataTable';
 import { api } from '../../../../services/api';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import Loading from '../loading/loading';
+import Loading from '../loading/Loading';
 import { Box, IconButton, HStack, ScaleFade, AlertDialog, AlertDialogBody, AlertDialogFooter,
   AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, Button, Text, useDisclosure, useToast
 } from '@chakra-ui/react';

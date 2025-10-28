@@ -23,12 +23,12 @@ async function fetchAPI(endpoint, data = null, fetchMethod = "GET", isFormData =
         }
         
         const result = await response.json();
-        
+
         // Handle both response formats
         if (result.success === false) {
             throw new Error(result.message || 'API request failed');
         }
-        
+
         return result.data || result;
     } catch (error) {
         console.error('API error:', error);
@@ -205,4 +205,33 @@ export async function fetchCurrentCustomer() {
 // LOG OUT
 export function logoutCustomer() {
     setCustomerToken(null);
+}
+
+// Backwards-compatible wrapper methods for components that call `api.customerSignup` / `api.customerLogin`
+// These return the shape other parts of the app expect (an object with `data`) so existing callers
+// don't need to be changed.
+try {
+    // `api` was exported earlier in this module — attach compatibility methods to it.
+    api.customerSignup = async (formData) => {
+        const customer = await signupCustomer(formData);
+        return { data: customer };
+    };
+
+    api.customerLogin = async (formData) => {
+        const customer = await loginCustomer(formData);
+        return { data: customer };
+    };
+
+    api.fetchCurrentCustomer = async () => {
+        // Keep compatibility: some callers may expect fetchCurrentCustomer as part of `api`.
+        return await fetchCurrentCustomer();
+    };
+
+    api.logoutCustomer = () => {
+        return logoutCustomer();
+    };
+} catch (e) {
+    // In unusual bundling cases `api` might not be writable yet — fail silently and let
+    // named exports be used instead.
+    console.warn('Could not attach compatibility methods to api object', e);
 }

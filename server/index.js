@@ -2,36 +2,25 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import path from 'path';
-import bcrypt from 'bcryptjs';
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import db from './config/db.js';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-env.config();
-
-
-//connect to local database
- const db = mysql.createConnection({
-   host: process.env.DB_HOST,
-   port: process.env.DB_PORT,
-   user: process.env.DB_USER,
-   password: process.env.DB_PASSWORD,
-   database: process.env.DB_NAME,
-    ssl:{rejectUnauthorized: true}
- }); 
- db.connect((err) => {
-   if (err) return console.error(err.message);
-
-   console.log('Connected to the MySQL server.');
- });
 
 //Middlewares
-app.use(cors());
+app.use(cors({ 
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));// serve uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));// serve uploaded images
 
 // ===== Multer Configuration FOR PHOTO UPLOAD =====
 const storage = multer.diskStorage({
@@ -694,10 +683,10 @@ app.post('/employee/login', async (req, res) => {
   }
 
   try {
-    // Find employee by email and check if not terminated or deleted
+    // Find employee by email (allow deleted and terminated employees to login)
     const sql = `SELECT employee_id, email, password, first_name, last_name, job_title
                  FROM employee
-                 WHERE email = ? AND deleted_at IS NULL AND terminate_date IS NULL`;
+                 WHERE email = ?`;
     const employees = await new Promise((resolve, reject) => {
       db.query(sql, [email], (err, results) => {
         if (err) reject(err);
@@ -713,8 +702,21 @@ app.post('/employee/login', async (req, res) => {
 
     const employee = employees[0];
 
-    // Compare password with hashed password
-    const isPasswordValid = await bcrypt.compare(password, employee.password);
+    // Check password - support both plain text and hashed passwords
+    let isPasswordValid = false;
+
+    // Try plain text comparison first
+    if (password === employee.password) {
+      isPasswordValid = true;
+    } else {
+      // Try bcrypt comparison for hashed passwords
+      try {
+        isPasswordValid = await bcrypt.compare(password, employee.password);
+      } catch {
+        // If bcrypt fails, password doesn't match
+        isPasswordValid = false;
+      }
+    }
 
     if (!isPasswordValid) {
       return res.status(401).json({

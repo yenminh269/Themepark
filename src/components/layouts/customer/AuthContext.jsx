@@ -11,6 +11,21 @@ export function AuthProvider({ children }) {
     if (storedUser) setUser(JSON.parse(storedUser));
   }, []);
 
+  // Listen for auth events from other parts of the app so we can update context immediately
+  useEffect(() => {
+    const handler = (e) => {
+      if (e && e.detail) {
+        setUser(e.detail);
+      } else {
+        const stored = localStorage.getItem("themepark_user");
+        setUser(stored ? JSON.parse(stored) : null);
+      }
+    };
+
+    window.addEventListener('themepark:auth', handler);
+    return () => window.removeEventListener('themepark:auth', handler);
+  }, []);
+
   // Save user to localStorage on change
   useEffect(() => {
     if (user) {
