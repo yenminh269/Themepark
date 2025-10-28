@@ -1,0 +1,270 @@
+/* Container */
+.app-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+/* Sidebar */
+.sidebar {
+  background-color: #4b5d16;
+  color: #a7b383;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Sidebar top */
+.sidebar-top {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 3-dash toggle */
+.sidebar-toggle {
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #ffffff;
+}
+
+/* Sidebar title */
+.sidebar-title {
+  font-weight: bold;
+  font-size: 1.5rem;
+  color: #ffffff;
+}
+
+/* Store list */
+.store-list h4 {
+  margin-bottom: 10px;
+  color: #e1e8d0;
+}
+
+.store-list ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.store-list li {
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.store-list li:hover {
+  color: #ffffff;
+}
+
+/* Sidebar bottom */
+.sidebar-bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.user-info {
+  font-size: 0.95rem;
+  color: #d3d9c3;
+  margin-bottom: 10px;
+}
+
+.logout-button {
+  background-color: #8da679;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background-color 0.2s;
+}
+
+.logout-button:hover {
+  background-color: #728559;
+}
+
+/* Main Content */
+.main-content {
+  flex-grow: 1;
+  background-color: #cdd6b9;
+  padding: 40px;
+  height: 100vh;
+  overflow-x: auto;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.card {
+  background-color: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  min-width: 800px;
+}
+
+.card h2 {
+  color: #3e4b2b;
+  margin-bottom: 20px;
+}
+
+/* Search */
+.search-wrapper {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.search-wrapper input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.search-wrapper select {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+/* Table */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 12px 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.table th {
+  background-color: #e5f0c7;
+  color: #3e4b2b;
+}
+
+.table tr:hover {
+  background-color: #f0f4e3;
+}
+
+.table input,
+.table select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+/* Buttons */
+.edit-button,
+.save-button,
+.cancel-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 0.9rem;
+}
+
+.edit-button {
+  background-color: #2196f3;
+  color: white;
+}
+
+.edit-button:hover {
+  background-color: #1976d2;
+}
+
+.save-button {
+  background-color: #4caf50;
+  color: white;
+}
+
+.save-button:hover {
+  background-color: #388e3c;
+}
+
+.cancel-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.cancel-button:hover {
+  background-color: #d32f2f;
+}
+
+/* Pagination */
+.pagination {
+  margin-top: 20px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pagination button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #d3d9c3;
+  color: #3e4b2b;
+}
+
+.pagination button.active,
+.pagination button:disabled {
+  background-color: #3e4b2b;
+  color: #ffffff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+  }
+
+  .main-content {
+    padding: 20px;
+  }
+
+  .card {
+    min-width: auto;
+  }
+}
+/* Sidebar collapse behavior */
+.sidebar.collapsed {
+  width: 60px; /* small width for collapsed sidebar */
+  padding: 10px;
+}
+
+.sidebar.collapsed .sidebar-title,
+.sidebar.collapsed .store-list h4,
+.sidebar.collapsed .store-list ul,
+.sidebar.collapsed .sidebar-bottom {
+  display: none; /* hide text and store list when collapsed */
+}
+
+.sidebar.collapsed .sidebar-toggle {
+  margin-bottom: 0; /* keep toggle visible */
+}
