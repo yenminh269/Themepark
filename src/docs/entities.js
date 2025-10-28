@@ -1,4 +1,4 @@
-import { MdDashboard, MdAdd, MdList, MdBuild, MdPeople, MdOutlineLogout } from "react-icons/md"
+import { MdDashboard, MdAdd, MdList, MdBuild, MdPeople, MdOutlineLogout, MdOutlineReviews } from "react-icons/md"
 
 const entities = [
     {
@@ -13,6 +13,11 @@ const entities = [
       name: 'Add New Ride',
       path: '/admin/add/ride',
       icon: MdAdd
+    },
+    {
+      name: 'Ride Gallery',
+      path: '/admin/view/rides',
+      icon: MdOutlineReviews
     },
     {
       name: 'Ride Lists',

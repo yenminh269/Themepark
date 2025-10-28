@@ -1,31 +1,64 @@
 import {  useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Form from 'react-bootstrap/Form';
-import InputLogIn from '../../input/InputLogin';
 import CustomButton from '../../button/CustomButton';
-import { Zoom } from '@mui/material';
-import { Fab } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+
 import './Login.css';
 import InputLogin from '../../input/InputLogin';
+import { api } from '../../../services/api';
 
 function Login({setAdmin}){
     const [isE,setIsE] = useState(false);
     const [validated, setValidated] = useState(false);
-    
-    const handleSubmit = (event) => {
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
         const form = event.currentTarget;
-            if (form.checkValidity() === false) {
-                event.preventDefault();
-                event.stopPropagation();
-            }else{
-                if(isE) {setAdmin(true)}
-                else{
-                    alert("Non-employee login not implemented yet");
-                }
-            }
+        if (form.checkValidity() === false) {
             setValidated(true);
-            
+            return;
+        }
+
+        setValidated(true);
+        setLoading(true);
+
+        try {
+            const formData = {
+                email: form.elements[0].value,
+                password: form.elements[1].value
+            };
+
+            if(isE) {
+                // Employee login with database check
+                const response = await api.employeeLogin(formData);
+
+                // Store employee info in localStorage
+                localStorage.setItem('employee', JSON.stringify(response.data));
+
+                alert(`Welcome back, ${response.data.first_name}!`);
+                // Set admin state and navigate to admin dashboard
+                setAdmin(true);
+            } else {
+                // Customer login
+                const response = await api.customerLogin(formData);
+
+                // Store customer info in localStorage
+                localStorage.setItem('customer', JSON.stringify(response.data));
+
+                alert(`Welcome back, ${response.data.first_name}!`);
+                // Navigate to customer dashboard or home page
+                navigate('/');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('Invalid email or password. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
   
     return(
@@ -45,14 +78,7 @@ function Login({setAdmin}){
                     <input type="checkbox" className="accent-[#176B87]"  checked={isE}
                         onChange={(e) => setIsE(e.target.checked)}/>Log in as employee
                 </div>
-                
-
-                {/* <Zoom in={isE}>
-                    <div className='divChild'>
-                        <Input size="4" type="text" label="Employee ID" feedback="Employee ID is required."/>
-                    </div>
-                </Zoom>  */}
-                <div> <CustomButton text="Log In"/></div>
+                <div> <CustomButton text={loading ? "Logging In..." : "Log In"} disabled={loading}/></div>
             </div>
         </Form>
     </div>

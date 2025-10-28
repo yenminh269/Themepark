@@ -30,53 +30,63 @@ function Input(props){
         
         // For regular number (capacity), validate integer only
         if (props.type === 'number') {
-            const value = e.target.value;
-            if(value < props.min){
-                e.target.setCustomValidity('The capacity is too low (2-50)');
-            } else if(value > props.max) {
-                e.target.setCustomValidity('The capacity is too high (2-50)');
-            }
-        }
+    const value = Number(e.target.value);
+    const min = Number(props.min);
+    const max = Number(props.max);
+
+    if (value < min) {
+        e.target.setCustomValidity(`The capacity is too low (${min}-${max})`);
+    } else if (value > max) {
+        e.target.setCustomValidity(`The capacity is too high (${min}-${max})`);
+    } else {
+        e.target.setCustomValidity(''); // clear any previous error
+    }
+}
+
     };
 
     const getInputProps = () => {
-        const baseProps = {
-           ...props, 
-            onKeyDown: handleKeyDown,
-            onInput: handleInput,
-        };
-
-        // Add decimal validation for currency type
-        if (props.type === 'currency') {
-            return {
-                ...baseProps,
-                type: 'number',
-                step: props.step || '0.01',
-                min: props.min || '0',
-                max: props.max || '9999.99'
-            };
-        }
-        
-        // For regular number (capacity), use step 1 for integers only
-        if (props.type === 'number') {
-            return {
-                ...baseProps,
-                step: props.step || '1'
-            };
-        }
-        
-        // For file inputs, remove onKeyDown and onInput handlers
-        if (props.type === 'file') {
-            return {
-                required: props.required,
-                type: 'file',
-                className: props.className,
-                accept: props.accept || 'image/*'
-            };
-        }
-
-        return baseProps;
+    // Destructure to remove custom props that shouldn't be passed to DOM
+    const { labelClassName, feedback, size, label, ...domProps } = props;
+    
+    const baseProps = {
+        ...domProps, 
+        onKeyDown: handleKeyDown,
+        onInput: handleInput,
     };
+
+    // Add decimal validation for currency type
+    if (props.type === 'currency') {
+        return {
+            ...baseProps,
+            type: 'number',
+            step: props.step || '0.01',
+            min: props.min || '0',
+            max: props.max || '9999.99'
+        };
+    }
+    
+    // For regular number (capacity), use step 1 for integers only
+    if (props.type === 'number') {
+        return {
+            ...baseProps,
+            step: props.step || '1'
+        };
+    }
+    
+    // For file inputs, remove onKeyDown and onInput handlers
+    if (props.type === 'file') {
+        return {
+            required: props.required,
+            type: 'file',
+            className: props.className,
+            accept: props.accept || 'image/*',
+            onChange: props.onChange
+        };
+    }
+
+    return baseProps;
+} ;
 
     // File inputs don't work well with FloatingLabel, so handle separately
     if (props.type === 'file') {
