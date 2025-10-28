@@ -1,0 +1,8 @@
+
+.sticky-header th {
+  position: sticky;
+  top: 0; /* stick to top */
+  background: white; /* make sure header has a background */
+  z-index: 10; /* so it sits above the rows */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* optional shadow for separation */
+}
