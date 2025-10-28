@@ -6,7 +6,7 @@ import ListSubheader from '@mui/material/ListSubheader';
 import IconButton from '@mui/material/IconButton';
 import InfoIcon from '@mui/icons-material/Info';
 import { useState, useEffect } from "react";
-import Loading from "../loading/loading";
+import Loading from "../loading/Loading";
 import { api } from "../../../../services/api";
 
 export default function RideGallery() {

@@ -5,7 +5,7 @@ import Form from "react-bootstrap/Form";
 import CustomButton from "../../../button/CustomButton";
 import { ScaleFade } from '@chakra-ui/react';
 import "../Add.css";
-import Loading from "../loading/loading";
+import Loading from "../loading/Loading";
 import { api } from '../../../../services/api';
 import DataTable from '../../../data-table/DataTable';
 import '../../../button/CustomButton.css' 

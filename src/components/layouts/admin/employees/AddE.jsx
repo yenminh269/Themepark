@@ -5,7 +5,7 @@ import Form from 'react-bootstrap/Form';
 import { FormControl, FormLabel } from '@chakra-ui/react';
 import Select from 'react-select';
 import CustomButton from '../../../button/CustomButton';
-import Loading from "../loading/loading";
+import Loading from "../loading/Loading";
 import { api } from '../../../../services/api';
 
 export default function AddE({onClose}){

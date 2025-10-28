@@ -19,6 +19,7 @@ function InputLogin(props){
                     type={isPasswordField && showPassword ? 'text' : props.type}
                     placeholder={props.placeholder || " "}
                     pattern={props.pattern}
+                    name={props.name}
                 />
                 <Form.Control.Feedback type="invalid">
                     {props.feedback}

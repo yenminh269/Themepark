@@ -2,7 +2,7 @@ import DataTable from '../../../data-table/DataTable';
 import { Box } from '@chakra-ui/react';
 import { api } from '../../../../services/api';
 import { useState, useEffect, useMemo } from 'react';
-import Loading from '../loading/loading';
+import Loading from '../loading/Loading';
 
 function RideLists() {
   const [loading, setLoading] = useState(true);

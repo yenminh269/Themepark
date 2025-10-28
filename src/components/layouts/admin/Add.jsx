@@ -5,7 +5,7 @@ import CustomButton from "../../button/CustomButton";
 import { FormControl, FormLabel, IconButton } from '@chakra-ui/react';
 import Select from 'react-select';
 import ItemAdded from "../../card/ItemAdded";
-import Loading from "./loading/loading";
+import Loading from "./loading/Loading";
 import ImageInputToggle from "../../input/imgInput";
 import './Add.css';
 import { useState, useEffect } from "react";
