@@ -134,8 +134,29 @@ export default function StorePage() {
 
       {/* Merchandise Grid */}
       <main className="!flex-1 !max-w-6xl !mx-auto !p-6">
+        {/* In-Park Only Notice for Food Stores */}
+        {!store.available_online && (
+          <div className="!mb-6 !bg-gradient-to-r !from-blue-50 !to-indigo-50 !border-2 !border-blue-300 !rounded-xl !p-6 !shadow-lg">
+            <div className="!flex !items-start !gap-4">
+              <div className="!text-4xl">🎢</div>
+              <div>
+                <h3 className="!text-xl !font-bold !text-blue-900 !mb-2">In-Park Purchase Only</h3>
+                <p className="!text-blue-800 !mb-2">
+                  This food & beverage menu is available for <strong>in-park orders only</strong>.
+                  Browse our delicious items here, then visit us at the park to place your order!
+                </p>
+                <p className="!text-sm !text-blue-700">
+                  💡 Tip: Save this menu to quickly order when you arrive at the park
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="!mb-6">
-          <h2 className="!text-2xl !font-bold !text-[#176B87]">Available Items</h2>
+          <h2 className="!text-2xl !font-bold !text-[#176B87]">
+            {store.available_online ? 'Available Items' : 'Menu'}
+          </h2>
         </div>
 
         {merchandise.length === 0 && (
@@ -152,9 +173,17 @@ export default function StorePage() {
                 className="!bg-white !rounded-2xl !shadow-lg hover:!shadow-2xl !overflow-hidden !border !border-[#B4D4FF] !transition-all hover:!scale-[1.02] !group"
               >
                 <div className="!relative !w-full !h-48 !overflow-hidden !bg-gradient-to-br !from-[#176B87] !to-[#86B6F6]">
-                  <div className="!w-full !h-full !bg-gray-200 !flex !items-center !justify-center">
-                    <span className="!text-gray-500 !text-sm">📦</span>
-                  </div>
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.item_name}
+                      className="!w-full !h-full !object-cover group-hover:!scale-110 !transition-transform !duration-500"
+                    />
+                  ) : (
+                    <div className="!w-full !h-full !bg-gray-200 !flex !items-center !justify-center">
+                      <span className="!text-gray-500 !text-sm">📦</span>
+                    </div>
+                  )}
 
                   {/* Stock Badge */}
                   <div className="!absolute !top-3 !right-3 !px-3 !py-1 !bg-white/95 backdrop-blur-sm !rounded-full !text-xs !font-bold !shadow-lg">
@@ -225,21 +254,41 @@ export default function StorePage() {
 
         {/* Store Cart Summary */}
         {storeCart.length > 0 && (
-          <div className="!mt-10 !bg-white/70 !p-6 !rounded-xl !shadow !flex !justify-between !items-center">
-            <div>
-              <p className="!text-lg !font-semibold !text-[#176B87]">
-                Store Total: ${storeTotal.toFixed(2)}
-              </p>
-              <p className="!text-sm !text-gray-600">
-                {storeCart.reduce((sum, item) => sum + item.quantity, 0)} items from {store.name}
-              </p>
+          <div className="!mt-10 !bg-white/70 !p-6 !rounded-xl !shadow">
+            <div className="!flex !justify-between !items-center !mb-4">
+              <div>
+                <p className="!text-lg !font-semibold !text-[#176B87]">
+                  Store Total: ${storeTotal.toFixed(2)}
+                </p>
+                <p className="!text-sm !text-gray-600">
+                  {storeCart.reduce((sum, item) => sum + item.quantity, 0)} items from {store.name}
+                </p>
+              </div>
+              {store.available_online ? (
+                <button
+                  onClick={handleCheckout}
+                  className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
+                >
+                  Checkout Online
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="!px-6 !py-3 !bg-gray-400 !text-white !rounded-lg !font-bold !cursor-not-allowed !border-none"
+                >
+                  🎢 Purchase at Park
+                </button>
+              )}
             </div>
-            <button
-              onClick={handleCheckout}
-              className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
-            >
-              Checkout from {store.name}
-            </button>
+            {!store.available_online && (
+              <div className="!bg-blue-50 !border !border-blue-200 !rounded-lg !p-4 !text-sm !text-blue-800">
+                <p className="!font-semibold !mb-1">🎢 In-Park Purchase Only</p>
+                <p>
+                  This is a food/beverage store. Please visit <strong>{store.name}</strong> at the park to complete your order.
+                  You can browse the menu here and order when you arrive!
+                </p>
+              </div>
+            )}
           </div>
         )}
       </main>

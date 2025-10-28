@@ -1,38 +1,9 @@
-/* homepage.css - Pure CSS version without Tailwind directives */
+/* homepage.css - Scoped CSS for HomePage only */
 
-/* --- Base layout setup --- */
-html, body, #root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  scroll-behavior: smooth;
-}
+/* --- Smooth transitions ONLY for homepage elements --- */
+/* REMOVED GLOBAL * SELECTOR TO PREVENT AFFECTING OTHER PAGES */
 
-/* --- Global body background & text color --- */
-body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-    Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-  color: #0b1b2b;
-  /* Remove this if you want to use Tailwind's bg-gradient in your component */
-  /* background: linear-gradient(to bottom right, #EEF5FF, #B4D4FF); */
-}
-
-/* --- Smooth transitions for everything --- */
-* {
-  transition: all 0.2s ease-in-out;
-}
-
-/* --- Headings --- */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-h1 { font-size: 2.5rem; }
-h2 { font-size: 2rem; }
-p  { font-size: 1rem; line-height: 1.6; opacity: 0.9; }
+/* Removed global heading styles - they were affecting all pages */
 
 /* --- Links --- */
 a {
