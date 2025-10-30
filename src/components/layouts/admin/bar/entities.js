@@ -30,6 +30,11 @@ const entities = [
       icon: MdCloud
     },
     {
+      name: 'Ride Maintenance',
+      path: 'ride-maintenance',
+      icon: MdCloud
+    },
+    {
       category: 'STORES'
     },
     {

@@ -5,7 +5,7 @@ import Sidebar from "./bar/Sidebar.jsx";
 import MobileSidebar from "./bar/MobileSidebar.jsx";
 import Add from "./Add.jsx";
 import AdminDashboard from "./AdminDashboard.jsx";
-
+import RideMaintenance from "./rides/RideMaintenance.jsx";
 import Employees from "./employees/Employees.jsx";
 import RideLists from "./rides/RideList.jsx";
 import StoreLists from "./stores/StoreLists.jsx";
@@ -99,7 +99,7 @@ function AdminMain() {
         {/* ✅ Routed content scrolls inside this area */}
         <Box p="40px">
           <Routes>
-            <Route path="/" element={<AdminDashboard />} />
+            {/* <Route path="/" element={<AdminDashboard />} /> */}
             {/* Rides Section */}
             <Route path="add/ride" element={<Add />} />
             <Route path="view/rides" element={<RideGalleryWrapper />}/>
@@ -110,7 +110,7 @@ function AdminMain() {
             {/* Merchandise Section */}
             <Route path="list/merchandise" element={<MerchandiseLists />} />
             <Route path="list/store-inventory" element={<StoreInventoryLists />} />
-            
+            <Route path="ride-maintenance" element={<RideMaintenance />} />
             {/* Rain Out Management */}
             <Route path="rain-out" element={<RainOutManagement />} />
             {/* Employee Section */}

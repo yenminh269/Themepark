@@ -70,6 +70,9 @@ export const api = {
     scheduleRideMaint: async (formData) => {
         return await fetchAPI('/ride-maintenance', formData, "POST", false);
     },
+    getAvgRidesPerMonth: async () => {
+        return await fetchAPI('/rides/avg-month');
+    },
 
     // ===== EMPLOYEES =====
     getAllEmployees: async () => {

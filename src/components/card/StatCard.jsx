@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
 
-const StatCard = ({ icon, name, value, growth }) => {
+const StatCard = ({ icon, name, value }) => {
   return (
     <Box
       p="20px"

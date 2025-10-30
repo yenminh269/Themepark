@@ -1,45 +1,38 @@
 import { Box, SimpleGrid, Icon, Flex, Text } from '@chakra-ui/react';
-import {
-  MdBarChart,
-  MdAttachMoney,
-  MdShoppingCart,
-  MdPeople,
-  MdTrendingUp
+import {MdBarChart,MdAttachMoney,MdShoppingCart, MdPeople, MdTrendingUp
 } from 'react-icons/md';
 import StatCard from '../../card/StatCard';
 import ChartCard from '../../card/ChartCard';
 import DataTable from '../../data-table/DataTable';
+import { api } from '../../../services/api';
+import { useEffect, useState } from 'react';
+import Loading from './loading/Loading';
+
 const AdminDashboard = () => {
   // Mock data for stats
-  const statsData = [
-    {
-      icon: <Icon as={MdBarChart} w="32px" h="32px" color="blue.500" />,
-      name: 'Total Revenue',
-      value: '$53,000',
-      growth: '+23%'
-    },
-    {
-      icon: <Icon as={MdAttachMoney} w="32px" h="32px" color="green.500" />,
-      name: 'Spending',
-      value: '$12,500'
-    },
-    {
-      icon: <Icon as={MdShoppingCart} w="32px" h="32px" color="purple.500" />,
-      name: 'Sales',
-      value: '2,300',
-      growth: '+12%'
-    },
-    {
-      icon: <Icon as={MdPeople} w="32px" h="32px" color="orange.500" />,
-      name: 'Total Customers',
-      value: '3,052'
-    },
-    {
-      icon: <Icon as={MdTrendingUp} w="32px" h="32px" color="teal.500" />,
-      name: 'Growth',
-      value: '+18%'
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [avgTicketPerMonth, setAvgTicketPerMonth] = useState();
+  const [averageRidesBrokenMaintenance, setAverageRidesBrokenMaintenance] = useState();
+  const [storeSales, setStoreSales] = useState();
+
+  useEffect(() => {
+    getAvgRidesPerMonth();
+  }, []);
+
+  const getAvgRidesPerMonth = async() => {
+    try{
+      setLoading(true);
+      const data = await api.getAvgRidesPerMonth();
+      setAvgRidePerMonth(data);
+      setError(null);
+    }catch(err){
+      setError('Failed to load average rides per month');
+    } finally {
+      setLoading(false);
     }
-  ];
+  }
+  
 
   // Mock data for tables
   const recentOrdersColumns = ['Name', 'Status', 'Date', 'Amount'];
@@ -57,6 +50,7 @@ const AdminDashboard = () => {
     ['Product C', 'Books', '145', '$5,600'],
     ['Product D', 'Toys', '98', '$3,200']
   ];
+  if(loading) return <Loading />
 
   return (
     <Box pt={{ base: '20px', md: '40px' }} px={{ base: '20px', md: '40px' }}>
@@ -66,15 +60,36 @@ const AdminDashboard = () => {
         gap="20px"
         mb="20px"
       >
-        {statsData.map((stat, index) => (
           <StatCard
-            key={index}
-            icon={stat.icon}
-            name={stat.name}
-            value={stat.value}
-            growth={stat.growth}
+            key={0}
+            icon={<Icon as={MdBarChart} w="32px" h="32px" color="blue.500" />}
+            name='Total Revenue'
+            value={revenue}
           />
-        ))}
+          <StatCard
+            key={1}
+            icon={<Icon as={MdAttachMoney} w="32px" h="32px" color="green.500" />}
+            name='Average Rides Broken/Maintenance Per Month'
+            value={averageRidesBrokenMaintenance}
+          />
+          <StatCard
+            key={2}
+            icon={<Icon as={MdShoppingCart} w="32px" h="32px" color="purple.500" />}
+            name='Store Sales'
+            value={storeSales}
+          />
+          <StatCard
+            key={3}
+            icon={<Icon as={MdShoppingCart} w="32px" h="32px" color="purple.500" />}
+            name='Ride Ticket Sales'
+            value={rideTicketSales}
+          />
+          <StatCard
+            key={4}
+            icon={<Icon as={MdTrendingUp} w="32px" h="32px" color="orange.500" />}
+            name='Average Ride Tickets Per Month'
+            value={avgTicketPerMonth}
+          />
       </SimpleGrid>
 
       {/* Charts Row */}

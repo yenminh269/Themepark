@@ -1672,6 +1672,8 @@ app.get('/api/ride-orders', requireCustomerAuth, async (req, res) => {
   }
 });
 
+//Average Ride Tickets Per Month
+
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`)
 })

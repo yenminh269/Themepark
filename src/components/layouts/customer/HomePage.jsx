@@ -36,7 +36,7 @@ export default function HomePage() {
                   Adventure Awaits
                 </span>
                 <br />
-                <span className="!text-[#176B87]">at VelocityValley</span>
+                <span className="!text-[#176B87]">at Velocity Valley</span>
               </h1>
               <p className="!text-xl !text-gray-700 !mb-8 !max-w-2xl !mx-auto">
                 Experience the thrill of a lifetime with world-class rides, family fun,
