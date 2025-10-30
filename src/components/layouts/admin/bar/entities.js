@@ -31,8 +31,8 @@ const entities = [
     },
     {
       name: 'Ride Maintenance',
-      path: 'ride-maintenance',
-      icon: MdCloud
+      path: '/admin/ride-maintenance',
+      icon: MdBuild
     },
     {
       category: 'STORES'

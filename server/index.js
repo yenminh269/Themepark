@@ -291,22 +291,22 @@ app.put("/api/customer/:id", requireCustomerAuth, (req, res) => {
     return res.status(403).json({ error: "Unauthorized to update this customer" });
   }
 
-  const { first_name, last_name, gender, email, dob, phone } = req.body;
+  const { first_name, last_name, gender,phone } = req.body;
 
   // Validate required fields
-  if (!first_name || !last_name || !gender || !email || !dob || !phone) {
+  if (!first_name || !last_name || !gender || !phone) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
   const sql = `
     UPDATE customer
-    SET first_name = ?, last_name = ?, gender = ?, email = ?, dob = ?, phone = ?
+    SET first_name = ?, last_name = ?, gender = ?, phone = ?
     WHERE customer_id = ?
   `;
 
   db.query(
     sql,
-    [first_name, last_name, gender, email, dob, phone, customerId],
+    [first_name, last_name, gender, phone, customerId],
     (err, result) => {
       if (err) {
         console.error("UPDATE customer error:", err);
@@ -314,20 +314,25 @@ app.put("/api/customer/:id", requireCustomerAuth, (req, res) => {
       }
 
       if (result.affectedRows === 0) {
-        return res.status(404).json({ error: "Customer not found" });
+      return res.status(404).json({ error: "Customer not found" });
       }
 
-      return res.json({
-        message: "Customer information updated successfully",
-        customer: {
-          customer_id: parseInt(customerId),
-          first_name,
-          last_name,
-          gender,
-          email,
-          dob,
-          phone,
-        },
+      // Fetch the updated customer data
+      const selectSql = `SELECT customer_id, first_name, last_name, gender, email, dob, phone FROM customer WHERE customer_id = ?`;
+      db.query(selectSql, [customerId], (selectErr, selectResult) => {
+      if (selectErr) {
+        console.error("SELECT customer error:", selectErr);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      if (selectResult.length === 0) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      const customer = selectResult[0];
+        return res.json({
+          message: "Customer information updated successfully",
+          customer,
+        });
       });
     }
   );
@@ -1672,7 +1677,157 @@ app.get('/api/ride-orders', requireCustomerAuth, async (req, res) => {
   }
 });
 
-//Average Ride Tickets Per Month
+//==================== ADMIN DASHBOARD STATS ====================
+// Get average ride tickets sold per month
+app.get('/rides/avg-month', async (req, res) => {
+  try {
+    const sql = `
+      SELECT AVG(monthly_tickets) as avg_tickets_per_month
+      FROM (
+        SELECT
+          DATE_FORMAT(ro.order_date, '%Y-%m') as month,
+          SUM(rod.number_of_tickets) as monthly_tickets
+        FROM ride_order ro
+        JOIN ride_order_detail rod ON ro.order_id = rod.order_id
+        WHERE ro.status = 'completed'
+        GROUP BY DATE_FORMAT(ro.order_date, '%Y-%m')
+      ) as monthly_data
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching average ride tickets per month:', err);
+        return res.status(500).json({
+          message: 'Error fetching average ride tickets per month',
+          error: err.message
+        });
+      }
+      const avgTickets = results[0]?.avg_tickets_per_month || 0;
+      res.json({ data: Math.round(avgTickets) });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch average tickets' });
+  }
+});
+
+// Get total revenue (rides + stores)
+app.get('/admin/total-revenue', async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        (SELECT COALESCE(SUM(total_amount), 0) FROM ride_order WHERE status = 'completed') as ride_revenue,
+        (SELECT COALESCE(SUM(total_amount), 0) FROM store_order WHERE status = 'completed') as store_revenue
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching total revenue:', err);
+        return res.status(500).json({
+          message: 'Error fetching total revenue',
+          error: err.message
+        });
+      }
+      const rideRevenue = parseFloat(results[0]?.ride_revenue || 0);
+      const storeRevenue = parseFloat(results[0]?.store_revenue || 0);
+      const totalRevenue = rideRevenue + storeRevenue;
+
+      res.json({
+        data: {
+          total: totalRevenue.toFixed(2),
+          ride_revenue: rideRevenue.toFixed(2),
+          store_revenue: storeRevenue.toFixed(2)
+        }
+      });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch total revenue' });
+  }
+});
+
+// Get store sales total
+app.get('/admin/store-sales', async (req, res) => {
+  try {
+    const sql = `
+      SELECT COALESCE(SUM(total_amount), 0) as total_sales
+      FROM store_order
+      WHERE status = 'completed'
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching store sales:', err);
+        return res.status(500).json({
+          message: 'Error fetching store sales',
+          error: err.message
+        });
+      }
+      const totalSales = parseFloat(results[0]?.total_sales || 0);
+      res.json({ data: totalSales.toFixed(2) });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch store sales' });
+  }
+});
+
+// Get ride ticket sales total
+app.get('/admin/ride-ticket-sales', async (req, res) => {
+  try {
+    const sql = `
+      SELECT COALESCE(SUM(total_amount), 0) as total_sales
+      FROM ride_order
+      WHERE status = 'completed'
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching ride ticket sales:', err);
+        return res.status(500).json({
+          message: 'Error fetching ride ticket sales',
+          error: err.message
+        });
+      }
+      const totalSales = parseFloat(results[0]?.total_sales || 0);
+      res.json({ data: totalSales.toFixed(2) });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch ride ticket sales' });
+  }
+});
+
+// Get average rides in broken/maintenance status per month
+app.get('/admin/avg-rides-broken-maintenance', async (req, res) => {
+  try {
+    const sql = `
+    SELECT AVG(monthly_count) as avg_broken_per_month
+    FROM (
+    SELECT
+    DATE_FORMAT(m.scheduled_date, '%Y-%m') as month,
+    COUNT(DISTINCT m.ride_id) as monthly_count
+    FROM maintenance m
+    GROUP BY DATE_FORMAT(m.scheduled_date, '%Y-%m')
+    ) as monthly_data
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching average broken/maintenance rides:', err);
+        return res.status(500).json({
+          message: 'Error fetching average broken/maintenance rides',
+          error: err.message
+        });
+      }
+      const avgBroken = results[0]?.avg_broken_per_month || 0;
+      res.json({ data: Math.round(avgBroken) });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch average broken/maintenance rides' });
+  }
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`)

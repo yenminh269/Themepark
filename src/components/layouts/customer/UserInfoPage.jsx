@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@chakra-ui/react";
 import { useAuth } from "./AuthContext";
@@ -74,7 +74,7 @@ const { user, signout } = useAuth();
   setOrdersLoading(true);
   try {
   const [rideOrderData, storeOrderData] = await Promise.all([
-    api.getRideOrders(),
+      api.getRideOrders(),
       api.getStoreOrders()
   ]);
   setRideOrders(rideOrderData);
@@ -93,9 +93,29 @@ const { user, signout } = useAuth();
     }
   }, [activeTab, signout]);
 
+
+  const formatPhoneNumber = (value) => {
+    // Remove all non-digit characters
+    const phoneNumber = value.replace(/\D/g, "");
+
+    // Format as XXX-XXX-XXXX when complete
+    if (phoneNumber.length === 10) {
+      return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+    } else {
+      return phoneNumber;
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+
+    // Apply phone formatting if it's the phone field
+    if (name === 'phone') {
+      const formatted = formatPhoneNumber(value);
+      setForm((prev) => ({ ...prev, [name]: formatted }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSave = async (e) => {
@@ -223,10 +243,7 @@ const { user, signout } = useAuth();
                     </label>
                     <input
                       name="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      type="email"
-                      className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
+                      value={form.email} disabled style={{ backgroundColor: '#91C8E4' }}
                     />
                   </div>
 
@@ -239,6 +256,7 @@ const { user, signout } = useAuth();
                       value={form.phone}
                       onChange={handleChange}
                       type="tel"
+                      maxLength="10"
                       className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
                     />
                   </div>
@@ -257,7 +275,7 @@ const { user, signout } = useAuth();
                         <option value="">Select Gender</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="Others">Others</option>
                       </select>
                     </div>
                     <div>
@@ -267,9 +285,7 @@ const { user, signout } = useAuth();
                       <input
                         name="dob"
                         value={form.dob}
-                        onChange={handleChange}
-                        type="date"
-                        className="!w-full !p-3 !rounded-lg !border !border-[#B4D4FF]"
+                        disabled style={{ backgroundColor: '#91C8E4' }}
                       />
                     </div>
                   </div>

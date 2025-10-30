@@ -9,25 +9,45 @@ import { useEffect, useState } from 'react';
 import Loading from './loading/Loading';
 
 const AdminDashboard = () => {
-  // Mock data for stats
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [avgTicketPerMonth, setAvgTicketPerMonth] = useState();
-  const [averageRidesBrokenMaintenance, setAverageRidesBrokenMaintenance] = useState();
-  const [storeSales, setStoreSales] = useState();
+  const [avgTicketPerMonth, setAvgTicketPerMonth] = useState(0);
+  const [averageRidesBrokenMaintenance, setAverageRidesBrokenMaintenance] = useState(0);
+  const [storeSales, setStoreSales] = useState('0.00');
+  const [rideTicketSales, setRideTicketSales] = useState('0.00');
+  const [revenue, setRevenue] = useState('0.00');
 
   useEffect(() => {
-    getAvgRidesPerMonth();
+    fetchAllDashboardData();
   }, []);
 
-  const getAvgRidesPerMonth = async() => {
+  const fetchAllDashboardData = async() => {
     try{
       setLoading(true);
-      const data = await api.getAvgRidesPerMonth();
-      setAvgRidePerMonth(data);
+      const [
+        avgTicketsData,
+        revenueData,
+        storeSalesData,
+        rideTicketSalesData,
+        avgBrokenData
+      ] = await Promise.all([
+        api.getAvgRidesPerMonth(),
+        api.getTotalRevenue(),
+        api.getStoreSales(),
+        api.getRideTicketSales(),
+        api.getAvgRidesBrokenMaintenance()
+      ]);
+
+      setAvgTicketPerMonth(avgTicketsData || 0);
+      setRevenue(revenueData.total || '0.00');
+      setStoreSales(storeSalesData || '0.00');
+      setRideTicketSales(rideTicketSalesData || '0.00');
+      setAverageRidesBrokenMaintenance(avgBrokenData || 0);
+
       setError(null);
     }catch(err){
-      setError('Failed to load average rides per month');
+      console.error('Error loading dashboard data:', err);
+      setError('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -54,6 +74,13 @@ const AdminDashboard = () => {
 
   return (
     <Box pt={{ base: '20px', md: '40px' }} px={{ base: '20px', md: '40px' }}>
+      {/* Error Message */}
+      {error && (
+        <Box bg="red.100" color="red.700" p="4" borderRadius="md" mb="20px">
+          {error}
+        </Box>
+      )}
+
       {/* Stats Grid */}
       <SimpleGrid
         columns={{ base: 1, md: 2, lg: 3, xl: 5 }}
@@ -62,13 +89,13 @@ const AdminDashboard = () => {
       >
           <StatCard
             key={0}
-            icon={<Icon as={MdBarChart} w="32px" h="32px" color="blue.500" />}
+            icon={<Icon as={MdAttachMoney} w="32px" h="32px" color="green.500" />}
             name='Total Revenue'
-            value={revenue}
+            value={`$${revenue}`}
           />
           <StatCard
             key={1}
-            icon={<Icon as={MdAttachMoney} w="32px" h="32px" color="green.500" />}
+            icon={<Icon as={MdBarChart} w="32px" h="32px" color="red.500" />}
             name='Average Rides Broken/Maintenance Per Month'
             value={averageRidesBrokenMaintenance}
           />
@@ -76,13 +103,13 @@ const AdminDashboard = () => {
             key={2}
             icon={<Icon as={MdShoppingCart} w="32px" h="32px" color="purple.500" />}
             name='Store Sales'
-            value={storeSales}
+            value={`$${storeSales}`}
           />
           <StatCard
             key={3}
-            icon={<Icon as={MdShoppingCart} w="32px" h="32px" color="purple.500" />}
+            icon={<Icon as={MdShoppingCart} w="32px" h="32px" color="blue.500" />}
             name='Ride Ticket Sales'
-            value={rideTicketSales}
+            value={`$${rideTicketSales}`}
           />
           <StatCard
             key={4}

@@ -74,6 +74,20 @@ export const api = {
         return await fetchAPI('/rides/avg-month');
     },
 
+    // ===== ADMIN DASHBOARD =====
+    getTotalRevenue: async () => {
+        return await fetchAPI('/admin/total-revenue');
+    },
+    getStoreSales: async () => {
+        return await fetchAPI('/admin/store-sales');
+    },
+    getRideTicketSales: async () => {
+        return await fetchAPI('/admin/ride-ticket-sales');
+    },
+    getAvgRidesBrokenMaintenance: async () => {
+        return await fetchAPI('/admin/avg-rides-broken-maintenance');
+    },
+
     // ===== EMPLOYEES =====
     getAllEmployees: async () => {
         return await fetchAPI('/employees');

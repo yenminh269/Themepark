@@ -17,9 +17,7 @@ export default function AddE({onClose}){
     const jobTitleOption = [
         {value: 'Store Manager', label:'Store Manager'},
         {value: 'Mechanical Employee', label:'Mechanical Employee'},
-        {value: 'Sales Employee', label: 'Sales Employee'},
-        {value:'Concession Manager', label:'Concession Manager'},
-        {value: 'Concession Employee',label:'Concession Employee'}
+        {value: 'Sales Employee', label: 'Sales Employee'}
     ];
 
     const [firstName, setFirstName] = useState('');

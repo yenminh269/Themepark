@@ -1,18 +1,42 @@
-import FloatingLabel from 'react-bootstrap/FloatingLabel'; 
+import { useState, useEffect } from 'react';
+import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Form from 'react-bootstrap/Form';
 import Col from 'react-bootstrap/Col';
 
 function Input(props){
+    const [internalValue, setInternalValue] = useState(props.value || '');
+
+    // Sync internal value with external prop changes
+    useEffect(() => {
+        if (props.value !== undefined) {
+            setInternalValue(props.value);
+        }
+    }, [props.value]);
+
     const handleKeyDown = (e) => {
         // For currency/number inputs, prevent 'e', 'E', '+', '-' keys
-        if ((props.type === 'currency' || props.type === 'number') && 
+        if ((props.type === 'currency' || props.type === 'number') &&
             ['e', 'E', '+', '-'].includes(e.key)) {
             e.preventDefault();
         }
-        
+
         // For regular number (capacity), also prevent decimal point
         if (props.type === 'number' && e.key === '.') {
             e.preventDefault();
+        }
+    };
+
+    const formatPhoneNumber = (value) => {
+        // Remove all non-digit characters
+        const phoneNumber = value.replace(/\D/g, '');
+
+        // Format as XXX-XXX-XXXX
+        if (phoneNumber.length <= 3) {
+            return phoneNumber;
+        } else if (phoneNumber.length <= 6) {
+            return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
+        } else {
+            return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
         }
     };
 
@@ -27,7 +51,7 @@ function Input(props){
                 e.target.setCustomValidity('');
             }
         }
-        
+
         // For regular number (capacity), validate integer only
         if (props.type === 'number') {
     const value = Number(e.target.value);
@@ -45,14 +69,39 @@ function Input(props){
 
     };
 
+    const handleChange = (e) => {
+        // Check if this is a phone input field (identified by label)
+        if (props.label && props.label.toLowerCase().includes('phone')) {
+            const formatted = formatPhoneNumber(e.target.value);
+            setInternalValue(formatted);
+
+            // Call the parent's onChange with the formatted value
+            if (props.onChange) {
+                e.target.value = formatted;
+                props.onChange(e);
+            }
+        } else {
+            setInternalValue(e.target.value);
+            if (props.onChange) {
+                props.onChange(e);
+            }
+        }
+    };
+
     const getInputProps = () => {
     // Destructure to remove custom props that shouldn't be passed to DOM
     const { labelClassName, feedback, size, label, ...domProps } = props;
-    
+
+    // Check if this is a phone field
+    const isPhoneField = label && label.toLowerCase().includes('phone');
+
     const baseProps = {
-        ...domProps, 
+        ...domProps,
         onKeyDown: handleKeyDown,
         onInput: handleInput,
+        onChange: handleChange,
+        // For phone fields, use internal controlled value
+        ...(isPhoneField && { value: internalValue })
     };
 
     // Add decimal validation for currency type

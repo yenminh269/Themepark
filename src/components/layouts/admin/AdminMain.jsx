@@ -99,7 +99,7 @@ function AdminMain() {
         {/* ✅ Routed content scrolls inside this area */}
         <Box p="40px">
           <Routes>
-            {/* <Route path="/" element={<AdminDashboard />} /> */}
+            <Route path="/" element={<AdminDashboard />} />
             {/* Rides Section */}
             <Route path="add/ride" element={<Add />} />
             <Route path="view/rides" element={<RideGalleryWrapper />}/>

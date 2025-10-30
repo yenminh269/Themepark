@@ -1,16 +1,17 @@
 import {  useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Col from 'react-bootstrap/Col';
 import Form from 'react-bootstrap/Form';
-import Row from 'react-bootstrap/Row';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import InputLogin from '../../input/InputLogin';
-import CustomButton from '../../button/CustomButton';
 import { api } from '../../../services/api';
+import themeparkImg from '../../../assets/themepark.jpg'; 
+import { useToast } from "@chakra-ui/react";
 
 function SignUp() {
+  const toast = useToast();
   const [validated, setValidated] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
@@ -22,7 +23,6 @@ function SignUp() {
       setValidated(true);
       return;
     }
-
     setValidated(true);
     setLoading(true);
 
@@ -38,6 +38,25 @@ function SignUp() {
         gender: form.elements.gender.value
       };
 
+      // Validate age: must be at least 18
+      const dob = new Date(formData.dob);
+      const today = new Date();
+      const age = today.getFullYear() - dob.getFullYear();
+      const monthDiff = today.getMonth() - dob.getMonth();
+      const dayDiff = today.getDate() - dob.getDate();
+      const isAdult = age > 18 || (age === 18 && (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)));
+      if (!isAdult) {
+        toast({
+          title: 'Age Restriction',
+          description: 'You must be at least 18 years old to create an account.',
+          status: 'error',
+          duration: 4000,
+          isClosable: true,
+          position: 'top',
+        });
+        return;
+      }
+
       // Call signup API - returns { data: customer }
       const response = await api.customerSignup(formData);
       const customer = response.data;
@@ -48,16 +67,29 @@ function SignUp() {
       // Notify AuthContext
       try {
         window.dispatchEvent(new CustomEvent('themepark:auth', { detail: customer }));
-      } catch {
-        // ignore if running in environments without CustomEvent
+      } catch (authError) {
+        console.error('Auth notification error:', authError);
       }
 
-      alert(`Welcome, ${customer.first_name}! Your account has been created successfully.`);
+      toast({
+        title: 'Account created successfully!',
+        description: `Welcome, ${customer.first_name}! Your account has been created successfully.`,
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+        position: 'top',
+      });
       navigate('/');
-
     } catch (error) {
       console.error('Signup error:', error);
-      alert(error.message || 'Failed to create account. Please try again.');
+      toast({
+        title: 'Signup failed',
+        description: error.message || 'Failed to create account. Please try again.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+        position: 'top',
+      });
     } finally {
       setLoading(false);
     }
@@ -81,7 +113,7 @@ function SignUp() {
             <h1 className="!text-3xl !font-black !text-[#176B87] !mb-4">Join the Fun</h1>
             <p className="!text-gray-700 !mb-6">Create an account to reserve tickets, manage orders, and skip the lines!</p>
             <img
-              src="https://images.unsplash.com/photo-1594739584670-1e9be48f6ec3?w=800&h=600&fit=crop&q=80"
+              src={themeparkImg}
               alt="Rides"
               className="!w-full !h-64 !object-cover !rounded-2xl !shadow-lg"
             />
@@ -126,7 +158,7 @@ function SignUp() {
 
               <div className='!w-full !flex !gap-4'>
                 <InputLogin size="6" type="date" label="Date of birth" name="dob" feedback="Please provide a valid birthdate." />
-                <InputLogin size="6" type="tel" label="Phone Number" name="phone" placeholder="123-456-7890" pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number in format: 000-000-0000" />
+                <InputLogin size="6" type="tel" label="Phone Number" maxLength="10" name="phone"  pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number in format: 000-000-0000" />
               </div>
 
               <Form.Group>
@@ -142,7 +174,20 @@ function SignUp() {
               </Form.Group>
 
               <Form.Group className="my-3">
-                <Form.Check className='text-[#176B87]' required label="Agree to terms and conditions" feedback="You must agree before submitting." feedbackType="invalid" />
+              <Form.Check className='!text-[#176B87]'
+              required label={<span> I agree to the <button type="button" className="text-blue-600 underline" onClick={() => setShowTerms(!showTerms)}>Terms and Conditions</button> and consent to the use of my personal information.</span>} feedback="You must agree before submitting." feedbackType="invalid" />
+                {showTerms && (
+                  <div className="mt-2 p-3 bg-gray-100 rounded text-sm text-gray-700">
+                    <p><strong>By creating an account, you agree to the following:</strong></p>
+                    <ul className="list-disc list-inside mt-1">
+                      <li><strong>Data Collection:</strong> We collect your name, email, phone, and DOB for account management, tickets, and notifications.</li>
+                      <li><strong>Use of Data:</strong> Info used to personalize experience, send updates, and notify about events/promotions.</li>
+                      <li><strong>Privacy:</strong> Personal info kept private and not shared without consent.</li>
+                      <li><strong>Accuracy:</strong> You confirm provided info is true and accurate.</li>
+                      <li><strong>Consent:</strong> By checking the box, you consent to data collection and use.</li>
+                    </ul>
+                  </div>
+                )}
               </Form.Group>
 
               <div>
