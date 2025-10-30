@@ -7,11 +7,11 @@ function InputLogin(props) {
   const [phoneValue, setPhoneValue] = useState("");
   const isPasswordField = props.type === "password";
   const isPhoneField = props.type === "tel";
+  const isNameField = props.label && (props.label.toLowerCase().includes("first name") || props.label.toLowerCase().includes("last name"));
 
   const formatPhoneNumber = (value) => {
     // Remove all non-digit character
     const phoneNumber = value.replace(/\D/g, "");
-
     // Format as XXX-XXX-XXXX when complete
     if (phoneNumber.length === 10) {
       return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
@@ -23,9 +23,15 @@ function InputLogin(props) {
   const handlePhoneChange = (e) => {
     const formatted = formatPhoneNumber(e.target.value);
     setPhoneValue(formatted);
-
     // Update the actual input value
     e.target.value = formatted;
+  };
+
+  const handleNameChange = (e) => {
+    // Only allow alphabetic characters and spaces for name fields
+    const value = e.target.value;
+    const alphabeticOnly = value.replace(/[^a-zA-Z\s]/g, "");
+    e.target.value = alphabeticOnly;
   };
 
   return (
@@ -35,11 +41,13 @@ function InputLogin(props) {
           required
           type={isPasswordField ? "password" : props.type}
           placeholder={props.placeholder || " "}
-          pattern={isPhoneField ? "[0-9]{3}-[0-9]{3}-[0-9]{4}" : props.pattern}
+          pattern={isPhoneField ? "[0-9]{3}-[0-9]{3}-[0-9]{4}" : (isNameField ? "[a-zA-Z\\s]+" : props.pattern)}
           name={props.name}
           onChange={isPhoneField ? handlePhoneChange : undefined}
+          onInput={isNameField ? handleNameChange : undefined}
           value={isPhoneField ? phoneValue : undefined}
           maxLength={isPhoneField ? 10 : undefined}
+          minLength={isNameField ? 2 : undefined}
         />
         <Form.Control.Feedback type="invalid">
           {props.feedback}

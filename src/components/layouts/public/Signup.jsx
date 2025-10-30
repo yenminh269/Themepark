@@ -4,7 +4,6 @@ import Form from 'react-bootstrap/Form';
 import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import InputLogin from '../../input/InputLogin';
 import { api } from '../../../services/api';
-import themeparkImg from '../../../assets/themepark.jpg'; 
 import { useToast } from "@chakra-ui/react";
 
 function SignUp() {
@@ -12,6 +11,8 @@ function SignUp() {
   const [validated, setValidated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
@@ -19,6 +20,39 @@ function SignUp() {
     event.stopPropagation();
 
     const form = event.currentTarget;
+
+    // Validate password requirements (min 8 chars, alpha and non-alpha)
+    const passwordValue = form.elements.password.value;
+    const hasAlpha = /[a-zA-Z]/.test(passwordValue);
+    const hasNonAlpha = /[^a-zA-Z]/.test(passwordValue);
+
+    if (passwordValue.length < 8 || !hasAlpha || !hasNonAlpha) {
+      toast({
+        title: 'Invalid Password',
+        description: 'Password must be at least 8 characters and include both alphabetic and non-alphabetic characters.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+        position: 'top',
+      });
+      setValidated(true);
+      return;
+    }
+
+    // Validate passwords match
+    if (passwordValue !== confirmPassword) {
+      toast({
+        title: 'Passwords Do Not Match',
+        description: 'Please ensure both password fields match.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+        position: 'top',
+      });
+      setValidated(true);
+      return;
+    }
+
     if (form.checkValidity() === false) {
       setValidated(true);
       return;
@@ -96,70 +130,89 @@ function SignUp() {
   };
 
   return (
-    <div className="!min-h-screen !bg-gradient-to-br !from-[#EEF5FF] !via-[#B4D4FF] !to-[#86B6F6] !flex !items-center !justify-center !p-6">
-      {/* Decorative background image */}
-      <div className="!absolute !inset-0 !opacity-20">
-        <img
-          src="https://images.unsplash.com/photo-1570993492903-ba4c3088f100?w=1920&h=1080&fit=crop&q=80"
-          alt="Theme Park"
-          className="!w-full !h-full !object-cover"
-        />
-      </div>
-
-      <div className="!relative !z-10 !w-full !max-w-6xl !grid md:!grid-cols-2 !gap-8 !items-center">
-        {/* Left info panel (hidden on small screens) */}
-        <div className="!hidden md:!block">
-          <div className="!bg-white/90 backdrop-blur-md !rounded-3xl !p-8 !shadow-2xl">
-            <h1 className="!text-3xl !font-black !text-[#176B87] !mb-4">Join the Fun</h1>
-            <p className="!text-gray-700 !mb-6">Create an account to reserve tickets, manage orders, and skip the lines!</p>
-            <img
-              src={themeparkImg}
-              alt="Rides"
-              className="!w-full !h-64 !object-cover !rounded-2xl !shadow-lg"
-            />
-            <div className="!mt-6 !grid !grid-cols-3 !gap-4 !text-center">
+    <div className="!min-h-screen !bg-gradient-to-br !from-[#FFFBDE] !from-0% !via-[#FFFBDE] !via-50% !to-[#4682A9] !to-100% !flex !items-center !justify-center !flex-wrap !p-6 !relative">
+      <div className=" backdrop-blur-md !rounded-3xl !p-5 !shadow-2xl">
+            <div className="!mt-6 !grid  !gap-4 !text-center">
               <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
                 <div className="!text-2xl !font-black !text-[#176B87]">Access</div>
                 <div className="!text-sm !text-gray-600">Exclusive deals</div>
               </div>
               <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
-                <div className="!text-2xl !font-black !text-[#176B87]">Fast</div>
-                <div className="!text-sm !text-gray-600">Skip the lines</div>
+                  <div className="!text-2xl !font-black !text-[#176B87]">Fast</div>
+                  <div className="!text-sm !text-gray-600">Skip the lines</div>
               </div>
               <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
-                <div className="!text-2xl !font-black !text-[#176B87]">Secure</div>
-                <div className="!text-sm !text-gray-600">Safe payments</div>
+                  <div className="!text-2xl !font-black !text-[#176B87]">Secure</div>
+                  <div className="!text-sm !text-gray-600">Safe payments</div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right - Signup Form */}
-        <div className="!bg-white/95 backdrop-blur-md !rounded-3xl !shadow-2xl !p-8 md:!p-12">
+      </div>
+      </div>
+      {/*Signup Form */}
+      <div className="backdrop-blur-md !rounded-3xl !shadow-2xl !p-5 md:!p-12 !w-full md:!w-[60vw] !mx-auto">
           <Form noValidate validated={validated} onSubmit={handleSubmit}>
-            <div className='!flex !flex-col !gap-6'>
+            <div className='!flex !flex-col !flex-wrap !gap-6'>
               <div className="!text-center md:!text-left">
-                <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-2">Create Account</h2>
-                <p className="!text-gray-600">Sign up now to reserve tickets and skip the lines!</p>
+                 <h1 className="!text-3xl !font-black !text-[#176B87] !mb-4">Join the Fun</h1>
+                  <p className="!text-gray-700 mb-0">Create an account to reserve tickets, manage orders, and skip the lines!</p>
               </div>
 
               <div>
                 <InputLogin size="15" type="text" label="Email" name="email" feedback="Please provide a valid email." />
+                <small className="!text-gray-600 !text-sm !mt-1 !block">
+                  The email address you provide will be used to log in to your account. 
+                  It cannot be changed after the account is created.</small>
               </div>
 
               <div>
-                <InputLogin size="15" type="password" label="Password" name="password" feedback="Password is required." />
+                <FloatingLabel label="Password">
+                  <Form.Control
+                    required
+                    type="password"
+                    name="password"
+                    placeholder=" "
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    minLength={8}
+                    pattern="^(?=.*[a-zA-Z])(?=.*[^a-zA-Z]).{8,}$"
+                    title="Password must be at least 8 characters and include both alphabetic and non-alphabetic characters"
+                    autoComplete="new-password"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    Password must be at least 8 characters and include both alphabetic and non-alphabetic characters.
+                  </Form.Control.Feedback>
+                </FloatingLabel>
+              </div>
+
+              <div>
+                <FloatingLabel label="Confirm Password">
+                  <Form.Control
+                    required
+                    type="password"
+                    name="confirmPassword"
+                    placeholder=" "
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    minLength={8}
+                    pattern="^(?=.*[a-zA-Z])(?=.*[^a-zA-Z]).{8,}$"
+                    title="Password must be at least 8 characters and include both alphabetic and non-alphabetic characters"
+                    autoComplete="new-password"
+                  />
+                  <Form.Control.Feedback type="invalid">
+                    Please confirm your password.
+                  </Form.Control.Feedback>
+                </FloatingLabel>
               </div>
 
               <div className='!w-full !flex !gap-4'>
-                <InputLogin size="6" type="text" label="First Name" name="firstName" feedback="Please provide a valid first name." />
-                <InputLogin size="6" type="text" label="Last Name" name="lastName" feedback="Please provide a valid last name." />
+                <InputLogin size="6" type="text" label="First Name" name="firstName" feedback="Please provide a valid first name (at least 2 characters)." />
+                <InputLogin size="6" type="text" label="Last Name" name="lastName" feedback="Please provide a valid last name (at least 2 characters)." />
               </div>
 
               <div className='!w-full !flex !gap-4'>
                 <InputLogin size="6" type="date" label="Date of birth" name="dob" feedback="Please provide a valid birthdate." />
                 <InputLogin size="6" type="tel" label="Phone Number" maxLength="10" name="phone"  pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number in format: 000-000-0000" />
               </div>
+              <small className="!text-gray-600 !text-sm !mt-1 !block">Note: Date of birth cannot be changed after account creation.</small>
 
               <Form.Group>
                 <FloatingLabel label="Gender">
@@ -174,34 +227,34 @@ function SignUp() {
               </Form.Group>
 
               <Form.Group className="my-3">
-              <Form.Check className='!text-[#176B87]'
-              required label={<span> I agree to the <button type="button" className="text-blue-600 underline" onClick={() => setShowTerms(!showTerms)}>Terms and Conditions</button> and consent to the use of my personal information.</span>} feedback="You must agree before submitting." feedbackType="invalid" />
-                {showTerms && (
-                  <div className="mt-2 p-3 bg-gray-100 rounded text-sm text-gray-700">
-                    <p><strong>By creating an account, you agree to the following:</strong></p>
-                    <ul className="list-disc list-inside mt-1">
-                      <li><strong>Data Collection:</strong> We collect your name, email, phone, and DOB for account management, tickets, and notifications.</li>
-                      <li><strong>Use of Data:</strong> Info used to personalize experience, send updates, and notify about events/promotions.</li>
-                      <li><strong>Privacy:</strong> Personal info kept private and not shared without consent.</li>
-                      <li><strong>Accuracy:</strong> You confirm provided info is true and accurate.</li>
-                      <li><strong>Consent:</strong> By checking the box, you consent to data collection and use.</li>
-                    </ul>
-                  </div>
-                )}
+                <Form.Check className='!text-[#176B87]'
+                required label={<span className='ml-2'>I agree to the <button type="button" 
+                className="text-blue-600 underline" onClick={() => setShowTerms(!showTerms)}>Terms and Conditions</button> and consent to the use of my personal information.</span>} feedback="You must agree before submitting." feedbackType="invalid" />
+                  {showTerms && (
+                    <div className="mt-2 p-3 bg-transparent rounded text-sm text-gray-700">
+                      <p><strong>By creating an account, you agree to the following:</strong></p>
+                      <ul className="list-disc list-inside mt-1">
+                        <li><strong>Data Collection:</strong> We collect your name, email, phone, and DOB for account management, tickets, and notifications.</li>
+                        <li><strong>Use of Data:</strong> Info used to personalize experience, send updates, and notify about events/promotions.</li>
+                        <li><strong>Privacy:</strong> Personal info kept private and not shared without consent.</li>
+                        <li><strong>Accuracy:</strong> You confirm provided info is true and accurate.</li>
+                        <li><strong>Consent:</strong> By checking the box, you consent to data collection and use.</li>
+                      </ul>
+                    </div>
+                  )}
               </Form.Group>
 
               <div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="!w-full !py-4 !bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !text-white !text-lg !font-bold !rounded-xl hover:!shadow-2xl hover:!scale-[1.02] !transition-all disabled:!opacity-50 disabled:!cursor-not-allowed !border-none"
+                  className="!w-full !py-4 !bg-gradient-to-r !from-[#176B87] !to-[#4682A9] !text-white !text-lg !font-bold !rounded-xl hover:!shadow-2xl hover:!scale-[1.02] !transition-all disabled:!opacity-50 disabled:!cursor-not-allowed !border-none"
                 >
-                  {loading ? '🔄 Signing Up...' : '🎟️ Create Account'}
+                  {loading ? '🔄 Signing Up...' : '🎫 Create Account'}
                 </button>
               </div>
             </div>
           </Form>
-        </div>
       </div>
     </div>
   );
