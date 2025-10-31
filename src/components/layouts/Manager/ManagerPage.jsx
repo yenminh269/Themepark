@@ -1,466 +1,853 @@
-// src/components/layouts/manager/ManagerPage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "./Sidebar";
-import DashboardCard from "./DashboardCard";
-import EditableTable from "./EditableTable";
-import TransactionTable from "./TransactionTable";
+import { 
+  MdDashboard, 
+  MdPeople, 
+  MdInventory, 
+  MdSchedule, 
+  MdLogout,
+  MdStore,
+  MdWarning,
+  MdAttachMoney,
+  MdShoppingCart,
+  MdEdit,
+  MdAdd,
+  MdClose,
+  MdSave,
+  MdPerson
+} from "react-icons/md";
 import "./ManagerPage.css";
-import { api } from "../../../services/api";
 
+const API_URL = "http://localhost:3001";
+
+// SIDEBAR COMPONENT
+const Sidebar = ({ activeTab, setActiveTab, activeDepartment, setActiveDepartment, managerInfo, onLogout }) => {
+  const tabs = [
+    { id: "overview", label: "Dashboard", icon: MdDashboard },
+    { id: "employees", label: "Employees", icon: MdPeople },
+    { id: "inventory", label: "Inventory", icon: MdInventory },
+    { id: "schedules", label: "Schedules", icon: MdSchedule },
+  ];
+
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-header">
+        <div className="logo-container">
+          <h2 className="sidebar-logo">Velocity Valley</h2>
+          <p className="sidebar-subtitle">Manager Portal</p>
+        </div>
+      </div>
+
+      {/* Department Toggle */}
+      <div className="department-toggle">
+        <button 
+          className={activeDepartment === 'giftshop' ? 'active' : ''}
+          onClick={() => setActiveDepartment('giftshop')}
+        >
+          Gift Shop
+        </button>
+        <button 
+          className={activeDepartment === 'foodanddrinks' ? 'active' : ''}
+          onClick={() => setActiveDepartment('foodanddrinks')}
+        >
+          Food & Drinks
+        </button>
+      </div>
+      
+      <nav className="sidebar-nav">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              className={`nav-item ${activeTab === tab.id ? "active" : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <Icon className="nav-icon" size={22} />
+              <span className="nav-label">{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {managerInfo && (
+        <div className="sidebar-footer">
+          <div className="sidebar-profile">
+            <div className="profile-avatar">
+              {managerInfo.first_name?.[0]}{managerInfo.last_name?.[0]}
+            </div>
+            <div className="profile-info">
+              <p className="profile-name">
+                {managerInfo.first_name} {managerInfo.last_name}
+              </p>
+              <p className="profile-title">{managerInfo.job_title}</p>
+            </div>
+          </div>
+          
+          <button className="logout-button" onClick={onLogout}>
+            <MdLogout size={20} />
+            <span>Logout</span>
+          </button>
+        </div>
+      )}
+    </aside>
+  );
+};
+
+// STAT CARD
+const StatCard = ({ title, value, icon: Icon, color = "#66785F" }) => {
+  return (
+    <div className="stat-card" style={{ borderTopColor: color }}>
+      <div className="stat-header">
+        <div className="stat-icon" style={{ backgroundColor: `${color}20` }}>
+          <Icon size={24} style={{ color }} />
+        </div>
+        <div className="stat-content">
+          <p className="stat-title">{title}</p>
+          <h3 className="stat-value">{value}</h3>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// oVERVIEW TAB
+const OverviewTab = ({ department, managerInfo }) => {
+  const [stats, setStats] = useState(null);
+  const [topItems, setTopItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [department]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      const statsRes = await fetch(`${API_URL}/api/manager/dashboard-stats/${department}`);
+      const statsData = await statsRes.json();
+      setStats(statsData);
+
+      const itemsRes = await fetch(`${API_URL}/api/manager/top-items/${department}?limit=5`);
+      const itemsData = await itemsRes.json();
+      setTopItems(itemsData);
+      
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="loading-container">Loading dashboard...</div>;
+  }
+
+  const deptName = department === 'giftshop' ? 'Gift Shop' : 'Food & Beverages';
+
+  return (
+    <div className="overview-container">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Dashboard Overview - {deptName}</h1>
+          <p className="page-subtitle">Welcome back, {managerInfo?.first_name}!</p>
+        </div>
+      </div>
+
+      <div className="stats-grid">
+        <StatCard 
+          title="Monthly Revenue" 
+          value={`$${stats?.total_revenue?.toFixed(2) || '0.00'}`}
+          icon={MdAttachMoney}
+          color="#66785F"
+        />
+        <StatCard 
+          title="Total Orders" 
+          value={stats?.total_orders || 0}
+          icon={MdShoppingCart}
+          color="#91AC8F"
+        />
+        <StatCard 
+          title="Active Employees" 
+          value={stats?.active_employees || 0}
+          icon={MdPeople}
+          color="#B2C9AD"
+        />
+        <StatCard 
+          title="Active Stores" 
+          value={stats?.active_stores || 0}
+          icon={MdStore}
+          color="#4B5945"
+        />
+      </div>
+
+      {stats?.low_stock_count > 0 && (
+        <div className="alert-section warning">
+          <MdWarning size={24} />
+          <div>
+            <h4>Low Stock Alert</h4>
+            <p>{stats.low_stock_count} items are running low on stock. Check inventory for details.</p>
+          </div>
+        </div>
+      )}
+
+      <div className="section-card">
+        <div className="section-header">
+          <h2 className="section-title">Top Selling Items This Month</h2>
+        </div>
+        
+        {topItems.length > 0 ? (
+          <div className="top-items-grid">
+            {topItems.map((item, index) => (
+              <div key={item.item_id} className="top-item-card">
+                <div className="item-rank">#{index + 1}</div>
+                <img 
+                  src={item.image_url || 'https://via.placeholder.com/80'} 
+                  alt={item.name}
+                  className="item-image"
+                />
+                <div className="item-details">
+                  <h4>{item.name}</h4>
+                  <p className="item-price">${item.price}</p>
+                  <div className="item-stats">
+                    <span>{item.total_sold} sold</span>
+                    <span className="revenue">${parseFloat(item.total_revenue).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <MdShoppingCart size={48} />
+            <p>No sales data available for this month</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// EMPLOYEES TAB
+const EmployeesTab = ({ department }) => {
+  const [employees, setEmployees] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [assignmentData, setAssignmentData] = useState({
+    store_id: '',
+    work_date: new Date().toISOString().split('T')[0],
+    worked_hour: 8,
+    shift_start: '09:00',
+    shift_end: '17:00'
+  });
+
+  useEffect(() => {
+    fetchEmployees();
+    fetchStores();
+  }, [department]);
+
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/api/manager/employees/${department}`);
+      const data = await res.json();
+      setEmployees(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      setLoading(false);
+    }
+  };
+
+  const fetchStores = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/manager/stores/${department}`);
+      const data = await res.json();
+      setStores(data);
+    } catch (error) {
+      console.error("Error fetching stores:", error);
+    }
+  };
+
+  const handleAssignEmployee = async () => {
+    if (!selectedEmployee || !assignmentData.store_id) {
+      alert('Please select a store');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/manager/assign-employee`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_id: selectedEmployee.employee_id,
+          ...assignmentData
+        })
+      });
+
+      if (res.ok) {
+        alert('Employee assigned successfully!');
+        setShowAssignModal(false);
+        fetchEmployees();
+      } else {
+        alert('Failed to assign employee');
+      }
+    } catch (error) {
+      console.error("Error assigning employee:", error);
+      alert('Error assigning employee');
+    }
+  };
+
+  if (loading) {
+    return <div className="loading-container">Loading employees...</div>;
+  }
+
+  return (
+    <div className="employees-container">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Employee Management</h1>
+          <p className="page-subtitle">Manage your team and assign them to stores</p>
+        </div>
+      </div>
+
+      <div className="employees-grid">
+        {employees.map((employee) => (
+          <div key={employee.employee_id} className="employee-card">
+            <div className="employee-avatar">
+              {employee.first_name[0]}{employee.last_name[0]}
+            </div>
+            <div className="employee-info">
+              <h3>{employee.first_name} {employee.last_name}</h3>
+              <p className="employee-role">{employee.job_title}</p>
+              <div className="employee-stats">
+                <div className="stat">
+                  <span className="label">Hours (Month)</span>
+                  <span className="value">{employee.total_hours || 0}h</span>
+                </div>
+                <div className="stat">
+                  <span className="label">Shifts</span>
+                  <span className="value">{employee.total_shifts || 0}</span>
+                </div>
+              </div>
+              <div className="employee-contact">
+                <p>{employee.email}</p>
+                <p>{employee.phone}</p>
+              </div>
+            </div>
+            <button 
+              className="assign-btn"
+              onClick={() => {
+                setSelectedEmployee(employee);
+                setShowAssignModal(true);
+              }}
+            >
+              <MdSchedule size={18} />
+              Assign to Store
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {employees.length === 0 && (
+        <div className="empty-state">
+          <MdPeople size={64} />
+          <p>No employees found</p>
+        </div>
+      )}
+
+      {showAssignModal && (
+        <div className="modal-overlay" onClick={() => setShowAssignModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Assign {selectedEmployee?.first_name} to Store</h2>
+              <button className="close-btn" onClick={() => setShowAssignModal(false)}>
+                <MdClose size={24} />
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Select Store</label>
+                <select 
+                  value={assignmentData.store_id}
+                  onChange={(e) => setAssignmentData({...assignmentData, store_id: e.target.value})}
+                  className="form-select"
+                >
+                  <option value="">Choose a store...</option>
+                  {stores.map(store => (
+                    <option key={store.store_id} value={store.store_id}>
+                      {store.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Work Date</label>
+                <input 
+                  type="date"
+                  value={assignmentData.work_date}
+                  onChange={(e) => setAssignmentData({...assignmentData, work_date: e.target.value})}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Shift Start</label>
+                  <input 
+                    type="time"
+                    value={assignmentData.shift_start}
+                    onChange={(e) => setAssignmentData({...assignmentData, shift_start: e.target.value})}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Shift End</label>
+                  <input 
+                    type="time"
+                    value={assignmentData.shift_end}
+                    onChange={(e) => setAssignmentData({...assignmentData, shift_end: e.target.value})}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Hours</label>
+                <input 
+                  type="number"
+                  value={assignmentData.worked_hour}
+                  onChange={(e) => setAssignmentData({...assignmentData, worked_hour: parseInt(e.target.value)})}
+                  className="form-input"
+                  min="1"
+                  max="24"
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setShowAssignModal(false)}>
+                Cancel
+              </button>
+              <button className="btn-primary" onClick={handleAssignEmployee}>
+                <MdSave size={18} />
+                Assign Employee
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// INVENTORY TAB
+const InventoryTab = ({ department }) => {
+  const [inventory, setInventory] = useState([]);
+  const [filteredInventory, setFilteredInventory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [editingItem, setEditingItem] = useState(null);
+
+  useEffect(() => {
+    fetchInventory();
+  }, [department]);
+
+  useEffect(() => {
+    filterInventoryData();
+  }, [inventory, searchTerm, filterStatus]);
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/api/manager/inventory/${department}`);
+      const data = await res.json();
+      setInventory(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching inventory:", error);
+      setLoading(false);
+    }
+  };
+
+  const filterInventoryData = () => {
+    let filtered = inventory;
+
+    if (searchTerm) {
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.store_name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(item => item.stock_status === filterStatus);
+    }
+
+    setFilteredInventory(filtered);
+  };
+
+  const handleUpdateStock = async (storeId, itemId, newQuantity) => {
+    try {
+      const res = await fetch(`${API_URL}/api/manager/inventory/${storeId}/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock_quantity: newQuantity })
+      });
+
+      if (res.ok) {
+        fetchInventory();
+        setEditingItem(null);
+      } else {
+        alert('Failed to update stock');
+      }
+    } catch (error) {
+      console.error("Error updating stock:", error);
+      alert('Error updating stock');
+    }
+  };
+
+  const getStockStatusColor = (status) => {
+    switch(status) {
+      case 'critical': return '#dc3545';
+      case 'low': return '#ffc107';
+      default: return '#28a745';
+    }
+  };
+
+  if (loading) {
+    return <div className="loading-container">Loading inventory...</div>;
+  }
+
+  return (
+    <div className="inventory-container">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Inventory Management</h1>
+          <p className="page-subtitle">Monitor and update stock levels across all stores</p>
+        </div>
+      </div>
+
+      <div className="filters-section">
+        <div className="search-box">
+          <input 
+            type="text"
+            placeholder="Search items or stores..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+        
+        <div className="filter-buttons">
+          <button 
+            className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('all')}
+          >
+            All Items
+          </button>
+          <button 
+            className={`filter-btn ${filterStatus === 'critical' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('critical')}
+          >
+            Critical
+          </button>
+          <button 
+            className={`filter-btn ${filterStatus === 'low' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('low')}
+          >
+            Low Stock
+          </button>
+          <button 
+            className={`filter-btn ${filterStatus === 'normal' ? 'active' : ''}`}
+            onClick={() => setFilterStatus('normal')}
+          >
+            Normal
+          </button>
+        </div>
+      </div>
+
+      <div className="table-container">
+        <table className="inventory-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Store</th>
+              <th>Category</th>
+              <th>Price</th>
+              <th>Stock</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredInventory.map((item) => (
+              <tr key={`${item.store_id}-${item.item_id}`}>
+                <td>
+                  <div className="item-cell">
+                    <img src={item.image_url || 'https://via.placeholder.com/40'} alt={item.name} />
+                    <div>
+                      <p className="item-name">{item.name}</p>
+                      <p className="item-desc">{item.description.substring(0, 40)}...</p>
+                    </div>
+                  </div>
+                </td>
+                <td>{item.store_name}</td>
+                <td><span className="category-badge">{item.type}</span></td>
+                <td>${item.price}</td>
+                <td>
+                  {editingItem === `${item.store_id}-${item.item_id}` ? (
+                    <input 
+                      type="number"
+                      defaultValue={item.stock_quantity}
+                      className="stock-input"
+                      min="0"
+                      onBlur={(e) => handleUpdateStock(item.store_id, item.item_id, parseInt(e.target.value))}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleUpdateStock(item.store_id, item.item_id, parseInt(e.target.value));
+                        }
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <span 
+                      className="stock-value"
+                      onClick={() => setEditingItem(`${item.store_id}-${item.item_id}`)}
+                    >
+                      {item.stock_quantity}
+                    </span>
+                  )}
+                </td>
+                <td>
+                  <span 
+                    className="status-badge"
+                    style={{ 
+                      backgroundColor: `${getStockStatusColor(item.stock_status)}20`,
+                      color: getStockStatusColor(item.stock_status)
+                    }}
+                  >
+                    {item.stock_status}
+                  </span>
+                </td>
+                <td>
+                  <button 
+                    className="icon-btn"
+                    onClick={() => setEditingItem(`${item.store_id}-${item.item_id}`)}
+                    title="Edit Stock"
+                  >
+                    <MdEdit size={18} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {filteredInventory.length === 0 && (
+          <div className="empty-state">
+            <MdInventory size={64} />
+            <p>No inventory items found</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// SCHEDULES TAB 
+const SchedulesTab = ({ department }) => {
+  const [schedules, setSchedules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({
+    start: new Date().toISOString().split('T')[0],
+    end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  });
+
+  useEffect(() => {
+    fetchSchedules();
+  }, [department, dateRange]);
+
+  const fetchSchedules = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(
+        `${API_URL}/api/manager/schedules/${department}?start_date=${dateRange.start}&end_date=${dateRange.end}`
+      );
+      const data = await res.json();
+      setSchedules(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching schedules:", error);
+      setLoading(false);
+    }
+  };
+
+  const groupedSchedules = schedules.reduce((acc, schedule) => {
+    const date = schedule.work_date;
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(schedule);
+    return acc;
+  }, {});
+
+  if (loading) {
+    return <div className="loading-container">Loading schedules...</div>;
+  }
+
+  return (
+    <div className="schedules-container">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Schedule Management</h1>
+          <p className="page-subtitle">View and manage employee work schedules</p>
+        </div>
+      </div>
+
+      <div className="date-range-filter">
+        <div className="form-group">
+          <label>From</label>
+          <input 
+            type="date"
+            value={dateRange.start}
+            onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+            className="form-input"
+          />
+        </div>
+        <div className="form-group">
+          <label>To</label>
+          <input 
+            type="date"
+            value={dateRange.end}
+            onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+            className="form-input"
+          />
+        </div>
+      </div>
+
+      <div className="schedules-timeline">
+        {Object.keys(groupedSchedules).sort().map((date) => (
+          <div key={date} className="schedule-day-card">
+            <div className="day-header">
+              <h3>{new Date(date + 'T00:00:00').toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</h3>
+              <span className="shift-count">{groupedSchedules[date].length} shifts</span>
+            </div>
+            
+            <div className="shifts-list">
+              {groupedSchedules[date].map((schedule, idx) => (
+                <div key={idx} className="shift-card">
+                  <div className="shift-time">
+                    <MdSchedule size={20} />
+                    <span>{schedule.shift_start} - {schedule.shift_end}</span>
+                    <span className="hours-badge">{schedule.worked_hour}h</span>
+                  </div>
+                  <div className="shift-details">
+                    <div className="employee-name">
+                      <MdPerson size={18} />
+                      {schedule.first_name} {schedule.last_name}
+                    </div>
+                    <div className="store-name">
+                      <MdStore size={18} />
+                      {schedule.store_name}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {Object.keys(groupedSchedules).length === 0 && (
+        <div className="empty-state">
+          <MdSchedule size={64} />
+          <p>No schedules found for the selected date range</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// MAIN MANAGER PAGE
 const ManagerPage = () => {
   const navigate = useNavigate();
-  
-  // Get manager info from localStorage
-  const [managerInfo, setManagerInfo] = useState({
-    first_name: "",
-    last_name: "",
-    job_title: "",
-    department: "",
-    email: ""
-  });
-  
   const [activeTab, setActiveTab] = useState("overview");
-  const [dashboardData, setDashboardData] = useState({
-    staff: [],
-    inventory: [],
-    sales: { today: 0, week: 0, month: 0 }
-  });
-
-  const [staffDetails, setStaffDetails] = useState([]);
-  const [recentTransactions, setRecentTransactions] = useState([]);
-  const [lowStock, setLowStock] = useState([]);
-  const [topItems, setTopItems] = useState([]);
-  
+  const [activeDepartment, setActiveDepartment] = useState("giftshop");
+  const [managerInfo, setManagerInfo] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [staffSearchQuery, setStaffSearchQuery] = useState("");
-  
-  // Modal states
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [reportType, setReportType] = useState("");
 
-  // Load manager info and department from localStorage
   useEffect(() => {
+    // Get manager info from localStorage (set by your login)
     const employeeData = localStorage.getItem('employee_info');
-    const department = localStorage.getItem('manager_department');
+    
+    if (!employeeData) {
+      navigate('/login');
+      return;
+    }
 
-    if (employeeData && department) {
-      try {
-        const parsedEmployee = JSON.parse(employeeData);
-        setManagerInfo({
-          first_name: parsedEmployee.first_name,
-          last_name: parsedEmployee.last_name,
-          job_title: parsedEmployee.job_title,
-          department: department,
-          email: parsedEmployee.email
-        });
-      } catch (error) {
-        console.error('Error parsing employee data:', error);
-        navigate('/login');
-      }
-    } else {
+    try {
+      const parsed = JSON.parse(employeeData);
+      setManagerInfo(parsed);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error parsing employee data:', error);
       navigate('/login');
     }
   }, [navigate]);
 
-  // Fetch dashboard data when department is set
-  useEffect(() => {
-    if (!managerInfo.department) return; // Wait for department to be set
-
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const result = await api.getManagerDashboard(managerInfo.department);
-        setDashboardData({
-          staff: result.staff,
-          inventory: result.inventory,
-          sales: result.sales
-        });
-        setStaffDetails(result.staff);
-        setRecentTransactions(result.transactions);
-        setLowStock(result.lowStock);
-        setTopItems(result.topItems);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        // Keep some fallback data for development
-        setStaffDetails([
-          { employee_id: 1, first_name: "Emily", last_name: "Chen", job_title: "Sales Associate", stores_assigned: 2, store_names: "Main Gift Shop, West Gift Shop" },
-        ]);
-        setRecentTransactions([]);
-        setLowStock([]);
-        setTopItems([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, [managerInfo.department]);
-
-  const getDepartmentName = () => {
-    if (!managerInfo) return "";
-    const dept = managerInfo.department;
-    if (dept === "giftshop") return "Gift Shop";
-    if (dept === "foodanddrinks") return "Food & Beverages";
-    if (dept === "maintenance") return "Maintenance";
-    return dept;
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD"
-    }).format(amount);
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    });
-  };
-
-  const handleAddItem = () => {
-    setShowAddModal(true);
-  };
-
-  const handleEditItem = (item) => {
-    setSelectedItem(item);
-    setShowEditModal(true);
-  };
-
-  const handleDeleteItem = async (itemId) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
-    alert("Delete functionality - will be connected to backend later");
-  };
-
-  const handleGenerateReport = (type) => {
-    setReportType(type);
-    setShowReportModal(true);
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      navigate('/logout');
+    }
   };
 
   if (loading) {
     return (
-      <div className="manager-layout">
-        <div className="loading-container">
-          <p>Loading manager information...</p>
-        </div>
+      <div className="loading-screen">
+        <div className="spinner"></div>
+        <p>Loading Manager Dashboard...</p>
       </div>
     );
   }
 
-  const isMaintenance = managerInfo.department === "maintenance";
-
   return (
-    <div className="manager-layout">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} managerInfo={managerInfo} />
+    <div className="manager-page">
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab}
+        activeDepartment={activeDepartment}
+        setActiveDepartment={setActiveDepartment}
+        managerInfo={managerInfo}
+        onLogout={handleLogout}
+      />
       
-      <main className="manager-content">
+      <main className="main-content">
         {activeTab === "overview" && (
-          <>
-            <header className="manager-header">
-              <div>
-                <h1>{getDepartmentName()} Manager Dashboard</h1>
-                <p>Welcome back, {managerInfo.first_name}</p>
-              </div>
-            </header>
-
-            <section className="overview-section">
-              <div className="card-grid">
-                <DashboardCard 
-                  title="Today's Revenue" 
-                  value={formatCurrency(dashboardData.sales.today)} 
-                  badge="Today"
-                />
-                <DashboardCard 
-                  title="Weekly Revenue" 
-                  value={formatCurrency(dashboardData.sales.week)} 
-                  badge="This Week"
-                />
-                <DashboardCard 
-                  title="Monthly Revenue" 
-                  value={formatCurrency(dashboardData.sales.month)} 
-                  badge="This Month"
-                />
-                <DashboardCard 
-                  title={isMaintenance ? "Active Jobs" : "Low Stock Items"} 
-                  value={isMaintenance 
-                    ? recentTransactions.filter(t => t.status !== "completed").length 
-                    : lowStock.length
-                  }
-                  alert={!isMaintenance && lowStock.length > 0}
-                />
-              </div>
-
-              {/* Reports Section */}
-              <div className="section-card" style={{ marginBottom: "2rem" }}>
-                <h3>Data Reports</h3>
-                <p style={{ color: "#66bb6a", marginBottom: "1rem", fontSize: "0.9rem" }}>
-                  Generate formatted reports from multiple database tables
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
-                  <button 
-                    className="report-button"
-                    onClick={() => handleGenerateReport("sales")}
-                  >
-                    Sales Report
-                  </button>
-                  <button 
-                    className="report-button"
-                    onClick={() => handleGenerateReport("inventory")}
-                  >
-                    Inventory Status Report
-                  </button>
-                  <button 
-                    className="report-button"
-                    onClick={() => handleGenerateReport("staff")}
-                  >
-                    Staff Performance Report
-                  </button>
-                </div>
-              </div>
-
-              {/* Top Items / Recent Activity */}
-              <div className="two-column-grid">
-                {!isMaintenance && topItems.length > 0 && (
-                  <div className="section-card">
-                    <h3>Top Selling Items</h3>
-                    <div className="items-list">
-                      {topItems.map((item, idx) => (
-                        <div key={idx} className="item-row">
-                          <div className="item-info">
-                            <span className="item-rank">{idx + 1}</span>
-                            <div>
-                              <p className="item-name">{item.name}</p>
-                              <p className="item-meta">{item.total_sold} units sold</p>
-                            </div>
-                          </div>
-                          <span className="item-value">{formatCurrency(item.revenue)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="section-card">
-                  <h3>Staff Overview</h3>
-                  <div className="items-list">
-                    {staffDetails.slice(0, 5).map((staff, idx) => (
-                      <div key={idx} className="item-row">
-                        <div className="item-info">
-                          <div className="staff-avatar">
-                            {staff.first_name?.[0]}{staff.last_name?.[0]}
-                          </div>
-                          <div>
-                            <p className="item-name">{staff.first_name} {staff.last_name}</p>
-                            <p className="item-meta">{staff.job_title}</p>
-                          </div>
-                        </div>
-                        <span className="item-meta">
-                          {isMaintenance ? `${staff.active_jobs || 0} jobs` : `${staff.stores_assigned || 0} stores`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Low Stock Alert */}
-              {!isMaintenance && lowStock.length > 0 && (
-                <div className="alert-section">
-                  <h3>Low Stock Alert</h3>
-                  <div className="alert-grid">
-                    {lowStock.map((item, idx) => (
-                      <div key={idx} className="alert-card">
-                        <p className="alert-item-name">{item.name}</p>
-                        <p className="alert-store">{item.store_name}</p>
-                        <p className="alert-quantity">Only {item.quantity} left</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </section>
-          </>
+          <OverviewTab department={activeDepartment} managerInfo={managerInfo} />
         )}
-
-        {activeTab === "staff" && (
-          <section className="staff-section scrollable">
-            <div className="section-header">
-              <h2>Staff Management</h2>
-              <button className="add-button" onClick={handleAddItem}>
-                + Add Staff
-              </button>
-            </div>
-            <div style={{ padding: "1.5rem", borderBottom: "1px solid rgba(46, 125, 50, 0.08)" }}>
-              <input
-                type="text"
-                placeholder="Search staff by name or job title..."
-                className="search-bar"
-                value={staffSearchQuery}
-                onChange={(e) => setStaffSearchQuery(e.target.value)}
-              />
-            </div>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Job Title</th>
-                  <th>{isMaintenance ? "Active Jobs" : "Assigned Stores"}</th>
-                  <th>Details</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {staffDetails
-                  .filter(staff => 
-                    `${staff.first_name} ${staff.last_name}`.toLowerCase().includes(staffSearchQuery.toLowerCase()) ||
-                    staff.job_title?.toLowerCase().includes(staffSearchQuery.toLowerCase())
-                  )
-                  .map((staff, idx) => (
-                  <tr key={idx}>
-                    <td>
-                      <div className="staff-cell">
-                        <div className="staff-avatar-small">
-                          {staff.first_name?.[0]}{staff.last_name?.[0]}
-                        </div>
-                        {staff.first_name} {staff.last_name}
-                      </div>
-                    </td>
-                    <td>{staff.job_title}</td>
-                    <td>
-                      <span className="badge">
-                        {isMaintenance ? `${staff.active_jobs || 0} jobs` : `${staff.stores_assigned || 0} stores`}
-                      </span>
-                    </td>
-                    <td className="details-cell">{staff.store_names || staff.job_statuses || "N/A"}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button 
-                          className="action-btn edit-btn"
-                          onClick={() => handleEditItem(staff)}
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          className="action-btn delete-btn"
-                          onClick={() => handleDeleteItem(staff.employee_id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+        {activeTab === "employees" && (
+          <EmployeesTab department={activeDepartment} />
         )}
-
-        {activeTab === "inventory" && !isMaintenance && (
-          <section className="inventory-section scrollable">
-            <div className="section-header">
-              <h2>Inventory Management</h2>
-              <button className="add-button" onClick={handleAddItem}>
-                + Add Product
-              </button>
-            </div>
-            <EditableTable 
-              data={dashboardData.inventory.map(item => ({
-                id: item.item_id,
-                name: item.item_name,
-                store: item.store_name,
-                quantity: item.quantity,
-                price: item.price,
-                type: item.type
-              }))} 
-              searchable={true}
-              onEdit={handleEditItem}
-              onDelete={handleDeleteItem}
-            />
-          </section>
+        {activeTab === "inventory" && (
+          <InventoryTab department={activeDepartment} />
         )}
-
-        {activeTab === "transactions" && (
-          <section className="transactions-section scrollable">
-            <div className="section-header mb-8">
-              <h2>{isMaintenance ? "Maintenance Jobs" : "Transaction History"}</h2>
-              {isMaintenance && (
-                <button className="add-button" onClick={handleAddItem}>
-                  + New Maintenance Job
-                </button>
-              )}
-            </div>
-
-            {!isMaintenance && (
-              <div className="transaction-cards">
-                <DashboardCard title="Total Revenue" value={formatCurrency(dashboardData.sales.month)} />
-                <DashboardCard 
-                  title="Total Transactions" 
-                  value={recentTransactions.length} 
-                />
-                <DashboardCard 
-                  title="Average Order" 
-                  value={recentTransactions.length > 0 
-                    ? formatCurrency(recentTransactions.reduce((sum, t) => sum + parseFloat(t.total_amount || 0), 0) / recentTransactions.length)
-                    : "$0.00"
-                  } 
-                />
-              </div>
-            )}
-
-            <TransactionTable 
-              data={recentTransactions.map(trans => ({
-                id: trans.store_order_id,
-                date: formatDate(trans.order_date),
-                customer: trans.store_name,
-                total: parseFloat(trans.total_amount || 0),
-                status: `${trans.item_count} items`
-              }))} 
-              searchable={true} 
-            />
-          </section>
+        {activeTab === "schedules" && (
+          <SchedulesTab department={activeDepartment} />
         )}
       </main>
-
-      {/* Modals */}
-      {(showAddModal || showEditModal) && (
-        <div className="modal-overlay" onClick={() => { setShowAddModal(false); setShowEditModal(false); }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>{showAddModal ? "Add New Item" : "Edit Item"}</h2>
-            <p style={{ color: "#66bb6a", marginBottom: "1rem" }}>
-              Data entry form will go here - connect to backend later
-            </p>
-            <button 
-              className="add-button"
-              onClick={() => { setShowAddModal(false); setShowEditModal(false); }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showReportModal && (
-        <div className="modal-overlay" onClick={() => setShowReportModal(false)}>
-          <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
-            <h2>{reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report</h2>
-            <p style={{ color: "#66bb6a", marginBottom: "1rem" }}>
-              Report data from multiple tables will display here
-            </p>
-            <button 
-              className="add-button"
-              onClick={() => setShowReportModal(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

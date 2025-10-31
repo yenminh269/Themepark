@@ -105,7 +105,8 @@ export const api = {
         return await fetchAPI(`/employees/${id}`, null, "DELETE", false);
     },
     employeeLogin: async (formData) => {
-        return await fetchAPI('/employee/login', formData, "POST", false);
+       const result = await fetchAPI('/employee/login', formData, "POST", false);
+    return result.data || result;
     },
 
     // ===== STORES =====

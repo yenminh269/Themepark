@@ -243,7 +243,6 @@ function requireCustomerAuth(req, res, next) {
     return res.status(401).json({ error: "Invalid token" });
   }
 
-  // decoded: { customer_id, email, iat, exp }
   req.customer_id = decoded.customer_id;
   next();
 }
@@ -337,7 +336,6 @@ app.put("/api/customer/:id", requireCustomerAuth, (req, res) => {
     }
   );
 });
-
 //ROUTES BY MINCY
 // Add a new ride (supports both uploaded photo OR URL)
 app.post('/ride/add', upload.single('photo'), (req, res) => {
@@ -1351,7 +1349,612 @@ app.put('/api/rain-outs/:id', (req, res) => {
   });
 });
 
-// ==================== MANAGER DASHBOARD DATA ====================
+
+//add by yosan
+// Add this route to your server/index.js
+app.post("/api/employee/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password required" });
+    }
+
+    console.log('Employee login attempt:', email); // Debug log
+
+    db.query(
+      "SELECT * FROM employee WHERE email = ? AND deleted_at IS NULL",
+      [email],
+      (err, results) => {
+        if (err) {
+          console.error("Database error:", err);
+          return res.status(500).json({ error: "Database error" });
+        }
+
+        if (results.length === 0) {
+          console.log('Employee not found:', email);
+          return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        const employee = results[0];
+        console.log('Found employee:', employee.first_name, employee.job_title);
+
+        // Simple password check (not bcrypt)
+        if (password !== employee.password) {
+          console.log('Password mismatch');
+          return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        // Only allow managers
+        const managerTitles = ['Store Manager', 'General Manager'];
+        if (!managerTitles.includes(employee.job_title)) {
+          console.log('Not a manager:', employee.job_title);
+          return res.status(403).json({ error: "Manager access only" });
+        }
+
+        console.log('Login successful for:', employee.email);
+
+        res.json({
+          success: true,
+          employee: {
+            employee_id: employee.employee_id,
+            first_name: employee.first_name,
+            last_name: employee.last_name,
+            email: employee.email,
+            job_title: employee.job_title
+          }
+        });
+      }
+    );
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+app.get('/api/manager/info', (req, res) => {
+  const { email } = req.query;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const sql = `
+    SELECT employee_id, first_name, last_name, email, job_title, phone
+    FROM employee
+    WHERE email = ? 
+      AND job_title = 'Store Manager'
+      AND deleted_at IS NULL
+  `;
+
+  db.query(sql, [email], (err, results) => {
+    if (err) {
+      console.error('Error fetching manager info:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Manager not found' });
+    }
+
+    res.json(results[0]);
+  });
+});
+
+// Get dashboard stats
+app.get('/api/manager/dashboard-stats/:department', (req, res) => {
+  const { department } = req.params;
+  
+  //determine store type based on department
+  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+  
+  //get multiple stats in parallel
+  const queries = {
+    //Total revenue from orders
+    revenue: `
+      SELECT COALESCE(SUM(so.total_amount), 0) as total_revenue
+      FROM store_order so
+      JOIN store s ON so.store_id = s.store_id
+      WHERE s.type = '${storeType}'
+        AND MONTH(so.order_date) = MONTH(CURRENT_DATE())
+        AND YEAR(so.order_date) = YEAR(CURRENT_DATE())
+    `,
+    
+    // total orders this month
+    orders: `
+      SELECT COUNT(*) as total_orders
+      FROM store_order so
+      JOIN store s ON so.store_id = s.store_id
+      WHERE s.type = '${storeType}'
+        AND MONTH(so.order_date) = MONTH(CURRENT_DATE())
+        AND YEAR(so.order_date) = YEAR(CURRENT_DATE())
+    `,
+    
+    employees: `
+      SELECT COUNT(DISTINCT e.employee_id) as active_employees
+      FROM employee e
+      WHERE e.job_title = '${department === 'giftshop' ? 'Sales Employee' : 'Concession Employee'}'
+        AND e.deleted_at IS NULL
+        AND e.terminate_date IS NULL
+    `,
+    
+    // Low stock items count
+    lowStock: `
+      SELECT COUNT(*) as low_stock_count
+      FROM store_inventory si
+      JOIN store s ON si.store_id = s.store_id
+      WHERE s.type = '${storeType}'
+        AND si.stock_quantity < 15
+    `,
+    
+    // Active stores
+    activeStores: `
+      SELECT COUNT(*) as active_stores
+      FROM store
+      WHERE type = '${storeType}'
+        AND status = 'open'
+        AND deleted_at IS NULL
+    `
+  };
+
+  const stats = {};
+  let completed = 0;
+  const total = Object.keys(queries).length;
+
+  Object.entries(queries).forEach(([key, sql]) => {
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error(`Error fetching ${key}:`, err);
+        stats[key] = 0;
+      } else {
+        stats[key] = results[0] ? Object.values(results[0])[0] : 0;
+      }
+      
+      completed++;
+      if (completed === total) {
+        res.json(stats);
+      }
+    });
+  });
+});
+
+// Get revenue trend for the past 6 months
+app.get('/api/manager/revenue-trend/:department', (req, res) => {
+  const { department } = req.params;
+  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+  
+  const sql = `
+    SELECT 
+      DATE_FORMAT(so.order_date, '%Y-%m') as month,
+      SUM(so.total_amount) as revenue,
+      COUNT(*) as order_count
+    FROM store_order so
+    JOIN store s ON so.store_id = s.store_id
+    WHERE s.type = ?
+      AND so.order_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
+    GROUP BY DATE_FORMAT(so.order_date, '%Y-%m')
+    ORDER BY month ASC
+  `;
+
+  db.query(sql, [storeType], (err, results) => {
+    if (err) {
+      console.error('Error fetching revenue trend:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get top selling items
+app.get('/api/manager/top-items/:department', (req, res) => {
+  const { department } = req.params;
+  const limit = req.query.limit || 5;
+  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+  
+  const sql = `
+    SELECT 
+      m.item_id,
+      m.name,
+      m.price,
+      m.image_url,
+      SUM(sod.quantity) as total_sold,
+      SUM(sod.quantity * sod.unit_price) as total_revenue
+    FROM store_order_detail sod
+    JOIN merchandise m ON sod.item_id = m.item_id
+    JOIN store_order so ON sod.store_order_id = so.store_order_id
+    JOIN store s ON so.store_id = s.store_id
+    WHERE s.type = ?
+      AND MONTH(so.order_date) = MONTH(CURRENT_DATE())
+      AND YEAR(so.order_date) = YEAR(CURRENT_DATE())
+    GROUP BY m.item_id, m.name, m.price, m.image_url
+    ORDER BY total_sold DESC
+    LIMIT ?
+  `;
+
+  db.query(sql, [storeType, parseInt(limit)], (err, results) => {
+    if (err) {
+      console.error('Error fetching top items:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get employees by department
+app.get('/api/manager/employees/:department', (req, res) => {
+  const { department } = req.params;
+  const jobTitle = 'Sales Employee';
+  
+  const sql = `
+    SELECT 
+      e.employee_id,
+      e.first_name,
+      e.last_name,
+      e.email,
+      e.phone,
+      e.job_title,
+      e.hire_date,
+      COUNT(DISTINCT esj.work_date) as total_shifts,
+      COALESCE(SUM(esj.worked_hour), 0) as total_hours
+    FROM employee e
+    LEFT JOIN employee_store_job esj ON e.employee_id = esj.employee_id
+      AND MONTH(esj.work_date) = MONTH(CURRENT_DATE())
+      AND YEAR(esj.work_date) = YEAR(CURRENT_DATE())
+    WHERE e.job_title = ?
+      AND e.deleted_at IS NULL
+      AND e.terminate_date IS NULL
+    GROUP BY e.employee_id, e.first_name, e.last_name, e.email, 
+             e.phone, e.job_title, e.hire_date
+    ORDER BY e.first_name, e.last_name
+  `;
+
+  db.query(sql, [jobTitle], (err, results) => {
+    if (err) {
+      console.error('Error fetching employees:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get stores by department
+app.get('/api/manager/stores/:department', (req, res) => {
+  const { department } = req.params;
+  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+  
+  const sql = `
+    SELECT 
+      store_id,
+      name,
+      type,
+      status,
+      description,
+      open_time,
+      close_time,
+      photo_path
+    FROM store
+    WHERE type = ?
+      AND deleted_at IS NULL
+    ORDER BY name
+  `;
+
+  db.query(sql, [storeType], (err, results) => {
+    if (err) {
+      console.error('Error fetching stores:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Assign employee to store
+app.post('/api/manager/assign-employee', (req, res) => {
+  const { employee_id, store_id, work_date, worked_hour, shift_start, shift_end } = req.body;
+  
+  if (!employee_id || !store_id || !work_date || !worked_hour) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  const sql = `
+    INSERT INTO employee_store_job 
+      (employee_id, store_id, work_date, worked_hour, shift_start, shift_end)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+      worked_hour = VALUES(worked_hour),
+      shift_start = VALUES(shift_start),
+      shift_end = VALUES(shift_end)
+  `;
+
+  db.query(sql, [employee_id, store_id, work_date, worked_hour, shift_start, shift_end], 
+    (err, result) => {
+      if (err) {
+        console.error('Error assigning employee:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Employee assigned successfully' });
+    }
+  );
+});
+
+// Remove employee assignment
+app.delete('/api/manager/remove-assignment/:employeeId/:storeId/:workDate', (req, res) => {
+  const { employeeId, storeId, workDate } = req.params;
+  
+  const sql = `
+    DELETE FROM employee_store_job
+    WHERE employee_id = ? AND store_id = ? AND work_date = ?
+  `;
+
+  db.query(sql, [employeeId, storeId, workDate], (err, result) => {
+    if (err) {
+      console.error('Error removing assignment:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Assignment not found' });
+    }
+    
+    res.json({ message: 'Assignment removed successfully' });
+  });
+});
+
+
+// Get inventory for manager's department
+app.get('/api/manager/inventory/:department', (req, res) => {
+  const { department } = req.params;
+  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+  
+  const sql = `
+    SELECT 
+      m.item_id,
+      m.name,
+      m.type,
+      m.price,
+      m.description,
+      m.image_url,
+      s.store_id,
+      s.name as store_name,
+      COALESCE(si.stock_quantity, 0) as stock_quantity,
+      CASE 
+        WHEN COALESCE(si.stock_quantity, 0) < 10 THEN 'critical'
+        WHEN COALESCE(si.stock_quantity, 0) < 20 THEN 'low'
+        ELSE 'normal'
+      END as stock_status
+    FROM merchandise m
+    CROSS JOIN store s
+    LEFT JOIN store_inventory si ON m.item_id = si.item_id AND s.store_id = si.store_id
+    WHERE s.type = ?
+      AND s.deleted_at IS NULL
+      AND (
+        (s.type = 'merchandise' AND m.type IN ('drinkware', 'apparel', 'toys', 'accessories'))
+        OR (s.type = 'food/drink' AND m.type IN ('snacks', 'beverages'))
+      )
+    ORDER BY s.name, stock_status, m.name
+  `;
+
+  db.query(sql, [storeType], (err, results) => {
+    if (err) {
+      console.error('Error fetching inventory:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Update inventory stock
+app.put('/api/manager/inventory/:storeId/:itemId', (req, res) => {
+  const { storeId, itemId } = req.params;
+  const { stock_quantity } = req.body;
+  
+  if (stock_quantity === undefined || stock_quantity < 0) {
+    return res.status(400).json({ error: 'Invalid stock quantity' });
+  }
+
+  // First check if record exists
+  const checkSql = `
+    SELECT * FROM store_inventory 
+    WHERE store_id = ? AND item_id = ?
+  `;
+
+  db.query(checkSql, [storeId, itemId], (err, results) => {
+    if (err) {
+      console.error('Error checking inventory:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    const sql = results.length > 0
+      ? `UPDATE store_inventory SET stock_quantity = ? WHERE store_id = ? AND item_id = ?`
+      : `INSERT INTO store_inventory (stock_quantity, store_id, item_id) VALUES (?, ?, ?)`;
+
+    db.query(sql, [stock_quantity, storeId, itemId], (err, result) => {
+      if (err) {
+        console.error('Error updating inventory:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ message: 'Inventory updated successfully', stock_quantity });
+    });
+  });
+});
+
+// Add new merchandise item
+app.post('/api/manager/merchandise', (req, res) => {
+  const { name, price, quantity, description, type, image_url } = req.body;
+  
+  if (!name || !price || quantity === undefined || !description || !type) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  const sql = `
+    INSERT INTO merchandise (name, price, quantity, description, type, image_url)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  db.query(sql, [name, price, quantity, description, type, image_url], (err, result) => {
+    if (err) {
+      console.error('Error adding merchandise:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ 
+      message: 'Merchandise added successfully',
+      item_id: result.insertId
+    });
+  });
+});
+
+
+// Get schedules for department
+app.get('/api/manager/schedules/:department', (req, res) => {
+  const { department } = req.params;
+  const { start_date, end_date } = req.query;
+  
+  const jobTitle = 'Sales Employee'; // Only Sales Employee
+  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+  
+  const sql = `
+    SELECT 
+      esj.employee_id,
+      esj.store_id,
+      esj.work_date,
+      esj.worked_hour,
+      esj.shift_start,
+      esj.shift_end,
+      e.first_name,
+      e.last_name,
+      e.email,
+      s.name as store_name
+    FROM employee_store_job esj
+    JOIN employee e ON esj.employee_id = e.employee_id
+    JOIN store s ON esj.store_id = s.store_id
+    WHERE e.job_title = ?
+      AND s.type = ?
+      ${start_date ? 'AND esj.work_date >= ?' : ''}
+      ${end_date ? 'AND esj.work_date <= ?' : ''}
+    ORDER BY esj.work_date DESC, esj.shift_start
+  `;
+
+  const params = [jobTitle, storeType];
+  if (start_date) params.push(start_date);
+  if (end_date) params.push(end_date);
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching schedules:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get weekly schedule summary
+app.get('/api/manager/weekly-schedule/:department', (req, res) => {
+  const { department } = req.params;
+  const jobTitle = department === 'giftshop' ? 'Sales Employee' : 'Concession Employee';
+  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+  
+  const sql = `
+    SELECT 
+      esj.work_date,
+      COUNT(DISTINCT esj.employee_id) as employees_scheduled,
+      SUM(esj.worked_hour) as total_hours,
+      COUNT(DISTINCT esj.store_id) as stores_covered
+    FROM employee_store_job esj
+    JOIN employee e ON esj.employee_id = e.employee_id
+    JOIN store s ON esj.store_id = s.store_id
+    WHERE e.job_title = ?
+      AND s.type = ?
+      AND esj.work_date >= CURDATE()
+      AND esj.work_date < DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+    GROUP BY esj.work_date
+    ORDER BY esj.work_date
+  `;
+
+  db.query(sql, [jobTitle, storeType], (err, results) => {
+    if (err) {
+      console.error('Error fetching weekly schedule:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+//REPORTS
+
+// Get sales report
+app.get('/api/manager/sales-report/:department', (req, res) => {
+  const { department } = req.params;
+  const { start_date, end_date } = req.query;
+  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+  
+  const sql = `
+    SELECT 
+      s.store_id,
+      s.name as store_name,
+      COUNT(DISTINCT so.store_order_id) as total_orders,
+      SUM(so.total_amount) as total_revenue,
+      AVG(so.total_amount) as avg_order_value,
+      COUNT(DISTINCT so.customer_id) as unique_customers
+    FROM store_order so
+    JOIN store s ON so.store_id = s.store_id
+    WHERE s.type = ?
+      ${start_date ? 'AND so.order_date >= ?' : ''}
+      ${end_date ? 'AND so.order_date <= ?' : ''}
+    GROUP BY s.store_id, s.name
+    ORDER BY total_revenue DESC
+  `;
+
+  const params = [storeType];
+  if (start_date) params.push(start_date);
+  if (end_date) params.push(end_date);
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching sales report:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get employee performance
+app.get('/api/manager/employee-performance/:department', (req, res) => {
+  const { department } = req.params;
+  const jobTitle = department === 'giftshop' ? 'Sales Employee' : 'Concession Employee';
+  
+  const sql = `
+    SELECT 
+      e.employee_id,
+      e.first_name,
+      e.last_name,
+      COUNT(DISTINCT esj.work_date) as days_worked,
+      SUM(esj.worked_hour) as total_hours,
+      COUNT(DISTINCT esj.store_id) as stores_worked,
+      ROUND(AVG(esj.worked_hour), 1) as avg_hours_per_shift
+    FROM employee e
+    LEFT JOIN employee_store_job esj ON e.employee_id = esj.employee_id
+      AND MONTH(esj.work_date) = MONTH(CURRENT_DATE())
+      AND YEAR(esj.work_date) = YEAR(CURRENT_DATE())
+    WHERE e.job_title = ?
+      AND e.deleted_at IS NULL
+      AND e.terminate_date IS NULL
+    GROUP BY e.employee_id, e.first_name, e.last_name
+    ORDER BY total_hours DESC
+  `;
+
+  db.query(sql, [jobTitle], (err, results) => {
+    if (err) {
+      console.error('Error fetching employee performance:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+
+
+
+
+
+//
 // Get manager dashboard data by department
 app.get('/api/manager/dashboard/:department', (req, res) => {
   const department = req.params.department;
