@@ -87,6 +87,12 @@ export const api = {
     getAvgRidesBrokenMaintenance: async () => {
         return await fetchAPI('/admin/avg-rides-broken-maintenance');
     },
+    getRecentRideOrders: async (offset = 0, limit = 5) => {
+        return await fetchAPI(`/admin/recent-ride-orders?offset=${offset}&limit=${limit}`);
+    },
+    getRideOrderDetails: async (orderId) => {
+        return await fetchAPI(`/admin/ride-order-details/${orderId}`);
+    },
 
     // ===== EMPLOYEES =====
     getAllEmployees: async () => {

@@ -293,7 +293,7 @@ function RideMaintenance() {
         {showForm && (
           <div className="w-full md:w-[400px]" id="maintenance-form">
             <ScaleFade initialScale={0.9} in={showForm}>
-              <div className="bg-white rounded-lg shadow-lg p-6 sticky top-4">
+              <div className="rounded-lg shadow-lg p-6 sticky top-4">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold text-[#4682A9]">
                     Schedule Maintenance

@@ -16,6 +16,7 @@ export default function CheckoutPage() {
     expiry: "",
     cvv: "",
     email: user?.email || "",
+    paymentMethod: "credit_card",
   });
 
   const [loading, setLoading] = useState(false);
@@ -36,15 +37,50 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
-      // Create unified order with all items (rides and store items together)
-      // The backend will handle separating them if needed
-      const order = await api.createRideOrder(cart, total);
+      // Separate ride items from store items
+      const rideItems = cart.filter(item => item.type === 'ride');
+      const storeItems = cart.filter(item => item.type === 'store');
+
+      const orders = [];
+
+      // Create ride order if there are ride items
+      if (rideItems.length > 0) {
+        const rideTotal = rideItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const rideOrder = await api.createRideOrder(rideItems, rideTotal);
+        orders.push({ type: 'ride', ...rideOrder });
+      }
+
+      // Create store order if there are store items
+      if (storeItems.length > 0) {
+        const storeTotal = storeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        // Group store items by store
+        const storeGroups = storeItems.reduce((groups, item) => {
+          if (!groups[item.storeId]) {
+            groups[item.storeId] = [];
+          }
+          groups[item.storeId].push(item);
+          return groups;
+        }, {});
+
+        // Create separate order for each store
+        for (const [storeId, items] of Object.entries(storeGroups)) {
+          const orderTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          const storeOrder = await api.createStoreOrder({
+            store_id: parseInt(storeId),
+            cart: items,
+            total: orderTotal,
+            payment_method: form.paymentMethod
+          });
+          orders.push({ type: 'store', ...storeOrder });
+        }
+      }
 
       // Clear cart after successful order
       clearCart();
 
       // Navigate to confirmation with order info
-      navigate("/confirmation", { state: { order } });
+      navigate("/confirmation", { state: { orders } });
     } catch (error) {
       console.error('Checkout error:', error);
       alert('Failed to complete your order. Please try again.');
@@ -174,6 +210,22 @@ export default function CheckoutPage() {
               placeholder="example@email.com"
               required
             />
+          </div>
+
+          <div>
+            <label className="!block !text-sm !font-semibold !text-slate-700">
+              Payment Method
+            </label>
+            <select
+              name="paymentMethod"
+              value={form.paymentMethod}
+              onChange={handleChange}
+              className="!w-full !p-3 !border !border-[#B4D4FF] !rounded-lg !bg-white"
+              required
+            >
+              <option value="credit_card">💳 Credit Card</option>
+              <option value="cash">💵 Cash (In-Park Only)</option>
+            </select>
           </div>
 
           <div className="!flex !justify-between !items-center !mt-6">

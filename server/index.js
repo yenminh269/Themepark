@@ -393,10 +393,9 @@ app.get('/rides', async (req, res) => {
 
 // Get all employees - EXCLUDE password
 app.get('/employees', async (req, res) => {
-  const sql = `SELECT employee_id, first_name, last_name, gender, email, 
-               job_title, phone, ssn, hire_date, terminate_date 
-               FROM employee 
-               WHERE deleted_at IS NULL`;
+  const sql = `SELECT employee_id, first_name, last_name, gender, email,
+               job_title, phone, ssn, hire_date, terminate_date
+               FROM employee`;
   db.query(sql, (err, results) => {
     if(err){
       return res.status(500).json({
@@ -619,21 +618,21 @@ app.post(`/employees/add`, async(req, res) => {
   })           
 })
 
-//Delete new employee
+//Delete an employee
 app.delete('/employees/:id', async (req, res) => {
   const id = req.params.id;
   const sql = ` UPDATE employee
-  SET deleted_at = NOW()
+  SET deleted_at = NOW(), terminate_date = NOW()
   WHERE employee_id = ?;
 `;
   db.query(sql, [id], (err, result) => {
     if (err) {
       return res.status(500).json({
-        message: 'Error deleting employee',
+        message: 'Error terminating employee',
         error: err.message
       });
     }
-    res.json({ message: "Employee marked as deleted successfully", data: result});
+    res.json({ message: "Employee terminated successfully", data: result});
   });
 });
 
@@ -753,10 +752,10 @@ app.post('/employee/login', async (req, res) => {
   }
 
   try {
-    // Find employee by email (allow deleted and terminated employees to login)
+    // Find employee by email (only allow active employees - exclude deleted ones)
     const sql = `SELECT employee_id, email, password, first_name, last_name, job_title
                  FROM employee
-                 WHERE email = ?`;
+                 WHERE email = ? AND deleted_at IS NULL AND terminate_date IS NULL`;
     const employees = await new Promise((resolve, reject) => {
       db.query(sql, [email], (err, results) => {
         if (err) reject(err);
@@ -769,12 +768,9 @@ app.post('/employee/login', async (req, res) => {
         message: 'Invalid email or password'
       });
     }
-
     const employee = employees[0];
-
     // Check password - support both plain text and hashed passwords
     let isPasswordValid = false;
-
     // Try plain text comparison first
     if (password === employee.password) {
       isPasswordValid = true;
@@ -1826,6 +1822,63 @@ app.get('/admin/avg-rides-broken-maintenance', async (req, res) => {
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'Failed to fetch average broken/maintenance rides' });
+  }
+});
+
+// Get recent ride orders with pagination
+app.get('/admin/recent-ride-orders', async (req, res) => {
+  try {
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 5;
+
+    const sql = `
+      SELECT order_id, order_date, total_amount, status
+      FROM ride_order
+      ORDER BY order_date DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    db.query(sql, [limit, offset], (err, results) => {
+      if (err) {
+        console.error('Error fetching recent ride orders:', err);
+        return res.status(500).json({
+          message: 'Error fetching recent ride orders',
+          error: err.message
+        });
+      }
+      res.json({ data: results });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch recent ride orders' });
+  }
+});
+
+// Get ride order details
+app.get('/admin/ride-order-details/:orderId', async (req, res) => {
+  try {
+    const orderId = req.params.orderId;
+
+    const sql = `
+      SELECT rod.order_id, rod.ride_id, rod.price_per_ticket, rod.number_of_tickets, r.name as ride_name
+      FROM ride_order_detail rod
+      LEFT JOIN ride r ON rod.ride_id = r.ride_id
+      WHERE rod.order_id = ?
+    `;
+
+    db.query(sql, [orderId], (err, results) => {
+      if (err) {
+        console.error('Error fetching ride order details:', err);
+        return res.status(500).json({
+          message: 'Error fetching ride order details',
+          error: err.message
+        });
+      }
+      res.json({ data: results });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch ride order details' });
   }
 });
 

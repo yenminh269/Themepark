@@ -151,6 +151,9 @@ export default function AddE({onClose}){
                 labelClassName="custom-form-label"
                 value={essn}
                 onChange={(e) => setSSN(e.target.value)}
+                pattern="\d{9}"
+                maxLength={9}
+                feedback="SSN must be exactly 9 digits."
                 />
             </div>
 
