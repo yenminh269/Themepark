@@ -254,6 +254,11 @@ export const api = {
     getManagerDashboard: async (department) => {
         return await fetchAPI(`/api/manager/dashboard/${department}`);
     },
+
+    // ===== REPORTS =====
+    getCustomerStatsPerMonth: async (month, year) => {
+        return await fetchAPI(`/api/reports/customer-stats?month=${month}&year=${year}`);
+    },
 };
 
 // =======================

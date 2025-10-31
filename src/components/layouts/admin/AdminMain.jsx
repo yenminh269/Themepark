@@ -13,6 +13,7 @@ import MerchandiseLists from "./merchandise/MerchandiseLists.jsx";
 import StoreInventoryLists from "./StoreInventoryLists.jsx";
 import RideGalleryWrapper from "./rides/RideGalleryWrapper.jsx";
 import RainOutManagement from "./RainOutManagement.jsx";
+import CustomerSpending from "./reports/queryReports.jsx";
 import './AdminMain.css'
 
 function AdminMain() {
@@ -29,13 +30,9 @@ function AdminMain() {
     <Flex h="100vh"  w="100vw" overflow="hidden" bg="#D1D8BE">
       {/* Sidebar */}
       <Box
-        w={{ base: "0", lg: "280px" }}
-        bg="#4B5945"
-        color="white"
-        position="fixed"
-        top="0"
-        left="0"
-        h="100vh"
+        w={{ base: "0", lg: "280px" }} bg="#4B5945"
+        color="white" position="fixed"top="0"
+        left="0" h="100vh"
         display={{ base: "none", lg: "block" }}
       >
         <Sidebar />
@@ -96,11 +93,12 @@ function AdminMain() {
           />
         )}
 
-        {/* ✅ Routed content scrolls inside this area */}
+        {/* Routed content scrolls inside this area */}
         <Box p="40px">
           <Routes>
             <Route path="/" element={<AdminDashboard />} />
             {/* Rides Section */}
+            <Route path="customer-spending" element={<CustomerSpending />} />
             <Route path="add/ride" element={<Add />} />
             <Route path="view/rides" element={<RideGalleryWrapper />}/>
             <Route path="list/rides" element={<RideLists />} />

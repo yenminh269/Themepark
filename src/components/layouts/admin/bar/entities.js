@@ -1,10 +1,19 @@
-import { MdDashboard, MdAdd, MdList, MdBuild, MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud } from "react-icons/md"
+import { MdDashboard, MdAdd, MdList, MdBuild, MdOutlineAnalytics,
+  MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud } from "react-icons/md"
 
 const entities = [
     {
       name: 'Main Dashboard',
       path: '/admin',
       icon: MdDashboard
+    },
+    {
+      category: 'ANALYTICS SECTION'
+    },
+    {
+      name: 'Customer Spending',
+      path: '/admin/customer-spending',
+      icon: MdOutlineAnalytics
     },
     {
       category: 'RIDES SECTION'

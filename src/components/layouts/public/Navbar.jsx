@@ -71,13 +71,13 @@ export default function Navbar() {
               }}
               className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
             >
-              Home
+              🎡Home
             </button>
             <button
             onClick={handleGetTickets}
             className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
             >
-            🎟️ Get Tickets
+            🎟️Get Tickets
             </button>
             <button
               onClick={() => {
@@ -86,7 +86,7 @@ export default function Navbar() {
               }}
               className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
             >
-              🛍️ Shop
+              🎁Shop
             </button>
             {user && (
               <button

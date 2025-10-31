@@ -1950,7 +1950,7 @@ app.get('/api/manager/employee-performance/:department', (req, res) => {
 
 
 
-//
+//MINCY
 // Get manager dashboard data by department
 app.get('/api/manager/dashboard/:department', (req, res) => {
   const department = req.params.department;
@@ -2461,14 +2461,12 @@ app.get('/admin/recent-ride-orders', async (req, res) => {
 app.get('/admin/ride-order-details/:orderId', async (req, res) => {
   try {
     const orderId = req.params.orderId;
-
     const sql = `
       SELECT rod.order_id, rod.ride_id, rod.price_per_ticket, rod.number_of_tickets, r.name as ride_name
       FROM ride_order_detail rod
       LEFT JOIN ride r ON rod.ride_id = r.ride_id
       WHERE rod.order_id = ?
     `;
-
     db.query(sql, [orderId], (err, results) => {
       if (err) {
         console.error('Error fetching ride order details:', err);
@@ -2482,6 +2480,58 @@ app.get('/admin/ride-order-details/:orderId', async (req, res) => {
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'Failed to fetch ride order details' });
+  }
+});
+//Customer statistics by month
+app.get('/api/reports/customer-stats', async (req, res) => {
+  try {
+    const month = parseInt(req.query.month);
+    const year = parseInt(req.query.year);
+    // Validate input
+    if (!month || !year || month < 1 || month > 12) {
+      return res.status(400).json({
+        error: 'Invalid month or year. Month must be between 1 and 12.'
+      });
+    }
+    const sql = `
+      SELECT
+        COUNT(DISTINCT customer_id) as customerCount,
+        SUM(total_amount) as totalRevenue,
+        CASE
+          WHEN COUNT(DISTINCT customer_id) > 0
+          THEN SUM(total_amount) / COUNT(DISTINCT customer_id)
+          ELSE 0
+        END as avgSpending
+      FROM ride_order
+      WHERE MONTH(order_date) = ? AND YEAR(order_date) = ?
+    `;
+
+    db.query(sql, [month, year], (err, results) => {
+      if (err) {
+        console.error('Error fetching customer statistics by month:', err);
+        return res.status(500).json({
+          message: 'Error fetching customer statistics by month',
+          error: err.message
+        });
+      }
+
+      // Return the first row with default values if no data
+      const data = results[0] || {
+        customerCount: 0,
+        totalRevenue: 0,
+        avgSpending: 0
+      };
+
+      // Convert null values to 0
+      data.customerCount = data.customerCount || 0;
+      data.totalRevenue = data.totalRevenue || 0;
+      data.avgSpending = data.avgSpending || 0;
+
+      res.json({ data });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch customer statistics by month' });
   }
 });
 
