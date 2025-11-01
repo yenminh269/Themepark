@@ -372,17 +372,22 @@ const { user, signout } = useAuth();
                     <h5 className="!font-semibold !text-gray-700 !mb-2">Ride Tickets:</h5>
                       <ul className="!space-y-2">
                           {order.items.map((item, idx) => (
-                              <li key={idx} className="!flex !justify-between !text-sm">
-                                  <span className="!text-gray-700">
-                                      {item.ride_name} × {item.number_of_tickets}
-                                    </span>
-                                    <span className="!font-semibold !text-[#176B87]">
+                              <li key={idx} className="!flex !justify-between !items-start !text-sm">
+                                  <div className="!flex-1">
+                                      <span className="!text-gray-700 !font-medium">
+                                          {item.ride_name}
+                                      </span>
+                                      <div className="!text-xs !text-gray-500 !mt-1">
+                                          ${parseFloat(item.price_per_ticket).toFixed(2)} each × {item.number_of_tickets}
+                                      </div>
+                                  </div>
+                                  <span className="!font-semibold !text-[#176B87]">
                                       ${parseFloat(item.subtotal).toFixed(2)}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                                  </span>
+                              </li>
+                          ))}
+                      </ul>
+                  </div>
                           </div>
                         ))}
                       </div>
@@ -433,10 +438,15 @@ const { user, signout } = useAuth();
                               <h5 className="!font-semibold !text-gray-700 !mb-2">Items Purchased:</h5>
                               <ul className="!space-y-2">
                                 {order.items.map((item, idx) => (
-                                  <li key={idx} className="!flex !justify-between !text-sm">
-                                    <span className="!text-gray-700">
-                                      {item.item_name} × {item.quantity}
-                                    </span>
+                                  <li key={idx} className="!flex !justify-between !items-start !text-sm">
+                                    <div className="!flex-1">
+                                      <span className="!text-gray-700 !font-medium">
+                                        {item.item_name}
+                                      </span>
+                                      <div className="!text-xs !text-gray-500 !mt-1">
+                                        ${parseFloat(item.price_per_item).toFixed(2)} each × {item.quantity}
+                                      </div>
+                                    </div>
                                     <span className="!font-semibold !text-[#176B87]">
                                       ${parseFloat(item.subtotal).toFixed(2)}
                                     </span>

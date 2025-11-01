@@ -173,7 +173,7 @@ export default function Navbar() {
                           </div>
                           <button
                             onClick={() => {
-                              navigate("/tickets");
+                              navigate("/checkout");
                               setCartDropdownOpen(false);
                             }}
                             className="!w-full !px-4 !py-2 !bg-[#176B87] !text-white !rounded-lg !font-semibold hover:!opacity-90 !transition !border-none"
