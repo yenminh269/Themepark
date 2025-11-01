@@ -3,6 +3,7 @@ import PageFooter from "./PageFooter";
 import "./Homepage.css";
 import { useState, useEffect } from "react";
 import { api, getImageUrl } from "../../../services/api";
+import Loading from "../admin/loading/Loading"
 
 export default function StoresPage() {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ export default function StoresPage() {
 
         {loading && (
           <div className="!text-center !py-10">
+            <Loading />
             <p className="!text-lg !text-[#176B87]">Loading stores...</p>
           </div>
         )}
