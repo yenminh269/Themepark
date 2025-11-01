@@ -339,7 +339,7 @@ app.put("/api/customer/:id", requireCustomerAuth, (req, res) => {
 //ROUTES BY MINCY
 // Add a new ride (supports both uploaded photo OR URL)
 app.post('/ride/add', upload.single('photo'), (req, res) => {
-    const { name, price, capacity, description, status, open_time, close_time, photo_url } = req.body;
+    const { name, price, capacity, description, open_time, close_time, photo_url } = req.body;
     // Decide which photo path to use
     let photo_path = null;
     if (photo_url && photo_url.startsWith('http')) {
@@ -350,15 +350,16 @@ app.post('/ride/add', upload.single('photo'), (req, res) => {
         photo_path = `/uploads/ride_photos/${req.file.filename}`;
     }
 
-    if (!name || !price || !capacity || !description || !status || !open_time || !close_time || !photo_path) {
+    // Status is not required - database trigger sets it to 'open' automatically
+    if (!name || !price || !capacity || !description || !open_time || !close_time || !photo_path) {
         return res.status(400).json({ message: 'All fields are required, including either photo or photo URL.' });
     }
     const sql = `
-        INSERT INTO ride (name, price, capacity, description, status, open_time, close_time, photo_path)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO ride (name, price, capacity, description, open_time, close_time, photo_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
     `;
 
-    db.query(sql, [name, price, capacity, description, status, open_time, close_time, photo_path],
+    db.query(sql, [name, price, capacity, description, open_time, close_time, photo_path],
         (err, result) => {
             if (err) {
                 console.error("Error inserting new ride:", err);
@@ -2482,56 +2483,104 @@ app.get('/admin/ride-order-details/:orderId', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch ride order details' });
   }
 });
-//Customer statistics by month
-app.get('/api/reports/customer-stats', async (req, res) => {
+// Average monthly customers report
+app.get('/api/reports/avg-monthly-customers', async (req, res) => {
   try {
-    const month = parseInt(req.query.month);
     const year = parseInt(req.query.year);
-    // Validate input
-    if (!month || !year || month < 1 || month > 12) {
+
+    // Validate year input
+    if (!year) {
       return res.status(400).json({
-        error: 'Invalid month or year. Month must be between 1 and 12.'
+        error: 'Year is required'
       });
     }
+
     const sql = `
-      SELECT
-        COUNT(DISTINCT customer_id) as customerCount,
-        SUM(total_amount) as totalRevenue,
-        CASE
-          WHEN COUNT(DISTINCT customer_id) > 0
-          THEN SUM(total_amount) / COUNT(DISTINCT customer_id)
-          ELSE 0
-        END as avgSpending
-      FROM ride_order
-      WHERE MONTH(order_date) = ? AND YEAR(order_date) = ?
+      SELECT year, month, total_customer,
+        ROUND(
+          AVG(total_customer) OVER (
+            ORDER BY month
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+          ), 2
+        ) AS running_avg_customer
+      FROM (
+        SELECT YEAR(order_date) AS year, MONTH(order_date) AS month,
+               COUNT(DISTINCT customer_id) AS total_customer
+        FROM (
+          SELECT customer_id, order_date FROM store_order
+          UNION ALL
+          SELECT customer_id, order_date FROM ride_order
+        ) AS combined_orders
+        WHERE YEAR(order_date) = ?
+        GROUP BY year, month
+      ) AS monthly_totals
+      ORDER BY month
     `;
 
-    db.query(sql, [month, year], (err, results) => {
+    db.query(sql, [year], (err, results) => {
       if (err) {
-        console.error('Error fetching customer statistics by month:', err);
+        console.error('Error fetching average monthly customers:', err);
         return res.status(500).json({
-          message: 'Error fetching customer statistics by month',
+          message: 'Error fetching average monthly customers',
           error: err.message
         });
       }
 
-      // Return the first row with default values if no data
-      const data = results[0] || {
-        customerCount: 0,
-        totalRevenue: 0,
-        avgSpending: 0
-      };
-
-      // Convert null values to 0
-      data.customerCount = data.customerCount || 0;
-      data.totalRevenue = data.totalRevenue || 0;
-      data.avgSpending = data.avgSpending || 0;
-
-      res.json({ data });
+      res.json(results);
     });
   } catch (err) {
     console.error('Error:', err);
-    res.status(500).json({ error: 'Failed to fetch customer statistics by month' });
+    res.status(500).json({ error: 'Failed to fetch average monthly customers' });
+  }
+});
+
+// Most ridden rides per month
+app.get('/api/reports/most-ridden', async (req, res) => {
+  try {
+    const year = parseInt(req.query.year);
+
+    // Validate year input
+    if (!year) {
+      return res.status(400).json({
+        error: 'Year is required'
+      });
+    }
+
+    const sql = `
+      SELECT month, name, total_tickets
+      FROM (
+        SELECT
+          MONTH(ro.order_date) as month,
+          ride.name as name,
+          SUM(rod.number_of_tickets) as total_tickets,
+          ROW_NUMBER() OVER(
+            PARTITION BY MONTH(ro.order_date)
+            ORDER BY SUM(rod.number_of_tickets) DESC
+          ) as rank_in_month
+        FROM ride_order as ro
+        LEFT JOIN ride_order_detail as rod ON rod.order_id = ro.order_id
+        LEFT JOIN ride ON ride.ride_id = rod.ride_id
+        WHERE YEAR(ro.order_date) = ?
+        GROUP BY MONTH(ro.order_date), ride.name
+      ) ranked
+      WHERE rank_in_month = 1
+      ORDER BY month
+    `;
+
+    db.query(sql, [year], (err, results) => {
+      if (err) {
+        console.error('Error fetching most ridden rides:', err);
+        return res.status(500).json({
+          message: 'Error fetching most ridden rides',
+          error: err.message
+        });
+      }
+
+      res.json(results);
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch most ridden rides' });
   }
 });
 

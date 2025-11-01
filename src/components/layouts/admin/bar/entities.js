@@ -1,5 +1,6 @@
-import { MdDashboard, MdAdd, MdList, MdBuild, MdOutlineAnalytics,
-  MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud } from "react-icons/md"
+import {MdOutlineSupervisedUserCircle, MdDashboard, MdAdd, MdList, MdBuild, MdOutlineAnalytics,
+  MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud ,
+  MdOutlineStorefront } from "react-icons/md"
 
 const entities = [
     {
@@ -8,13 +9,19 @@ const entities = [
       icon: MdDashboard
     },
     {
-      category: 'ANALYTICS SECTION'
+      category: 'REPORT SECTION'
     },
     {
-      name: 'Customer Spending',
-      path: '/admin/customer-spending',
+      name: 'Most Frequently Ridden Rides per Month',
+      path: '/admin/most-frequently-ridden-rides',
       icon: MdOutlineAnalytics
     },
+    {
+      name: 'Customer Summary',
+      path: '/admin/customer-summary',
+      icon: MdOutlineSupervisedUserCircle
+    },
+
     {
       category: 'RIDES SECTION'
     },
@@ -54,7 +61,7 @@ const entities = [
     {
       name: 'Manage Stores',
       path: '/admin/list/stores',
-      icon: MdList
+      icon: MdOutlineStorefront
     },
     {
       category: 'EMPLOYEES'

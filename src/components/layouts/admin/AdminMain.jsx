@@ -13,7 +13,8 @@ import MerchandiseLists from "./merchandise/MerchandiseLists.jsx";
 import StoreInventoryLists from "./StoreInventoryLists.jsx";
 import RideGalleryWrapper from "./rides/RideGalleryWrapper.jsx";
 import RainOutManagement from "./RainOutManagement.jsx";
-import CustomerSpending from "./reports/queryReports.jsx";
+import MostRiddenRide from "./reports/MostRidden.jsx";
+import CustomerSummary from "./reports/CustomerSum.jsx";
 import './AdminMain.css'
 
 function AdminMain() {
@@ -97,8 +98,10 @@ function AdminMain() {
         <Box p="40px">
           <Routes>
             <Route path="/" element={<AdminDashboard />} />
-            {/* Rides Section */}
-            <Route path="customer-spending" element={<CustomerSpending />} />
+            {/* Analysis Section */}
+            <Route path="most-frequently-ridden-rides" element={<MostRiddenRide />} />
+            <Route path="customer-summary" element={<CustomerSummary />} />
+             {/* Rides Section */}
             <Route path="add/ride" element={<Add />} />
             <Route path="view/rides" element={<RideGalleryWrapper />}/>
             <Route path="list/rides" element={<RideLists />} />

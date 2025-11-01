@@ -1,28 +1,20 @@
 import { useState } from "react";
 import Input from '../../../input/Input';
-import Form from 'react-bootstrap/Form';
 import CustomButton from "../../../button/CustomButton";
 import "../Add.css";
 import { api } from '../../../../services/api';
 import { useToast } from '@chakra-ui/react';
 
-function CustomerSpending() {
-  const [month, setMonth] = useState("");
+function MostRiddenRide() {
   const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
   const toast = useToast();
 
-  const handleMonthChange = (e) => {
-    setMonth(e.target.value);
-    setReportData(null); // Clear report when month changes
-    setError(null);
-  };
-
   const handleYearChange = (e) => {
     setYear(e.target.value);
-    setReportData(null); // Clear report when year changes
+    setReportData(null);
     setError(null);
   };
 
@@ -37,7 +29,7 @@ function CustomerSpending() {
     setReportData(null);
 
     try {
-      const data = await api.getCustomerStatsPerMonth(month, year);
+      const data = await api.getMostRiddenRides(year);
       setReportData(data);
     } catch (err) {
       setError(err.message || "Failed to fetch report data");
@@ -48,26 +40,33 @@ function CustomerSpending() {
   };
 
   const handleSaveReport = () => {
-    if (!reportData) return;
+    if (!reportData || reportData.length === 0) return;
 
     try {
-      // Create a formatted report text
-      const reportText = `CUSTOMER STATISTICS REPORT
-        Month: ${month}/${year}
-        Generated: ${new Date().toLocaleString()}
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                         'July', 'August', 'September', 'October', 'November', 'December'];
 
-        ==============================
-        Number of Customers: ${reportData.customerCount || 0}
-        Average Ride Spending per Customer: $${reportData.avgSpending ? reportData.avgSpending.toFixed(2) : '0.00'}
-        Total Revenue: $${reportData.totalRevenue ? reportData.totalRevenue.toFixed(2) : '0.00'}
-        ==============================`;
+      // Create a formatted report text
+      let reportText = `MOST RIDDEN RIDES PER MONTH REPORT
+Year: ${year}
+Generated: ${new Date().toLocaleString()}
+
+==============================
+`;
+
+      reportData.forEach(item => {
+        const monthName = monthNames[item.month - 1] || `Month ${item.month}`;
+        reportText += `${monthName}: ${item.name} (${item.total_tickets} tickets)\n`;
+      });
+
+      reportText += '==============================';
 
       // Create a blob and download it
       const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `customer-report-${month}-${year}.txt`;
+      a.download = `most-ridden-rides-report-${year}.txt`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
@@ -81,10 +80,11 @@ function CustomerSpending() {
       // Show success message
       toast({
         title: 'Report saved',
-        description: `Report saved as customer-report-${month}-${year}.txt`,
+        description: `Report saved successfully`,
         status: 'success',
         duration: 5000,
         isClosable: true,
+        position: 'top',
       });
     } catch (error) {
       console.error('Error saving report:', error);
@@ -94,39 +94,30 @@ function CustomerSpending() {
         status: 'error',
         duration: 5000,
         isClosable: true,
+        position: 'top',
       });
     }
   };
 
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+
   return (
       <div className="w-full max-w-4xl">
-        <Form
+        <form
           onSubmit={handleSubmit}
           className="flex flex-col px-5 rounded w-full mb-6"
           style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
         >
           <h2 className="text-2xl font-bold mb-4 pt-3" style={{ color: '#4B5945' }}>
-            Customer Statistics Report
+            Most Ridden Rides per Month Report
           </h2>
 
           <p className="mb-4 text-md text-gray-600">
-            Generate a report showing the number of customers and 
-            average ride spending per customer for a specific month.
+            Generate a report showing the most frequently ridden ride for each month
           </p>
 
-          <div className="flex gap-4 flex-wrap">
-            <Input
-              required
-              type="number"
-              label="Month (1-12)"
-              className="custom-input"
-              labelClassName="custom-form-label"
-              value={month}
-              onChange={handleMonthChange}
-              min="1"
-              max="12"
-              placeholder="Enter month (1-12)"
-            />
+          <div className="flex gap-4 flex-wrap mb-4">
             <Input
               required
               type="number"
@@ -147,7 +138,7 @@ function CustomerSpending() {
               className="custom-button"
               disabled={loading}
             />
-            {reportData && (
+            {reportData && reportData.length > 0 && (
               <button
                 type="button"
                 onClick={handleSaveReport}
@@ -162,11 +153,11 @@ function CustomerSpending() {
               {error}
             </div>
           )}
-        </Form>
+        </form>
 
-        {reportData && (
+        {reportData && reportData.length > 0 && (
           <div
-            className="bg-white p-4 mt-4 rounded w-full relative"
+            className=" flex flex-col items-center justify-center p-6 mt-4 rounded w-full relative"
             style={{ boxShadow: '-8px -8px 12px rgba(0,0,0,0.25)' }}
           >
             <button
@@ -178,40 +169,51 @@ function CustomerSpending() {
               &times;
             </button>
             <h3 className="text-xl font-bold mb-4" style={{ color: '#4B5945' }}>
-              Report Results - {month}/{year}
+              Most Ridden Rides by Month - {year}
             </h3>
+            <table >
+                <thead className="bg-[#4B5945] text-white">
+                  <tr>
+                    <th className="py-3 !px-6 border !border-black font-semibold">Month</th>
+                    <th className="py-3 !px-6 border !border-black font-semibold">Most Popular Ride</th>
+                    <th className="py-3 !px-6 border !border-black font-semibold">Total Tickets</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.map((item, index) => (
+                    <tr
+                      key={index}
+                      className={index % 2 === 0 ? 'bg-[#EEF5FF]' : 'bg-[#91C8E4]'}
+                    >
+                      <td className="py-3 !px-6 border !border-gray-500">
+                        {monthNames[item.month - 1] || `Month ${item.month}`}
+                      </td>
+                      <td className="py-3 !px-6 border !border-gray-500 font-medium">
+                        {item.name}
+                      </td>
+                      <td className="py-3 !px-6 border !border-gray-500 text-center">
+                        {item.total_tickets.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+           
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-sm text-gray-600 mb-1">Number of Customers</div>
-                <div className="text-3xl font-bold text-blue-700">
-                  {reportData.customerCount || 0}
-                </div>
-              </div>
-
-              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                <div className="text-sm text-gray-600 mb-1">Average Spending</div>
-                <div className="text-3xl font-bold text-green-700">
-                  ${reportData.avgSpending ? reportData.avgSpending.toFixed(2) : '0.00'}
-                </div>
-              </div>
-
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="text-sm text-gray-600 mb-1">Total Revenue</div>
-                <div className="text-3xl font-bold text-purple-700">
-                  ${reportData.totalRevenue ? reportData.totalRevenue.toFixed(2) : '0.00'}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 text-sm text-gray-500">
+            <div className="mt-4 text-sm text-gray-700">
               Generated on: {new Date().toLocaleString()}
             </div>
           </div>
         )}
+
+        {reportData && reportData.length === 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mt-4">
+            <p className="text-yellow-800">No data available for most ridden rides.</p>
+          </div>
+        )}
       </div>
-    
+
   );
 }
 
-export default CustomerSpending;
+export default MostRiddenRide;

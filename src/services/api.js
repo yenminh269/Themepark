@@ -256,8 +256,11 @@ export const api = {
     },
 
     // ===== REPORTS =====
-    getCustomerStatsPerMonth: async (month, year) => {
-        return await fetchAPI(`/api/reports/customer-stats?month=${month}&year=${year}`);
+    getMostRiddenRides: async (year) => {
+        return await fetchAPI(`/api/reports/most-ridden?year=${year}`);
+    },
+    getAvgMonthlyCustomers: async (year) => {
+        return await fetchAPI(`/api/reports/avg-monthly-customers?year=${year}`);
     },
 };
 
