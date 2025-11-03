@@ -150,7 +150,7 @@ Generated: ${new Date().toLocaleString()}
           style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
         >
           <h2 className="text-2xl font-bold mb-4 pt-3" style={{ color: '#4B5945' }}>
-            Average Monthly Customers Report
+            📋 Average Monthly Customers Report
           </h2>
 
           <p className="mb-4 text-md text-gray-700">

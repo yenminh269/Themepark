@@ -23,7 +23,7 @@ const entities = [
     },
     {
       name: 'Ride Maintenance Report',
-      path: '/admin/ride-maintenance-report',
+      path: '/admin/ride-report',
       icon: MdReport
     },
     {

@@ -603,6 +603,41 @@ app.get('/api/employee-maintenances/:employeeId', async (req, res) => {
   }
 });
 
+// Update ride statuses based on today's maintenance schedules
+app.post('/api/update-ride-maintenance-status', async (req, res) => {
+  const sql = `
+    UPDATE ride
+    SET status = 'maintenance'
+    WHERE ride_id IN (
+      SELECT ride_id FROM maintenance WHERE DATE(scheduled_date) = CURDATE()
+    )
+  `;
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      db.query(sql, (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    res.json({
+      success: true,
+      message: 'Ride statuses updated successfully',
+      data: {
+        affectedRows: result.affectedRows
+      }
+    });
+  } catch (err) {
+    console.error('Error updating ride statuses:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating ride statuses',
+      error: err.message
+    });
+  }
+});
+
 // Update maintenance status
 app.put('/api/maintenance/:id', async (req, res) => {
   const { id } = req.params;
@@ -773,12 +808,44 @@ app.get('/stores', async (req, res) => {
     });
 })
 
+//Get stores assigned to a specific employee with their shift schedules
+app.get('/employee/:employeeId/stores', async (req, res) => {
+    const { employeeId } = req.params;
+    const sql = `
+        SELECT
+            s.store_id,
+            s.name,
+            s.type,
+            s.status,
+            s.description,
+            s.open_time,
+            s.close_time,
+            esj.work_date,
+            esj.shift_start,
+            esj.shift_end
+        FROM store s
+        INNER JOIN employee_store_job esj ON s.store_id = esj.store_id
+        WHERE esj.employee_id = ?
+        ORDER BY esj.work_date DESC, esj.shift_start
+    `;
+
+    db.query(sql, [employeeId], (err, results) => {
+        if(err){
+            console.error('❌ Database error:', err);
+            return res.status(500).json({
+                message: 'Error fetching employee stores',
+                error: err.message
+            });
+        }
+        res.json({ data: results });
+    });
+});
+
 //Update a store
 app.put('/store/:id', async (req, res) => {
   const {name, type, status, description, open_time, close_time} = req.body;
   const openTime = open_time.length === 5 ? open_time + ':00' : open_time;
   const closeTime = close_time.length === 5 ? close_time + ':00' : close_time;
-  console.log(req.body);
   const id = req.params.id;
   const sql = `
     UPDATE store
@@ -1496,7 +1563,35 @@ app.put('/api/rain-outs/:id', (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Rain out not found' });
     }
-    res.json({ message: 'Rain out updated successfully' });
+
+    // If status is 'cleared', manually update ride statuses (as backup to trigger)
+    if (status === 'cleared') {
+      const updateRidesSql = `
+        UPDATE ride
+        SET status = 'open'
+        WHERE status = 'closed'
+        AND ride_id NOT IN (
+          SELECT DISTINCT ride_id
+          FROM maintenance
+          WHERE status != 'done'
+        )
+      `;
+
+      db.query(updateRidesSql, (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error('Error updating ride statuses after clearing rain:', updateErr);
+          // Don't fail the whole request, just log the error
+        } else {
+          console.log(`Updated ${updateResult.affectedRows} rides to 'open' status`);
+        }
+        res.json({
+          message: 'Rain out updated successfully',
+          ridesUpdated: updateResult ? updateResult.affectedRows : 0
+        });
+      });
+    } else {
+      res.json({ message: 'Rain out updated successfully' });
+    }
   });
 });
 
@@ -2640,6 +2735,41 @@ app.get('/admin/ride-order-details/:orderId', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch ride order details' });
   }
 });
+
+// Get top 5 products by quantity sold
+app.get('/admin/top-products', async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        m.name as product_name,
+        m.type as category,
+        SUM(sod.quantity) as total_quantity,
+        SUM(sod.subtotal) as total_revenue
+      FROM store_order_detail sod
+      JOIN merchandise m ON sod.item_id = m.item_id
+      JOIN store_order so ON sod.store_order_id = so.store_order_id
+      WHERE so.status = 'completed'
+      GROUP BY sod.item_id, m.name, m.type
+      ORDER BY total_quantity DESC
+      LIMIT 5
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching top products:', err);
+        return res.status(500).json({
+          message: 'Error fetching top products',
+          error: err.message
+        });
+      }
+      res.json({ data: results });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch top products' });
+  }
+});
+
 // Average monthly customers report
 app.get('/api/reports/avg-monthly-customers', async (req, res) => {
   try {

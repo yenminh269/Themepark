@@ -20,14 +20,14 @@ import StoresPage from './components/layouts/customer/StoresPage.jsx';
 import StorePage from './components/layouts/customer/StorePage.jsx';
 import StoreCheckoutPage from './components/layouts/customer/StoreCheckoutPage.jsx';
 import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
-import EmployeeRouter from './components/layouts/public/EmployeeRouter.jsx';
 import EmployeeDashboard from './components/layouts/employee/EmployeeDashboard.jsx';
 import ProtectedRoute from './components/layouts/public/ProtectedRoute.jsx';
 
 // Component to conditionally render Navbar based on route
 function AppContent() {
   const location = useLocation();
-  const hideNavbar = location.pathname.startsWith('/admin') || location.pathname === '/manager' || location.pathname === '/employee' || location.pathname === '/maintenance';
+  const hideNavbar = location.pathname.startsWith('/admin') || location.pathname === '/manager' || 
+  location.pathname === '/sales' || location.pathname === '/maintenance';
 
  return (
     <>
@@ -52,8 +52,7 @@ function AppContent() {
         <Route path="/store-checkout" element={<ProtectedRoute><StoreCheckoutPage /></ProtectedRoute>} />
 
         {/* ===== EMPLOYEE ROUTES (Require Employee Authentication) ===== */}
-        <Route path="/employee" element={<ProtectedRoute type="employee"><EmployeeRouter /></ProtectedRoute>} />
-        <Route path="/employee-dashboard" element={<ProtectedRoute type="employee" allowedRoles={['Sales Employee']}><EmployeeDashboard /></ProtectedRoute>} />
+        <Route path="/sales" element={<ProtectedRoute type="employee" allowedRoles={['Sales Employee']}><EmployeeDashboard /></ProtectedRoute>} />
         <Route path="/maintenance" element={<ProtectedRoute type="employee" allowedRoles={['Mechanical Employee']}><EMaintenance /></ProtectedRoute>} />
         <Route path="/manager" element={<ProtectedRoute type="employee" allowedRoles={['Store Manager', 'General Manager']}><ManagerPage /></ProtectedRoute>} />
 

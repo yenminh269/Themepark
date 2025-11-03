@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useToast } from '@chakra-ui/react';
 import Input from "../../../input/Input";
 import Form from "react-bootstrap/Form";
-import CustomButton from "../../../button/CustomButton";
 import { ScaleFade } from '@chakra-ui/react';
 import "../Add.css";
 import Loading from "../loading/Loading";
@@ -148,7 +147,10 @@ function RideMaintenance() {
   };
   const handleSubmit = async (e) => {
   e.preventDefault();
-  
+
+  // Prevent duplicate submissions
+  if (submitting) return;
+
   if (!selectedRideId || !selectedEmpId || !description || !maintenanceDate || !workedHours) {
     toast({
       title: 'Missing Information',
@@ -224,24 +226,23 @@ function RideMaintenance() {
 }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-
-     {/* Header Section */}
-<div className="flex justify-between items-center mb-2">
-  <h1 className="text-2xl font-bold text-[#4682A9]">Ride Maintenance Management</h1>
-  {!showForm && (
-    <button
-      onClick={handleAddMaintenance}
-      className="custom-button  text-[#819A91] rounded hover:bg-[#3a6b8a] transition-colors"
-    >
-      + Schedule New Maintenance
-    </button>
-  )}
-</div>
+    <div className="flex flex-col gap-4">
+        {/* Header Section */}
+    <div className="flex justify-between items-center mb-2">
+      <h1 className="text-2xl font-bold text-[#4682A9]">Ride Maintenance Management</h1>
+      {!showForm && (
+        <button
+          onClick={handleAddMaintenance}
+          className="btn-custom text-[#819A91] rounded hover:bg-[#3a6b8a] transition-colors"
+        >
+          + Schedule New Maintenance
+        </button>
+      )}
+    </div>
       {/* Main Content Layout */}
       <div className="flex flex-wrap gap-4">
         {/* Left Side - Tables */}
-        <div className="flex flex-col gap-4 flex-1 min-w-[300px]">
+        <div className="flex flex-col gap-4 flex-1 min-w-[400px]">
           {/* Maintenance Schedule Table - Now at the top */}
           <div className="bg-white rounded-lg shadow-md p-4">
             <h2 className="text-xl font-semibold mb-3 text-[#4682A9]">
@@ -286,13 +287,10 @@ function RideMaintenance() {
 
         {/* Right Side - Form */}
         {showForm && (
-          <div className="w-full md:w-[400px]" id="maintenance-form">
+          <div className="w-full md:w-[300px]" id="maintenance-form">
             <ScaleFade initialScale={0.9} in={showForm}>
               <div className="rounded-lg p-4 shadow-lg p-6 sticky top-4">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-[#4682A9]">
-                    Schedule Maintenance
-                  </h2>
                   <button
                     type="button"
                     onClick={handleCloseForm}
@@ -356,15 +354,18 @@ function RideMaintenance() {
                     onChange={(e) => setWorkedHours(e.target.value)}
                   />
                   <div className="flex gap-2 mt-6">
-                    <CustomButton 
-                      text="Schedule Maintenance" 
-                      className="custom-button flex-1"
+                    <button
                       type="submit"
-                    />
+                      disabled={submitting}
+                      className="btn-custom flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {submitting ? 'Scheduling...' : 'Schedule Maintenance'}
+                    </button>
                     <button
                       type="button"
                       onClick={handleCloseForm}
-                      className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                      disabled={submitting}
+                      className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Cancel
                     </button>

@@ -102,7 +102,7 @@ function AdminMain() {
             {/* Analysis Section */}
             <Route path="most-frequently-ridden-rides" element={<MostRiddenRide />} />
             <Route path="customer-summary" element={<CustomerSummary />} />
-            <Route path="ride-maintenance-report" element={<RideMaint />} />
+            <Route path="ride-report" element={<RideMaint />} />
              {/* Rides Section */}
             <Route path="add/ride" element={<Add />} />
             <Route path="view/rides" element={<RideGalleryWrapper />}/>

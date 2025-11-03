@@ -96,6 +96,9 @@ export const api = {
     getRideOrderDetails: async (orderId) => {
         return await fetchAPI(`/admin/ride-order-details/${orderId}`);
     },
+    getTopProducts: async () => {
+        return await fetchAPI('/admin/top-products');
+    },
 
     // ===== EMPLOYEES =====
     getAllEmployees: async () => {
@@ -121,6 +124,9 @@ export const api = {
     getAllStores: async () => {
         return await fetchAPI('/stores');
     },
+    getEmployeeStores: async (employeeId) => {
+        return await fetchAPI(`/employee/${employeeId}/stores`);
+    },
     addStore: async (formData) => {
         return await fetchAPI('/store/add', formData, "POST", true);
     },
@@ -137,6 +143,9 @@ export const api = {
     },
     getEmployeeMaintenances: async () => {
         return await fetchAPI('/maintenances-employee/id');
+    },
+    updateRideMaintenanceStatus: async () => {
+        return await fetchAPI('/api/update-ride-maintenance-status', null, "POST", false);
     },
 
     // ===== MERCHANDISE =====

@@ -73,7 +73,7 @@ function ProtectedRoute({ children, type = 'customer', allowedRoles = [] }) {
       } else if (jobTitle === 'General Manager') {
         return <Navigate to="/admin" replace />;
       } else if (jobTitle === 'Sales Employee') {
-        return <Navigate to="/employee-dashboard" replace />;
+        return <Navigate to="/sales" replace />;
       } else {
           return <Navigate to="/" replace />;
         }

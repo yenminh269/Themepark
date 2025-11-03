@@ -10,24 +10,21 @@ export function CartProvider({ children }) {
   // Unified cart functions (for rides and online-available store items)
   const addToCart = (item) => {
     setCart((prev) => {
-      // For rides: match by id only
-      // For store items: match by id AND storeId
+      // Match by id, type, and storeId (for store items)
       const existing = prev.find((cartItem) => {
-        if (item.type === 'store' && cartItem.type === 'store') {
-          return cartItem.id === item.id && cartItem.storeId === item.storeId;
+        if (item.type === 'store') {
+          return cartItem.id === item.id && cartItem.storeId === item.storeId && cartItem.type === 'store';
+        } else {
+          return cartItem.id === item.id && cartItem.type === item.type;
         }
-        return cartItem.id === item.id;
       });
 
       if (existing) {
         return prev.map((cartItem) =>
-          (cartItem.type === 'store' && item.type === 'store')
-            ? (cartItem.id === item.id && cartItem.storeId === item.storeId
-                ? { ...cartItem, quantity: cartItem.quantity + 1 }
-                : cartItem)
-            : (cartItem.id === item.id
-                ? { ...cartItem, quantity: cartItem.quantity + 1 }
-                : cartItem)
+          (item.type === 'store' && cartItem.type === 'store' && cartItem.id === item.id && cartItem.storeId === item.storeId) ||
+          (item.type !== 'store' && cartItem.type === item.type && cartItem.id === item.id)
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
         );
       } else {
         return [...prev, { ...item, quantity: 1 }];
@@ -39,16 +36,18 @@ export function CartProvider({ children }) {
     setCart((prev) =>
       prev
         .map((item) => {
-          // For store items, match both id and storeId
-          if (storeId && item.storeId) {
-            return item.id === itemId && item.storeId === storeId
-              ? { ...item, quantity: Math.max(item.quantity - 1, 0) }
-              : item;
+          if (storeId) {
+            // For store items
+            if (item.id === itemId && item.storeId === storeId && item.type === 'store') {
+              return { ...item, quantity: Math.max(item.quantity - 1, 0) };
+            }
+          } else {
+            // For rides
+            if (item.id === itemId && item.type === 'ride') {
+              return { ...item, quantity: Math.max(item.quantity - 1, 0) };
+            }
           }
-          // For rides, match id only
-          return item.id === itemId
-            ? { ...item, quantity: Math.max(item.quantity - 1, 0) }
-            : item;
+          return item;
         })
         .filter((item) => item.quantity > 0)
     );

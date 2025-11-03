@@ -22,6 +22,7 @@ const AdminDashboard = () => {
   const [expandedOrders, setExpandedOrders] = useState({});
   const [orderDetails, setOrderDetails] = useState({});
   const [hasMoreOrders, setHasMoreOrders] = useState(true);
+  const [topProducts, setTopProducts] = useState([]);
   const ordersTableRef = useRef(null);
 
   useEffect(() => {
@@ -32,19 +33,21 @@ const AdminDashboard = () => {
     try{
       setLoading(true);
       const [
-        avgTicketsData,
-        revenueData,
-        storeSalesData,
-        rideTicketSalesData,
-        avgBrokenData,
-        rideOrdersData
+      avgTicketsData,
+      revenueData,
+      storeSalesData,
+      rideTicketSalesData,
+      avgBrokenData,
+      rideOrdersData,
+        topProductsData
       ] = await Promise.all([
-        api.getAvgRidesPerMonth(),
-        api.getTotalRevenue(),
-        api.getStoreSales(),
-        api.getRideTicketSales(),
-        api.getAvgRidesBrokenMaintenance(),
-        api.getRecentRideOrders(0, 5)
+      api.getAvgRidesPerMonth(),
+      api.getTotalRevenue(),
+      api.getStoreSales(),
+      api.getRideTicketSales(),
+      api.getAvgRidesBrokenMaintenance(),
+        api.getRecentRideOrders(0, 5),
+        api.getTopProducts()
       ]);
 
       setAvgTicketPerMonth(avgTicketsData || 0);
@@ -53,6 +56,7 @@ const AdminDashboard = () => {
       setRideTicketSales(rideTicketSalesData || '0.00');
       setAverageRidesBrokenMaintenance(avgBrokenData || 0);
       setRideOrders(rideOrdersData || []);
+      setTopProducts(topProductsData || []);
       setOrderOffset(5);
 
       setError(null);
@@ -128,12 +132,13 @@ const AdminDashboard = () => {
   const recentOrdersColumns = ['Order ID', 'Date', 'Amount', 'Status', 'Actions'];
 
   const topProductsColumns = ['Product', 'Category', 'Sales', 'Revenue'];
-  const topProductsData = [
-    ['Product A', 'Electronics', '234', '$12,400'],
-    ['Product B', 'Clothing', '189', '$8,900'],
-    ['Product C', 'Books', '145', '$5,600'],
-    ['Product D', 'Toys', '98', '$3,200']
-  ];
+
+  const topProductsData = topProducts.map(product => [
+    product.product_name,
+    product.category,
+    product.total_quantity.toString(),
+    `$${parseFloat(product.total_revenue).toFixed(2)}`
+  ]);
   if(loading) return <Loading />
 
   return (

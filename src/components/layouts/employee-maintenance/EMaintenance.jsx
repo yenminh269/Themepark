@@ -112,7 +112,6 @@ const handleCompleteTask = async (maintenanceId) => {
     }
 
     const updateResult = await updateResponse.json();
-    console.log('Update result:', updateResult);
 
     // Refresh the maintenance data for this employee
     const response = await fetch(`${SERVER_URL}/api/employee-maintenances/${employee.employee_id}`);
