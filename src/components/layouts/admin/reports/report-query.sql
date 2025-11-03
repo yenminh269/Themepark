@@ -28,4 +28,26 @@ FROM (
     GROUP BY year, month
 ) AS monthly_totals
 ORDER BY year, month;
--- 
+-- ride maintencae report
+SELECT 
+    r.name AS ride_name,
+    rod.ride_id,
+    SUM(rod.number_of_tickets) AS total_rides,
+    IFNULL(m_count.total_maintenance_count, 0) AS total_maintenance_count,
+    ROUND( 
+		CASE 
+			WHEN  IFNULL(m_count.total_maintenance_count, 0) = 0 THEN 0
+			ELSE
+				(NULLIF(IFNULL(m_count.total_maintenance_count, 0), 0) / SUM(rod.number_of_tickets))  * 100
+		END,
+        2) as percent_needing_maintenance
+FROM ride_order_detail AS rod
+LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
+LEFT JOIN (
+    SELECT ride_id, COUNT(*) AS total_maintenance_count
+    FROM maintenance
+    GROUP BY ride_id
+) AS m_count ON m_count.ride_id = rod.ride_id
+GROUP BY r.name, rod.ride_id
+ORDER BY r.name ASC;
+--

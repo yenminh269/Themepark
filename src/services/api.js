@@ -17,11 +17,14 @@ async function fetchAPI(endpoint, data = null, fetchMethod = "GET", isFormData =
             }
         }
         const response = await fetch(`${SERVER_URL}${endpoint}`, options);
-        
+
         if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+            // Try to parse error message from response body
+            const errorData = await response.json();
+            const errorMessage = errorData.message || errorData.error || `HTTP error! Status: ${response.status}`;
+            throw new Error(errorMessage);
         }
-        
+
         const result = await response.json();
 
         // Handle both response formats
@@ -261,6 +264,9 @@ export const api = {
     },
     getAvgMonthlyCustomers: async (year) => {
         return await fetchAPI(`/api/reports/avg-monthly-customers?year=${year}`);
+    },
+    getRideMaintenanceReport: async () => {
+        return await fetchAPI('/api/reports/ride-maintenance');
     },
 };
 

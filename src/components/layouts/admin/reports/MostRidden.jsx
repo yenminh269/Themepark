@@ -59,7 +59,40 @@ Generated: ${new Date().toLocaleString()}
         reportText += `${monthName}: ${item.name} (${item.total_tickets} tickets)\n`;
       });
 
-      reportText += '==============================';
+      reportText += '==============================\n\n';
+
+      // Add insights to the report
+      reportText += 'INSIGHTS:\n';
+      reportText += '----------\n';
+
+      // Calculate insights
+      const rideCounts = {};
+      const rideTickets = {};
+      reportData.forEach(item => {
+        rideCounts[item.name] = (rideCounts[item.name] || 0) + 1;
+        rideTickets[item.name] = (rideTickets[item.name] || 0) + parseInt(item.total_tickets);
+      });
+
+      const mostFrequentRide = Object.entries(rideCounts).reduce((max, [ride, count]) =>
+        count > max.count ? { ride, count } : max
+      , { ride: '', count: 0 });
+
+      const highestTotalTickets = Object.entries(rideTickets).reduce((max, [ride, tickets]) =>
+        tickets > max.tickets ? { ride, tickets } : max
+      , { ride: '', tickets: 0 });
+
+      const uniqueRides = Object.keys(rideCounts).length;
+
+      // Add insight statements
+      if (mostFrequentRide.count > 1) {
+        reportText += `- ${mostFrequentRide.ride} remained the top-performing ride across ${mostFrequentRide.count} ${mostFrequentRide.count === 1 ? 'month' : 'months'}.\n`;
+      }
+      if (highestTotalTickets.tickets > 0) {
+        reportText += `- ${highestTotalTickets.ride} generated the highest total ticket sales with ${highestTotalTickets.tickets.toLocaleString()} tickets sold across all months.\n`;
+      }
+      reportText += `- A total of ${uniqueRides} different ${uniqueRides === 1 ? 'ride was' : 'rides were'} featured as the most popular throughout the year.\n`;
+
+      reportText += '\n==============================';
 
       // Create a blob and download it
       const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
@@ -166,7 +199,7 @@ Generated: ${new Date().toLocaleString()}
               style={{ cursor: 'pointer' }}
               aria-label="Close report"
             >
-              &times;
+              X
             </button>
             <h3 className="text-xl font-bold mb-4" style={{ color: '#4B5945' }}>
               Most Ridden Rides by Month - {year}
@@ -198,9 +231,60 @@ Generated: ${new Date().toLocaleString()}
                   ))}
                 </tbody>
               </table>
-           
 
-            <div className="mt-4 text-sm text-gray-700">
+            {/* Insights Section */}
+            <div className="mt-6 w-full">
+              <h4 className="text-lg font-semibold mb-3" style={{ color: '#4B5945' }}>
+                📝 Insights
+              </h4>
+              <div className="bg-[#EEEFE0] p-2 rounded">
+                {(() => {
+                  // Count occurrences of each ride
+                  const rideCounts = {};
+                  const rideTickets = {};
+                  reportData.forEach(item => {
+                    rideCounts[item.name] = (rideCounts[item.name] || 0) + 1;
+                    rideTickets[item.name] = (rideTickets[item.name] || 0) + parseInt(item.total_tickets);
+                  });
+
+                  // Find the ride that appears most frequently
+                  const mostFrequentRide = Object.entries(rideCounts).reduce((max, [ride, count]) =>
+                    count > max.count ? { ride, count } : max
+                  , { ride: '', count: 0 });
+
+                  // Find the ride with highest total tickets across all months
+                  const highestTotalTickets = Object.entries(rideTickets).reduce((max, [ride, tickets]) =>
+                    tickets > max.tickets ? { ride, tickets } : max
+                  , { ride: '', tickets: 0 });
+
+                  // Get unique rides
+                  const uniqueRides = Object.keys(rideCounts).length;
+
+                  return (
+                    <div className="space-y-2 text-gray-700">
+                      {mostFrequentRide.count > 1 && (
+                        <p>
+                          <strong>{mostFrequentRide.ride}</strong> remained the top-performing ride across{' '}
+                          <strong>{mostFrequentRide.count}</strong> {mostFrequentRide.count === 1 ? 'month' : 'months'}.
+                        </p>
+                      )}
+                      {highestTotalTickets.tickets > 0 && (
+                        <p>
+                          <strong>{highestTotalTickets.ride}</strong> generated the highest total ticket sales with{' '}
+                          <strong>{highestTotalTickets.tickets.toLocaleString()}</strong> tickets sold across all months.
+                        </p>
+                      )}
+                      <p>
+                        A total of <strong>{uniqueRides}</strong> different {uniqueRides === 1 ? 'ride was' : 'rides were'} featured
+                        as the most popular throughout the year.
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div className="mb-4 text-sm text-gray-700">
               Generated on: {new Date().toLocaleString()}
             </div>
           </div>

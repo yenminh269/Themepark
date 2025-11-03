@@ -44,12 +44,12 @@ function RideMaintenance() {
   ];
 
   const MaintenanceAttr = [
-    'Maintenance ID', 'Ride Name', 'Employee', 'Description', 
+    'Maintenance ID', 'Ride Name', 'Employee', 'Description',
     'Scheduled Date', 'Status'
   ];
   const maintenanceKeys = [
     'maintenance_id', 'ride_name', 'employee_name', 'description',
-    'scheduled_date', 'completion_status'
+    'scheduled_date', 'status'
   ];
 
   useEffect(() => {
@@ -123,15 +123,13 @@ function RideMaintenance() {
   );
 
  const formattedMaintenanceData = maintenanceSchedules.map(maintObj => {
-  const employeeName = `${maintObj.first_name} ${maintObj.last_name}`;
+  const employeeName = maintObj.assigned_employees || 'No employees assigned';
   return maintenanceKeys.map(key => {
     if (key === 'employee_name') return employeeName;
     if (key === 'scheduled_date' && maintObj[key])
       return new Date(maintObj[key]).toLocaleDateString();
-    if (key === 'completion_status') {
-      return maintObj[key] === 'done' ? '✓ Completed' : 
-             maintObj[key] === 'in process' ? '⟳ In Progress' : 
-             '📅 Scheduled';
+    if (key === 'status') {
+      return maintObj[key] === 'done'? '✓ Completed':'📅 Scheduled';
     }
     return maintObj[key] ?? '';
   });
@@ -170,9 +168,6 @@ function RideMaintenance() {
   date: maintenanceDate,
   hour: workedHours,
 };
-
-  console.log('=== Submitting Maintenance ===');
-  console.log('Payload:', newMaintenance);
 
   try {
     setSubmitting(true);
@@ -237,7 +232,7 @@ function RideMaintenance() {
   {!showForm && (
     <button
       onClick={handleAddMaintenance}
-      className="custom-button px-4 py-2 bg-[#4682A9] text-white rounded hover:bg-[#3a6b8a] transition-colors"
+      className="custom-button  text-[#819A91] rounded hover:bg-[#3a6b8a] transition-colors"
     >
       + Schedule New Maintenance
     </button>
@@ -293,7 +288,7 @@ function RideMaintenance() {
         {showForm && (
           <div className="w-full md:w-[400px]" id="maintenance-form">
             <ScaleFade initialScale={0.9} in={showForm}>
-              <div className="rounded-lg shadow-lg p-6 sticky top-4">
+              <div className="rounded-lg p-4 shadow-lg p-6 sticky top-4">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold text-[#4682A9]">
                     Schedule Maintenance

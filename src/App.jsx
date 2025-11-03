@@ -27,7 +27,7 @@ import ProtectedRoute from './components/layouts/public/ProtectedRoute.jsx';
 // Component to conditionally render Navbar based on route
 function AppContent() {
   const location = useLocation();
-  const hideNavbar = location.pathname.startsWith('/admin') || location.pathname === '/manager';
+  const hideNavbar = location.pathname.startsWith('/admin') || location.pathname === '/manager' || location.pathname === '/employee' || location.pathname === '/maintenance';
 
  return (
     <>

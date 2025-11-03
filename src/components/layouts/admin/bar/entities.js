@@ -1,6 +1,6 @@
 import {MdOutlineSupervisedUserCircle, MdDashboard, MdAdd, MdList, MdBuild, MdOutlineAnalytics,
   MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud ,
-  MdOutlineStorefront } from "react-icons/md"
+  MdOutlineStorefront, MdReport  } from "react-icons/md"
 
 const entities = [
     {
@@ -21,7 +21,11 @@ const entities = [
       path: '/admin/customer-summary',
       icon: MdOutlineSupervisedUserCircle
     },
-
+    {
+      name: 'Ride Maintenance Report',
+      path: '/admin/ride-maintenance-report',
+      icon: MdReport
+    },
     {
       category: 'RIDES SECTION'
     },
@@ -41,7 +45,7 @@ const entities = [
       icon: MdList
     },
     {
-      name: 'Rain Out Management',
+      name: 'Rain History',
       path: '/admin/rain-out',
       icon: MdCloud
     },

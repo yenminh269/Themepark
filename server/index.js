@@ -163,7 +163,6 @@ app.post("/api/customer/signup", async (req, res) => {
 });
 
 //LOGIN ROUTE
-
 app.post("/api/customer/login", (req, res) => {
   const { email, password } = req.body;
 
@@ -336,7 +335,8 @@ app.put("/api/customer/:id", requireCustomerAuth, (req, res) => {
     }
   );
 });
-//ROUTES BY MINCY
+
+//ROUTES BY MINH
 // Add a new ride (supports both uploaded photo OR URL)
 app.post('/ride/add', upload.single('photo'), (req, res) => {
     const { name, price, capacity, description, open_time, close_time, photo_url } = req.body;
@@ -553,6 +553,88 @@ ORDER BY m.scheduled_date DESC
     console.error('Error fetching maintenance schedules:', err);
     return res.status(500).json({
       message: 'Error fetching maintenance schedules',
+      error: err.message
+    });
+  }
+});
+
+// Get maintenance schedules for a specific employee
+app.get('/api/employee-maintenances/:employeeId', async (req, res) => {
+  const { employeeId } = req.params;
+
+  const sql = `
+    SELECT
+      m.maintenance_id,
+      m.ride_id,
+      r.name as ride_name,
+      m.description,
+      DATE(m.scheduled_date) as scheduled_date,
+      m.status,
+      m.created_at,
+      m.updated_at,
+      emj_current.worked_hour
+    FROM maintenance m
+    INNER JOIN employee_maintenance_job emj_current
+      ON m.maintenance_id = emj_current.maintenance_id
+      AND emj_current.employee_id = ?
+    LEFT JOIN ride r ON m.ride_id = r.ride_id
+    ORDER BY m.scheduled_date DESC
+  `;
+
+  try {
+    const results = await new Promise((resolve, reject) => {
+      db.query(sql, [employeeId], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+
+    res.json({
+      message: 'Employee maintenance schedules retrieved successfully',
+      data: results,
+      count: results.length
+    });
+  } catch (err) {
+    console.error('Error fetching employee maintenance schedules:', err);
+    return res.status(500).json({
+      message: 'Error fetching employee maintenance schedules',
+      error: err.message
+    });
+  }
+});
+
+// Update maintenance status
+app.put('/api/maintenance/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!status) {
+    return res.status(400).json({ error: 'Status is required' });
+  }
+
+  const sql = 'UPDATE maintenance SET status = ? WHERE maintenance_id = ?';
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      db.query(sql, [status, id], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Maintenance task not found' });
+    }
+
+    res.json({
+      message: 'Maintenance status updated successfully',
+      maintenance_id: id,
+      status: status
+    });
+  } catch (err) {
+    console.error('Error updating maintenance status:', err);
+    return res.status(500).json({
+      message: 'Error updating maintenance status',
       error: err.message
     });
   }
@@ -789,15 +871,29 @@ app.post('/employee/login', async (req, res) => {
       });
     }
 
+    // Fetch full employee details including phone and hire_date
+    const detailSql = `SELECT employee_id, email, first_name, last_name, job_title, phone, hire_date, gender
+                       FROM employee
+                       WHERE employee_id = ?`;
+    const employeeDetails = await new Promise((resolve, reject) => {
+      db.query(detailSql, [employee.employee_id], (err, results) => {
+        if (err) reject(err);
+        else resolve(results[0]);
+      });
+    });
+
     // Return employee info (excluding password)
     res.json({
       message: 'Login successful',
       data: {
-        employee_id: employee.employee_id,
-        email: employee.email,
-        first_name: employee.first_name,
-        last_name: employee.last_name,
-        job_title: employee.job_title,
+        employee_id: employeeDetails.employee_id,
+        email: employeeDetails.email,
+        first_name: employeeDetails.first_name,
+        last_name: employeeDetails.last_name,
+        job_title: employeeDetails.job_title,
+        phone: employeeDetails.phone,
+        hire_date: employeeDetails.hire_date,
+        gender: employeeDetails.gender,
         is_employee: true
       }
     });
@@ -1280,9 +1376,20 @@ app.delete('/api/employee-schedules/:id', (req, res) => {
 });
 
 // ==================== RAIN OUT MANAGEMENT ====================
-// Get rain out records
+// Get rain out records with employee information
 app.get('/api/rain-outs', (req, res) => {
-  const sql = 'SELECT * FROM rain_out ORDER BY rain_out_date DESC';
+  const sql = `
+    SELECT
+      r.*,
+      e1.first_name AS activate_emp_first_name,
+      e1.last_name AS activate_emp_last_name,
+      e2.first_name AS clear_emp_first_name,
+      e2.last_name AS clear_emp_last_name
+    FROM rain_out r
+    LEFT JOIN employee e1 ON r.activate_emp = e1.employee_id
+    LEFT JOIN employee e2 ON r.clear_emp = e2.employee_id
+    ORDER BY r.rain_out_date DESC
+  `;
   db.query(sql, (err, results) => {
     if (err) {
       console.error('Error fetching rain outs:', err);
@@ -1294,28 +1401,62 @@ app.get('/api/rain-outs', (req, res) => {
 
 // Create rain out record
 app.post('/api/rain-outs', (req, res) => {
-  const { rain_out_date, note } = req.body;
+  const { rain_out_date, note, activate_emp } = req.body;
 
   if (!rain_out_date) {
     return res.status(400).json({ error: 'Rain out date is required' });
   }
 
-  const sql = `
-    INSERT INTO rain_out (rain_out_date, note, status)
-    VALUES (?, ?, 'active')
-  `;
+  if (!activate_emp) {
+    return res.status(400).json({ error: 'Employee ID is required' });
+  }
 
-  db.query(sql, [rain_out_date, note], (err, result) => {
-    if (err) {
-      console.error('Error creating rain out:', err);
-      if (err.code === 'ER_DUP_ENTRY') {
-        return res.status(409).json({ error: 'Rain out already exists for this date' });
-      }
-      return res.status(500).json({ error: 'Failed to create rain out', message: err.message });
+  // First, check if a rain out already exists for this date
+  const checkSql = 'SELECT rain_out_id, status FROM rain_out WHERE rain_out_date = ?';
+
+  db.query(checkSql, [rain_out_date], (checkErr, checkResults) => {
+    if (checkErr) {
+      console.error('Error checking rain out:', checkErr);
+      return res.status(500).json({ error: 'Failed to check rain out status' });
     }
-    res.json({
-      message: 'Rain out recorded successfully',
-      rain_out_id: result.insertId
+
+    if (checkResults.length > 0) {
+      // Rain out already exists for this date
+      const existingRainOut = checkResults[0];
+      if (existingRainOut.status === 'active') {
+        return res.status(409).json({
+          error: 'A rain out for this date is already active',
+          message: 'A rain out for this date is already active'
+        });
+      } else {
+        return res.status(409).json({
+          error: 'A rain out for this date already exists',
+          message: 'A rain out for this date already exists'
+        });
+      }
+    }
+
+    // No existing rain out, proceed with insertion
+    const insertSql = `
+      INSERT INTO rain_out (rain_out_date, note, status, activate_emp)
+      VALUES (?, ?, 'active', ?)
+    `;
+
+    db.query(insertSql, [rain_out_date, note, activate_emp], (err, result) => {
+      if (err) {
+        console.error('Error creating rain out:', err);
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(409).json({
+            error: 'Rain out already exists for this date',
+            message: 'Rain out already exists for this date'
+          });
+        }
+        return res.status(500).json({ error: 'Failed to create rain out', message: err.message });
+      }
+      res.json({
+        message: 'Rain out recorded successfully',
+        rain_out_id: result.insertId
+      });
     });
   });
 });
@@ -1323,15 +1464,28 @@ app.post('/api/rain-outs', (req, res) => {
 // Update rain out status
 app.put('/api/rain-outs/:id', (req, res) => {
   const rainOutId = req.params.id;
-  const { status, note } = req.body;
+  const { status, note, clear_emp } = req.body;
 
   let sql, params;
-  if (note !== undefined) {
-    sql = 'UPDATE rain_out SET status = ?, note = ? WHERE rain_out_id = ?';
-    params = [status, note, rainOutId];
+
+  // If status is 'cleared', also update clear_emp and resolved_at
+  if (status === 'cleared' && clear_emp) {
+    if (note !== undefined) {
+      sql = 'UPDATE rain_out SET status = ?, note = ?, clear_emp = ?, resolved_at = NOW() WHERE rain_out_id = ?';
+      params = [status, note, clear_emp, rainOutId];
+    } else {
+      sql = 'UPDATE rain_out SET status = ?, clear_emp = ?, resolved_at = NOW() WHERE rain_out_id = ?';
+      params = [status, clear_emp, rainOutId];
+    }
   } else {
-    sql = 'UPDATE rain_out SET status = ? WHERE rain_out_id = ?';
-    params = [status, rainOutId];
+    // Regular update without clear_emp
+    if (note !== undefined) {
+      sql = 'UPDATE rain_out SET status = ?, note = ? WHERE rain_out_id = ?';
+      params = [status, note, rainOutId];
+    } else {
+      sql = 'UPDATE rain_out SET status = ? WHERE rain_out_id = ?';
+      params = [status, rainOutId];
+    }
   }
 
   db.query(sql, params, (err, result) => {
@@ -1398,7 +1552,10 @@ app.post("/api/employee/login", async (req, res) => {
             first_name: employee.first_name,
             last_name: employee.last_name,
             email: employee.email,
-            job_title: employee.job_title
+            job_title: employee.job_title,
+            phone: employee.phone,
+            hire_date: employee.hire_date,
+            gender: employee.gender
           }
         });
       }
@@ -2581,6 +2738,50 @@ app.get('/api/reports/most-ridden', async (req, res) => {
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ error: 'Failed to fetch most ridden rides' });
+  }
+});
+
+// Ride maintenance report
+app.get('/api/reports/ride-maintenance', async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        r.name AS ride_name,
+        rod.ride_id,
+        SUM(rod.number_of_tickets) AS total_rides,
+        IFNULL(m_count.total_maintenance_count, 0) AS total_maintenance_count,
+        ROUND(
+          CASE
+            WHEN IFNULL(m_count.total_maintenance_count, 0) = 0 THEN 0
+            ELSE
+              (NULLIF(IFNULL(m_count.total_maintenance_count, 0), 0) / SUM(rod.number_of_tickets)) * 100
+          END,
+          2) as percent_needing_maintenance
+      FROM ride_order_detail AS rod
+      LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
+      LEFT JOIN (
+        SELECT ride_id, COUNT(*) AS total_maintenance_count
+        FROM maintenance
+        GROUP BY ride_id
+      ) AS m_count ON m_count.ride_id = rod.ride_id
+      GROUP BY r.name, rod.ride_id
+      ORDER BY r.name ASC
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching ride maintenance report:', err);
+        return res.status(500).json({
+          message: 'Error fetching ride maintenance report',
+          error: err.message
+        });
+      }
+
+      res.json(results);
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch ride maintenance report' });
   }
 });
 

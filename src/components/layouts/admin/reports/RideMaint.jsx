@@ -1,24 +1,15 @@
 import { useState } from "react";
-import Input from '../../../input/Input';
 import CustomButton from "../../../button/CustomButton";
 import "../Add.css";
 import { api } from '../../../../services/api';
 import { useToast } from '@chakra-ui/react';
 
-function CustomerSummary() {
-  const [year, setYear] = useState(new Date().getFullYear());
+function RideMaint() {
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
   const [conclusion, setConclusion] = useState("");
   const toast = useToast();
-
-  const handleYearChange = (e) => {
-    setYear(e.target.value);
-    setReportData(null);
-    setConclusion("");
-    setError(null);
-  };
 
   const handleCloseReport = () => {
     setReportData(null);
@@ -28,34 +19,38 @@ function CustomerSummary() {
   const generateConclusion = (data) => {
     if (!data || data.length === 0) return "";
 
-    // Find peak month across all years
-    let peakMonth = null;
-    let peakCustomers = 0;
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                        'July', 'August', 'September', 'October', 'November', 'December'];
+    // Find ride with highest maintenance percentage
+    let highestMaintenanceRide = null;
+    let highestPercentage = 0;
+
+    // Find ride with most rides
+    let mostPopularRide = null;
+    let mostRides = 0;
 
     data.forEach(item => {
-      if (item.total_customer > peakCustomers) {
-        peakCustomers = item.total_customer;
-        peakMonth = item.month;
+      if (parseFloat(item.percent_needing_maintenance) > highestPercentage) {
+        highestPercentage = parseFloat(item.percent_needing_maintenance);
+        highestMaintenanceRide = item.ride_name;
+      }
+
+      if (item.total_rides > mostRides) {
+        mostRides = item.total_rides;
+        mostPopularRide = item.ride_name;
       }
     });
 
-    const peakMonthName = monthNames[peakMonth - 1];
+    let conclusionText = "";
 
-    // Determine season
-    let season = "";
-    if ([12, 1, 2].includes(peakMonth)) {
-      season = "winter season";
-    } else if ([3, 4, 5].includes(peakMonth)) {
-      season = "spring season";
-    } else if ([6, 7, 8].includes(peakMonth)) {
-      season = "summer season";
-    } else {
-      season = "fall season";
+    if (highestMaintenanceRide && highestPercentage > 0) {
+      const highestMaintenanceData = data.find(d => d.ride_name === highestMaintenanceRide);
+      conclusionText += `<strong>${highestMaintenanceRide}</strong> has the highest maintenance rate at ${highestPercentage}% (${highestMaintenanceData.total_maintenance_count} maintenance records per ${highestMaintenanceData.total_rides.toLocaleString()} rides). `;
     }
 
-    return `📈 Trend: Visitor numbers peaked in ${peakMonthName} (${season}).`;
+    if (mostPopularRide) {
+      conclusionText += `<strong>${mostPopularRide}</strong> is the most popular ride with ${mostRides.toLocaleString()} total rides.`;
+    }
+
+    return conclusionText;
   };
 
   const handleSubmit = async (e) => {
@@ -66,7 +61,7 @@ function CustomerSummary() {
     setConclusion("");
 
     try {
-      const data = await api.getAvgMonthlyCustomers(year);
+      const data = await api.getRideMaintenanceReport();
       setReportData(data);
       setConclusion(generateConclusion(data));
     } catch (err) {
@@ -81,23 +76,21 @@ function CustomerSummary() {
     if (!reportData || reportData.length === 0) return;
 
     try {
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                         'July', 'August', 'September', 'October', 'November', 'December'];
-
       // Create a formatted report text
-      let reportText = `AVERAGE MONTHLY CUSTOMERS REPORT
-Year: ${year}
+      let reportText = `RIDE MAINTENANCE REPORT
 Generated: ${new Date().toLocaleString()}
 
 ==============================
 `;
 
       reportData.forEach(item => {
-        const monthName = monthNames[item.month - 1] || `Month ${item.month}`;
-        reportText += `${monthName}: ${item.total_customer} customers (Average number per month: ${item.running_avg_customer})\n`;
+        reportText += `Ride: ${item.ride_name}\n`;
+        reportText += `  Total Rides: ${item.total_rides.toLocaleString()}\n`;
+        reportText += `  Maintenance Count: ${item.total_maintenance_count}\n`;
+        reportText += `  Maintenance Rate: ${item.percent_needing_maintenance}%\n\n`;
       });
 
-      reportText += `\n==============================\n`;
+      reportText += `==============================\n`;
       reportText += `${conclusion}\n`;
       reportText += '==============================';
 
@@ -106,7 +99,7 @@ Generated: ${new Date().toLocaleString()}
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `avg-monthly-customers-report-${year}.txt`;
+      a.download = `ride-maintenance-report-${new Date().toISOString().split('T')[0]}.txt`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
@@ -139,9 +132,6 @@ Generated: ${new Date().toLocaleString()}
     }
   };
 
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                      'July', 'August', 'September', 'October', 'November', 'December'];
-
   return (
       <div className="w-full max-w-5xl">
         <form
@@ -150,27 +140,12 @@ Generated: ${new Date().toLocaleString()}
           style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
         >
           <h2 className="text-2xl font-bold mb-4 pt-3" style={{ color: '#4B5945' }}>
-            Average Monthly Customers Report
+            Ride Maintenance Report
           </h2>
 
           <p className="mb-4 text-md text-gray-700">
-            Generate a report showing the total customers and average number per month
+            Generate a report showing ride usage statistics and maintenance frequency
           </p>
-
-          <div className="flex gap-4 flex-wrap mb-4">
-            <Input
-              required
-              type="number"
-              label="Year"
-              className="custom-input"
-              labelClassName="custom-form-label"
-              value={year}
-              onChange={handleYearChange}
-              min="2020"
-              max={new Date().getFullYear()}
-              placeholder="Enter year"
-            />
-          </div>
 
           <div className="flex justify-center gap-3 mt-4">
             <CustomButton
@@ -205,19 +180,21 @@ Generated: ${new Date().toLocaleString()}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
               style={{ cursor: 'pointer' }}
               aria-label="Close report"
-            >X
+            >
+              &times;
             </button>
             <h3 className="text-xl font-bold mb-4" style={{ color: '#4B5945' }}>
-              Average Monthly Customers - {year}
+              Ride Maintenance Analysis
             </h3>
 
             <div className="overflow-x-auto w-full">
               <table className="mx-auto">
                 <thead className="bg-[#4B5945] text-white">
                   <tr>
-                    <th className="py-3 !px-6 border !border-black font-semibold">Month</th>
-                    <th className="py-3 !px-6 border !border-black font-semibold">Number of Customers</th>
-                    <th className="py-3 !px-6 border !border-black font-semibold">Average Number per Month</th>
+                    <th className="py-3 !px-6 border !border-black font-semibold">Ride Name</th>
+                    <th className="py-3 !px-6 border !border-black font-semibold">Total Rides</th>
+                    <th className="py-3 !px-6 border !border-black font-semibold">Maintenance Count</th>
+                    <th className="py-3 !px-6 border !border-black font-semibold">Maintenance Rate (%)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -227,13 +204,16 @@ Generated: ${new Date().toLocaleString()}
                       className={index % 2 === 0 ? 'bg-[#EEF5FF]' : 'bg-[#91C8E4]'}
                     >
                       <td className="py-3 !px-6 border !border-gray-500">
-                        {monthNames[item.month - 1] || `Month ${item.month}`}
+                        {item.ride_name}
                       </td>
                       <td className="py-3 !px-6 border !border-gray-500 text-center">
-                        {item.total_customer.toLocaleString()}
+                        {item.total_rides.toLocaleString()}
                       </td>
                       <td className="py-3 !px-6 border !border-gray-500 text-center">
-                        {parseFloat(item.running_avg_customer).toFixed(2)}
+                        {item.total_maintenance_count}
+                      </td>
+                      <td className="py-3 !px-6 border !border-gray-500 text-center">
+                        {parseFloat(item.percent_needing_maintenance).toFixed(2)}%
                       </td>
                     </tr>
                   ))}
@@ -246,8 +226,8 @@ Generated: ${new Date().toLocaleString()}
               <h4 className="text-lg font-semibold mb-3" style={{ color: '#4B5945' }}>
                 📝Insights
               </h4>
-              <div className="bg-[#EEEFE0] p-2 rounded">
-                <p className="my-2 text-gray-700">{conclusion}</p>
+              <div className="bg-[#EEEFE0] p-4 rounded">
+                <p className="my-2 text-gray-700" dangerouslySetInnerHTML={{ __html: conclusion }}></p>
               </div>
               </div>
             )}
@@ -260,7 +240,7 @@ Generated: ${new Date().toLocaleString()}
 
         {reportData && reportData.length === 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mt-4">
-            <p className="text-yellow-800">No data available for average monthly customers.</p>
+            <p className="text-yellow-800">No ride maintenance data available.</p>
           </div>
         )}
       </div>
@@ -268,4 +248,4 @@ Generated: ${new Date().toLocaleString()}
   );
 }
 
-export default CustomerSummary;
+export default RideMaint;

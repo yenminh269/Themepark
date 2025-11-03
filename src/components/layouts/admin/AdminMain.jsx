@@ -12,9 +12,10 @@ import StoreLists from "./stores/StoreLists.jsx";
 import MerchandiseLists from "./merchandise/MerchandiseLists.jsx";
 import StoreInventoryLists from "./StoreInventoryLists.jsx";
 import RideGalleryWrapper from "./rides/RideGalleryWrapper.jsx";
-import RainOutManagement from "./RainOutManagement.jsx";
+import RainHistory from "./RainHistory.jsx";
 import MostRiddenRide from "./reports/MostRidden.jsx";
 import CustomerSummary from "./reports/CustomerSum.jsx";
+import RideMaint from "./reports/RideMaint.jsx";
 import './AdminMain.css'
 
 function AdminMain() {
@@ -101,6 +102,7 @@ function AdminMain() {
             {/* Analysis Section */}
             <Route path="most-frequently-ridden-rides" element={<MostRiddenRide />} />
             <Route path="customer-summary" element={<CustomerSummary />} />
+            <Route path="ride-maintenance-report" element={<RideMaint />} />
              {/* Rides Section */}
             <Route path="add/ride" element={<Add />} />
             <Route path="view/rides" element={<RideGalleryWrapper />}/>
@@ -113,7 +115,7 @@ function AdminMain() {
             <Route path="list/store-inventory" element={<StoreInventoryLists />} />
             <Route path="ride-maintenance" element={<RideMaintenance />} />
             {/* Rain Out Management */}
-            <Route path="rain-out" element={<RainOutManagement />} />
+            <Route path="rain-out" element={<RainHistory />} />
             {/* Employee Section */}
             <Route path="/employees" element={<Employees />} />
           </Routes>
