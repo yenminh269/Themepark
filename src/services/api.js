@@ -198,17 +198,18 @@ export const api = {
         return body.data || [];
     },
 
-    createRideOrder: async (cart, total) => {
+    createRideOrder: async (payload) => {
+    // payload = { cart, subtotal, tax, total, payment_method }
         const token = getCustomerToken();
         if (!token) throw new Error('No authentication token');
 
         const res = await fetch(`${SERVER_URL}/api/ride-orders`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ cart, total }),
+            body: JSON.stringify(payload),
         });
 
         if (!res.ok) {
@@ -217,8 +218,9 @@ export const api = {
         }
 
         const body = await res.json();
-        return body.order;
+        return body.order || body; // keep compatibility with your current handler
     },
+
 
     // ===== STORE ORDERS =====
     getStoreOrders: async () => {

@@ -1,6 +1,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "./CartContext";
 import { useAuth } from "./AuthContext";
+import { round } from "../../../utils/money";
 import PageFooter from "./PageFooter";
 import "./Homepage.css";
 import { useState } from "react";
@@ -11,6 +12,10 @@ export default function StoreCheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { storeCart, storeTotal, clearStoreCart } = useCart();
+  const TAX_RATE = 0.0825;
+  const tax = round(storeTotal * TAX_RATE);
+  const grandTotal = round(storeTotal + tax);
+
   const { user } = useAuth();
 
   const { storeId, storeName } = location.state || {};
@@ -35,10 +40,13 @@ export default function StoreCheckoutPage() {
       // Create the store order
       const orderData = {
         cart: storeCart,
-        total: storeTotal,
+        subtotal: storeTotal,
+        tax,
+        total: grandTotal,        // send total WITH tax
         payment_method: paymentMethod,
-        store_id: storeId
+        store_id: storeId,
       };
+
 
       const result = await api.createStoreOrder(orderData);
 
@@ -116,11 +124,20 @@ export default function StoreCheckoutPage() {
             </div>
 
             <div className="!mt-6 !pt-4 !border-t !border-gray-200">
-              <div className="!flex !justify-between !items-center !text-xl !font-bold !text-[#176B87]">
-                <span>Total:</span>
+              <div className="!flex !justify-between !text-slate-700">
+                <span>Subtotal</span>
                 <span>${storeTotal.toFixed(2)}</span>
               </div>
+              <div className="!flex !justify-between !text-slate-700">
+                <span>Tax (8.25%)</span>
+                <span>${tax.toFixed(2)}</span>
+              </div>
+              <div className="!flex !justify-between !items-center !text-xl !font-bold !text-[#176B87] !mt-2">
+                <span>Total</span>
+                <span>${grandTotal.toFixed(2)}</span>
+              </div>
             </div>
+
           </div>
 
           {/* Payment & Customer Info */}
@@ -190,7 +207,7 @@ export default function StoreCheckoutPage() {
                 disabled={processing || !user}
                 className="!w-full !px-6 !py-4 !bg-[#176B87] !text-white !rounded-xl !font-bold !text-lg hover:!opacity-90 !transition !border-none !disabled:opacity-50 !disabled:cursor-not-allowed"
               >
-                {processing ? 'Processing...' : `Complete Order - $${storeTotal.toFixed(2)}`}
+                {processing ? 'Processing...' : `Complete Order - $${grandTotal.toFixed(2)}`}
               </button>
 
               {!user && (

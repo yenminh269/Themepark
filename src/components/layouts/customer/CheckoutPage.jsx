@@ -3,12 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { useCart } from "./CartContext";
 import PageFooter from "./PageFooter";
+import { round } from "../../../utils/money";
 import "./Homepage.css";
 import { api } from "../../../services/api";
 
 export default function CheckoutPage() {
   const { user } = useAuth();
   const { cart, total, clearCart } = useCart();
+  const TAX_RATE = 0.0825; // 8.25% — adjust if needed
+  const tax = round(total * TAX_RATE);
+  const grandTotal = round(total + tax);
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -45,15 +49,23 @@ export default function CheckoutPage() {
 
       // Create ride order if there are ride items
       if (rideItems.length > 0) {
-        const rideTotal = rideItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const rideOrder = await api.createRideOrder(rideItems, rideTotal);
+        const rideSubtotal = rideItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const rideTax = round(rideSubtotal * TAX_RATE);
+        const rideTotal = round(rideSubtotal + rideTax);
+
+        const rideOrder = await api.createRideOrder({
+          cart: rideItems,
+          subtotal: rideSubtotal,
+          tax: rideTax,
+          total: rideTotal,
+          payment_method: form.paymentMethod,
+        });
+
         orders.push({ type: 'ride', ...rideOrder });
       }
 
       // Create store order if there are store items
       if (storeItems.length > 0) {
-        const storeTotal = storeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
         // Group store items by store
         const storeGroups = storeItems.reduce((groups, item) => {
           if (!groups[item.storeId]) {
@@ -63,14 +75,19 @@ export default function CheckoutPage() {
           return groups;
         }, {});
 
-        // Create separate order for each store
+        // Create separate order for each store (with tax)
         for (const [storeId, items] of Object.entries(storeGroups)) {
-          const orderTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          const storeSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          const storeTax = round(storeSubtotal * TAX_RATE);
+          const storeTotal = round(storeSubtotal + storeTax);
+
           const storeOrder = await api.createStoreOrder({
-            store_id: parseInt(storeId),
+            store_id: parseInt(storeId, 10),
             cart: items,
-            total: orderTotal,
-            payment_method: form.paymentMethod
+            subtotal: storeSubtotal,
+            tax: storeTax,
+            total: storeTotal,
+            payment_method: form.paymentMethod,
           });
           orders.push({ type: 'store', ...storeOrder });
         }
@@ -146,10 +163,13 @@ export default function CheckoutPage() {
           )}
 
           <div className="!flex !justify-end !mt-4">
-            <p className="!text-lg !font-semibold !text-[#176B87]">
-              Total: ${total.toFixed(2)}
-            </p>
+            <div className="!text-lg !font-semibold !text-[#176B87]">
+              <p>Subtotal: ${total.toFixed(2)}</p>
+              <p>Tax (8.25%): ${tax.toFixed(2)}</p>
+              <h4>Total: ${grandTotal.toFixed(2)}</h4>
+            </div>
           </div>
+
         </div>
 
         {/* Payment Form */}
