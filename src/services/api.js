@@ -99,6 +99,9 @@ export const api = {
     getTopProducts: async () => {
         return await fetchAPI('/admin/top-products');
     },
+    getWeeklyRevenue: async () => {
+        return await fetchAPI('/admin/weekly-revenue');
+    },
 
     // ===== EMPLOYEES =====
     getAllEmployees: async () => {
