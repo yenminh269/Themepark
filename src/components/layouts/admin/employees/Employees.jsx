@@ -16,6 +16,7 @@ function Employees() {
   const [editedData, setEditedData] = useState({});
   const [addE, showAddE] = useState(false);
   const [showActive, setShowActive] = useState(true); // true = active, false = terminated
+  const [visibleSSNs, setVisibleSSNs] = useState(new Set()); // Track which employee SSNs are visible
   const addFormRef = useRef(null);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -148,6 +149,18 @@ function Employees() {
     setEditedData(prev => ({ ...prev, [key]: value }));
   };
 
+  const toggleSSNVisibility = (employeeId) => {
+    setVisibleSSNs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(employeeId)) {
+        newSet.delete(employeeId);
+      } else {
+        newSet.add(employeeId);
+      }
+      return newSet;
+    });
+  };
+
   const handleDelete = (id, row) => {
     setDeleteTarget({ id, name: `${row[1]} ${row[2]}` });
     onOpen();
@@ -233,6 +246,30 @@ function Employees() {
     if (editingId === empObj.employee_id) return renderEditableRow(empObj);
     return columnKeys.map(key => {
       if ((key === 'hire_date' || key === 'terminate_date') && empObj[key]) return empObj[key]?.slice(0, 10);
+
+      // Handle SSN display with click-to-reveal
+      if (key === 'ssn') {
+        const isVisible = visibleSSNs.has(empObj.employee_id);
+        return (
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSSNVisibility(empObj.employee_id);
+            }}
+            style={{
+              cursor: 'pointer',
+              userSelect: 'none',
+              padding: '3px 0px',
+              borderRadius: '4px',
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+            title={isVisible ? 'Click to hide' : 'Click to reveal SSN'}
+          >
+            {isVisible ? empObj[key] : '••••••'}
+          </span>
+        );
+      }
       return empObj[key] ?? '';
     });
   });
@@ -240,7 +277,7 @@ function Employees() {
   if (loading) return <Loading isLoading={loading} />;
 
   return (
-    <Box position="relative" p={4}>
+    <Box position="relative">
       <input
         type="text"
         placeholder="Search employees..."

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../customer/AuthContext";
 import { useCart } from "../customer/CartContext";
@@ -41,7 +41,7 @@ export default function Navbar() {
   }, [cartDropdownOpen]);
 
   return (
-    <nav className="!sticky !top-0 !z-50 !bg-white/90 backdrop-blur-lg !border-b !border-[#B4D4FF]/30 !shadow-sm">
+    <nav className="!sticky !top-0 !z-50  !border-b !border-[#B4D4FF]/30 !shadow-sm">
       <div className="!mx-auto !max-w-7xl !px-6 !py-4">
         <div className="!flex !items-center !justify-between">
           {/* Logo */}
@@ -52,57 +52,55 @@ export default function Navbar() {
             }}
             className="!flex !items-center !gap-2 !text-2xl !font-bold !text-[#176B87] hover:!scale-105 !transition-transform !bg-transparent !border-none"
           >
-            <img 
-              src="https://cdn-icons-png.flaticon.com/512/14023/14023195.png" 
-              alt="Velocity icon" 
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/14023/14023195.png"
+              alt="Velocity icon"
               className="!h-[1em] !w-[1em] object-contain inline-block"
-            /> 
+            />
             <span className="!bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !bg-clip-text !text-transparent">
               Velocity Valley
             </span>
           </button>
 
-          {/* Desktop Navigation */}
-          <div className="!hidden md:!flex !items-center !gap-6">
-            <button
-              onClick={() => {
-                navigate("/");
-                setMobileMenuOpen(false);
-              }}
-              className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
-            >
-              🎡Home
-            </button>
-            <button
-            onClick={handleGetTickets}
-            className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
-            >
-            🎟️Get Tickets
-            </button>
-            <button
-              onClick={() => {
-                navigate("/stores");
-                setMobileMenuOpen(false);
-              }}
-              className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
-            >
-              🎁Shop
-            </button>
-            {user && (
+          {/* Centered Navigation Container with hover effect */}
+          <div className="!hidden lg:!flex !absolute !left-1/2 !-translate-x-1/2 !transition-all hover:!scale-105 !border-[3px] !border-[rgba(30,30,30,0.60)] !rounded-xl !p-1 !bg-white">
+            <div className="!flex !items-center !gap-4 !overflow-x-auto !whitespace-nowrap ">
               <button
                 onClick={() => {
-                  navigate("/userinfo");
+                  navigate("/");
                   setMobileMenuOpen(false);
                 }}
-                className="!text-gray-700 hover:!text-[#176B87] !font-medium !transition !bg-transparent !border-none"
-              >
-                My Account
+                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#B4D4FF] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
+              >🎡 Home
               </button>
-            )}
+              <button
+                onClick={handleGetTickets}
+                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#B4D4FF] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
+              >🎟️ Get Tickets
+              </button>
+              <button
+                onClick={() => {
+                  navigate("/stores");
+                  setMobileMenuOpen(false);
+                }}
+                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#B4D4FF] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
+              >🎁 Shop
+              </button>
+              {user && (
+                <button
+                  onClick={() => {
+                    navigate("/userinfo");
+                    setMobileMenuOpen(false);
+                  }}
+                  className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#B4D4FF] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
+                > My Account
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Right Side Actions */}
-          <div className="!hidden md:!flex !items-center !gap-3">
+          <div className="!hidden lg:!flex !items-center !gap-3">
             {user ? (
               <>
                 {cart.length > 0 && (
@@ -177,22 +175,20 @@ export default function Navbar() {
                               setCartDropdownOpen(false);
                             }}
                             className="!w-full !px-4 !py-2 !bg-[#176B87] !text-white !rounded-lg !font-semibold hover:!opacity-90 !transition !border-none"
-                          >
-                            View Full Cart & Checkout
+                          > View Full Cart & Checkout
                           </button>
                         </div>
                       </div>
                     )}
                   </div>
                 )}
-                <span className="!text-lg !text-gray-600 mt-3">
+                <span className="!text-lg !text-[#4682A9] mt-3">
                   Hi, <strong>{user.first_name || user.email?.split('@')[0]}</strong>
                 </span>
                 <button
                   onClick={handleSignOut}
-                  className="!px-4 !py-2 !rounded-lg !font-semibold !bg-[#176B87] !text-white hover:!shadow-lg hover:!scale-105 !transition !border-none"
-                >
-                  Sign Out
+                  className="!text-sm !py-3 !px-4 !rounded-[30px] !bg-[#4682A9] !font-bold !text-white !border-2 !border-white hover:!opacity-90 !transition"
+                >Sign Out
                 </button>
 
               </>
@@ -200,13 +196,12 @@ export default function Navbar() {
               <>
                 <Link
                   to="/login"
-                  className="!px-4 !py-2 !rounded-lg !font-semibold !border-2 !border-[#176B87] !text-[#176B87] hover:!bg-[#176B87] hover:!text-white !transition !no-underline"
-                >
-                  Login
+                  className="!text-sm !py-3 !px-4 !rounded-[30px] !bg-[#4682A9] !font-bold !text-white !border-2 !border-white hover:!opacity-90 !transition !no-underline"
+                > Log In
                 </Link>
                 <Link
                   to="/signup"
-                  className="!px-4 !py-2 !rounded-lg !font-semibold !bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !text-white hover:!shadow-lg hover:!scale-105 !transition !no-underline"
+                  className="!text-sm !py-3 !px-4 !rounded-[30px] !bg-[#4682A9] !font-bold !text-white !border-2 !border-white hover:!opacity-90 !transition !no-underline"
                 >
                   Sign Up
                 </Link>
@@ -217,7 +212,7 @@ export default function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:!hidden !p-2 !text-[#176B87] !bg-transparent !border-none"
+            className="lg:!hidden !p-2 !text-[#176B87] hover:!bg-[#91C8E4] !rounded-lg !bg-transparent !border-none"
           >
             <svg className="!w-6 !h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {mobileMenuOpen ? (
@@ -231,33 +226,30 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:!hidden !mt-4 !pb-4 !space-y-2 !border-t !border-gray-200 !pt-4">
+          <div className="lg:!hidden flex  !mt-4 !pb-4 !space-y-2 !border-t !border-gray-200 !pt-4">
             <button
               onClick={() => {
                 navigate("/");
                 setMobileMenuOpen(false);
               }}
-              className="!block !w-full !text-left !px-4 !py-2 !text-gray-700 hover:!bg-[#EEF5FF] !rounded-lg !bg-transparent !border-none"
-            >
-              Home
+              className="!block !w-full  !px-4 !py-2 !text-gray-700 hover:!bg-[#91C8E4] !rounded-lg !bg-transparent !border-none"
+            > 🎡 Home 
             </button>
             <button
             onClick={() => {
             handleGetTickets();
             setMobileMenuOpen(false);
             }}
-            className="!block !w-full !text-left !px-4 !py-2 !text-gray-700 hover:!bg-[#EEF5FF] !rounded-lg !bg-transparent !border-none"
-            >
-            🎟️ Get Tickets
+            className="!block !w-full  !px-4 !py-2 !text-gray-700 hover:!bg-[#91C8E4] !rounded-lg !bg-transparent !border-none"
+            >🎟️ Get Tickets
             </button>
             <button
               onClick={() => {
                 navigate("/stores");
                 setMobileMenuOpen(false);
               }}
-              className="!block !w-full !text-left !px-4 !py-2 !text-gray-700 hover:!bg-[#EEF5FF] !rounded-lg !bg-transparent !border-none"
-            >
-              🛍️ Shop
+              className="!block !w-full !px-4 !py-2 !text-gray-700 hover:!bg-[#91C8E4] !rounded-lg !bg-transparent !border-none"
+            >🎁 Shop
             </button>
             {user ? (
               <>
@@ -281,15 +273,14 @@ export default function Navbar() {
               <>
                 <Link
                   to="/login"
-                  className="!block !px-4 !py-2 !text-[#176B87] hover:!bg-[#EEF5FF] !rounded-lg !no-underline"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Login
+                 className="!text-sm !mb-0 !py-3 !px-4 !rounded-[20px] !bg-[#4682A9] !font-bold !text-white !border-2 !border-white hover:!opacity-90 !transition !no-underline"
+               onClick={() => setMobileMenuOpen(false)}
+                >Log In
                 </Link>
                 <Link
                   to="/signup"
-                  className="!block !px-4 !py-2 !text-[#176B87] hover:!bg-[#EEF5FF] !rounded-lg !no-underline"
-                  onClick={() => setMobileMenuOpen(false)}
+                  className="!text-sm !py-3  !px-4 !rounded-[20px] !bg-[#4682A9] !font-bold !text-white !border-2 !border-white hover:!opacity-90 !transition !no-underline"
+               onClick={() => setMobileMenuOpen(false)}
                 >
                   Sign Up
                 </Link>
