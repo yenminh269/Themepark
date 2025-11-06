@@ -17,8 +17,8 @@ import {
   MdPerson
 } from "react-icons/md";
 import "./ManagerPage.css";
-
-const API_URL = "http://localhost:3001";
+import SERVER_URL from "../../services/api";
+const API_URL = SERVER_URL;
 
 // SIDEBAR COMPONENT
 const Sidebar = ({ activeTab, setActiveTab, activeDepartment, setActiveDepartment, managerInfo, onLogout }) => {
