@@ -1,6 +1,6 @@
 import {MdOutlineSupervisedUserCircle, MdDashboard, MdAdd, MdList, MdBuild, MdOutlineAnalytics,
   MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud ,
-  MdOutlineStorefront, MdReport  } from "react-icons/md"
+  MdOutlineStorefront, MdReport, MdAccountCircle  } from "react-icons/md"
 
 const entities = [
     {
@@ -22,7 +22,7 @@ const entities = [
       icon: MdOutlineSupervisedUserCircle
     },
     {
-      name: 'Ride Maintenance Report',
+      name: 'Ride Report',
       path: '/admin/ride-report',
       icon: MdReport
     },
@@ -74,6 +74,14 @@ const entities = [
       name: 'Manage Employees',
       path: '/admin/employees',
       icon: MdPeople
+    },
+    {
+      category: 'ACCOUNT'
+    },
+    {
+      name: 'My Profile',
+      path: '/admin/profile',
+      icon: MdAccountCircle
     },
     {
       name: 'Log Out',

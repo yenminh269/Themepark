@@ -4,9 +4,22 @@ import CustomButton from "../../../button/CustomButton";
 import "../Add.css";
 import { api } from '../../../../services/api';
 import { useToast } from '@chakra-ui/react';
+import { FormControl, FormLabel } from '@chakra-ui/react';
+import Select from 'react-select';
 
 function MostRiddenRide() {
+  const groupOption = [
+    {value: 'merchandise', label: 'Merchandise'},
+    {value: 'employee', label: 'Employee'}
+  ];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const [inactive, setInactive] = useState(false);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [month, setMonth] = useState(null);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [group, setGroup] = useState(null);
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
   const [error, setError] = useState(null);
@@ -132,23 +145,61 @@ Generated: ${new Date().toLocaleString()}
     }
   };
 
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                      'July', 'August', 'September', 'October', 'November', 'December'];
-
   return (
       <div className="w-full max-w-4xl">
-        <form
-          onSubmit={handleSubmit}
+        <form onSubmit={handleSubmit}
           className="flex flex-col px-5 rounded w-full mb-6"
           style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
         >
           <h2 className="text-2xl font-bold mb-4 pt-3" style={{ color: '#4B5945' }}>
-            📋 Most Ridden Rides per Month Report
+            📋Employee Activity by Month
           </h2>
 
           <p className="mb-4 text-md text-gray-600">
             Generate a report showing the most frequently ridden ride for each month
           </p>
+
+          <div className="flex-1">
+            <FormControl isRequired>
+                <FormLabel color="#4B5945" fontWeight="500">Group</FormLabel>
+                  <Select
+                     options={groupOption}
+                     placeholder="Select group"
+                     className="custom-react-select"
+                      classNamePrefix="react-select"
+                      onChange={(option) => setGroup(option.value)}
+                   />
+            </FormControl>
+              <input type="checkbox"
+                 className="!w-4 !h-4 accent-[#176B87]"
+                 checked={inactive}
+                  onChange={(e) => setInactive(e.target.checked)}
+                />
+             <label className="!text-gray-700 !font-medium">Include inactive employees</label>
+          </div>
+
+          <div className="flex-1">
+                <Input
+                required
+                type="date"
+                label="Activity date from"
+                className="custom-input"
+                labelClassName="custom-form-label"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                />
+            </div>
+          <div className="flex-1">
+                <Input
+                required
+                type="date"
+                label="Activity date to"
+                className="custom-input"
+                labelClassName="custom-form-label"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                />
+            </div>
 
           <div className="flex gap-4 flex-wrap mb-4">
             <Input
@@ -163,6 +214,18 @@ Generated: ${new Date().toLocaleString()}
               max={new Date().getFullYear()}
               placeholder="Enter year"
             />
+          </div>
+           <div className="flex-1">
+            <FormControl isRequired>
+                <FormLabel color="#4B5945" fontWeight="500">Activity Month:</FormLabel>
+                  <Select
+                     options={monthNames}
+                     placeholder="Select month"
+                     className="custom-react-select"
+                      classNamePrefix="react-select"
+                      onChange={(option) => setMonth(option.value)}
+                   />
+            </FormControl>
           </div>
 
           <div className="flex justify-center gap-3 mt-4">

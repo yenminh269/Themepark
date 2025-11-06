@@ -50,4 +50,12 @@ LEFT JOIN (
 ) AS m_count ON m_count.ride_id = rod.ride_id
 GROUP BY r.name, rod.ride_id
 ORDER BY r.name ASC;
---
+-- Total ride takens/revenue for all rides per(start date-end date)
+select year(od), month(od), day(od), sum(noticket), sum(price*noticket), name
+from (select ro.order_id, ro.order_date as od,  rod.price_per_ticket as price, rod.number_of_tickets as noticket,
+ rod.ride_id, ride.name as name
+from ride_order as ro
+left join ride_order_detail as rod on rod.order_id = ro.order_id
+left join ride on ride.ride_id = rod.ride_id ) as total_ride_taken
+WHERE od >= '2025-11-03' AND od <= '2025-11-06'
+GROUP BY  year(od), month(od), day(od), name;

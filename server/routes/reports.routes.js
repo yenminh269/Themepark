@@ -148,4 +148,164 @@ router.get('/ride-maintenance', async (req, res) => {
   }
 });
 
+// GET /ride-report - Dynamic ride report based on type
+router.get('/ride-report', async (req, res) => {
+  try {
+    const { group, type, startDate, endDate, rideName } = req.query;
+
+    // Validate required parameters
+    if (!group || !type || !startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Missing required parameters: group, type, startDate, and endDate are required'
+      });
+    }
+
+    let sql = '';
+    let params = [];
+
+    switch (type) {
+      case 'total_rides':
+        // Total Rides Taken and Revenue
+        sql = `
+          SELECT
+            YEAR(od) as year,
+            MONTH(od) as month,
+            DAY(od) as day,
+            SUM(noticket) as total_tickets,
+            SUM(price * noticket) as total_revenue,
+            name
+          FROM (
+            SELECT
+              ro.order_id,
+              ro.order_date as od,
+              rod.price_per_ticket as price,
+              rod.number_of_tickets as noticket,
+              rod.ride_id,
+              ride.name as name
+            FROM ride_order as ro
+            LEFT JOIN ride_order_detail as rod ON rod.order_id = ro.order_id
+            LEFT JOIN ride ON ride.ride_id = rod.ride_id
+          ) as total_ride_taken
+          WHERE od >= ? AND od <= ?
+          ${group === 'ride' && rideName ? 'AND name = ?' : ''}
+          GROUP BY year, month, day, name
+          ORDER BY year, month, day, name
+        `;
+        params = [startDate, endDate];
+        if (group === 'ride' && rideName) {
+          params.push(rideName);
+        }
+        break;
+
+      case 'total_maintenance':
+        // Total Maintenance Activities
+        sql = `
+          SELECT
+            r.name AS ride_name,
+            rod.ride_id,
+            SUM(rod.number_of_tickets) AS total_rides,
+            IFNULL(m_count.total_maintenance_count, 0) AS total_maintenance_count,
+            ROUND(
+              CASE
+                WHEN IFNULL(m_count.total_maintenance_count, 0) = 0 THEN 0
+                ELSE (NULLIF(IFNULL(m_count.total_maintenance_count, 0), 0) / SUM(rod.number_of_tickets)) * 100
+              END,
+              2) as percent_needing_maintenance
+          FROM ride_order_detail AS rod
+          LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
+          LEFT JOIN ride_order AS ro ON rod.order_id = ro.order_id
+          LEFT JOIN (
+            SELECT ride_id, COUNT(*) AS total_maintenance_count
+            FROM maintenance
+            WHERE date >= ? AND date <= ?
+            GROUP BY ride_id
+          ) AS m_count ON m_count.ride_id = rod.ride_id
+          WHERE ro.order_date >= ? AND ro.order_date <= ?
+          ${group === 'ride' && rideName ? 'AND r.name = ?' : ''}
+          GROUP BY r.name, rod.ride_id
+          ORDER BY r.name ASC
+        `;
+        params = [startDate, endDate, startDate, endDate];
+        if (group === 'ride' && rideName) {
+          params.push(rideName);
+        }
+        break;
+
+      case 'most_popular':
+        // Most Popular Ride
+        sql = `
+          SELECT
+            r.name AS ride_name,
+            SUM(rod.number_of_tickets) AS total_rides
+          FROM ride_order_detail AS rod
+          LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
+          LEFT JOIN ride_order AS ro ON rod.order_id = ro.order_id
+          WHERE ro.order_date >= ? AND ro.order_date <= ?
+          ${group === 'ride' && rideName ? 'AND r.name = ?' : ''}
+          GROUP BY r.name, rod.ride_id
+          ORDER BY total_rides DESC
+        `;
+        params = [startDate, endDate];
+        if (group === 'ride' && rideName) {
+          params.push(rideName);
+        }
+        break;
+
+      case 'highest_maintenance':
+        // Highest Maintenance Percentage
+        sql = `
+          SELECT
+            r.name AS ride_name,
+            rod.ride_id,
+            SUM(rod.number_of_tickets) AS total_rides,
+            IFNULL(m_count.total_maintenance_count, 0) AS total_maintenance_count,
+            ROUND(
+              CASE
+                WHEN IFNULL(m_count.total_maintenance_count, 0) = 0 THEN 0
+                ELSE (NULLIF(IFNULL(m_count.total_maintenance_count, 0), 0) / SUM(rod.number_of_tickets)) * 100
+              END,
+              2) as percent_needing_maintenance
+          FROM ride_order_detail AS rod
+          LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
+          LEFT JOIN ride_order AS ro ON rod.order_id = ro.order_id
+          LEFT JOIN (
+            SELECT ride_id, COUNT(*) AS total_maintenance_count
+            FROM maintenance
+            WHERE date >= ? AND date <= ?
+            GROUP BY ride_id
+          ) AS m_count ON m_count.ride_id = rod.ride_id
+          WHERE ro.order_date >= ? AND ro.order_date <= ?
+          ${group === 'ride' && rideName ? 'AND r.name = ?' : ''}
+          GROUP BY r.name, rod.ride_id
+          ORDER BY percent_needing_maintenance DESC
+        `;
+        params = [startDate, endDate, startDate, endDate];
+        if (group === 'ride' && rideName) {
+          params.push(rideName);
+        }
+        break;
+
+      default:
+        return res.status(400).json({
+          error: 'Invalid report type. Valid types are: total_rides, total_maintenance, most_popular, highest_maintenance'
+        });
+    }
+
+    db.query(sql, params, (err, results) => {
+      if (err) {
+        console.error('Error fetching ride report:', err);
+        return res.status(500).json({
+          message: 'Error fetching ride report',
+          error: err.message
+        });
+      }
+
+      res.json(results);
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch ride report' });
+  }
+});
+
 export default router;

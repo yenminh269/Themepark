@@ -295,6 +295,16 @@ export const api = {
     getRideMaintenanceReport: async () => {
         return await fetchAPI('/api/reports/ride-maintenance');
     },
+    getRideReport: async (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.group) queryParams.append('group', params.group);
+        if (params.type) queryParams.append('type', params.type);
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.rideName) queryParams.append('rideName', params.rideName);
+
+        return await fetchAPI(`/api/reports/ride-report?${queryParams.toString()}`);
+    },
 };
 
 // =======================

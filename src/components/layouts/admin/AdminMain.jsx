@@ -15,7 +15,8 @@ import RideGalleryWrapper from "./rides/RideGalleryWrapper.jsx";
 import RainHistory from "./RainHistory.jsx";
 import MostRiddenRide from "./reports/MostRidden.jsx";
 import CustomerSummary from "./reports/CustomerSum.jsx";
-import RideMaint from "./reports/RideMaint.jsx";
+import RideReport from "./reports/RideReport.jsx";
+import AdminProfile from "./profile/AdminProfile.jsx";
 import './AdminMain.css'
 
 function AdminMain() {
@@ -102,7 +103,7 @@ function AdminMain() {
             {/* Analysis Section */}
             <Route path="most-frequently-ridden-rides" element={<MostRiddenRide />} />
             <Route path="customer-summary" element={<CustomerSummary />} />
-            <Route path="ride-report" element={<RideMaint />} />
+            <Route path="ride-report" element={<RideReport />} />
              {/* Rides Section */}
             <Route path="add/ride" element={<Add />} />
             <Route path="view/rides" element={<RideGalleryWrapper />}/>
@@ -118,6 +119,8 @@ function AdminMain() {
             <Route path="rain-out" element={<RainHistory />} />
             {/* Employee Section */}
             <Route path="/employees" element={<Employees />} />
+            {/* Profile Section */}
+            <Route path="/profile" element={<AdminProfile />} />
           </Routes>
         </Box>
       </Box>
