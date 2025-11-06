@@ -127,7 +127,7 @@ export default function CheckoutPage() {
 
           <div className="!flex !justify-end !mt-4">
             <div className="!text-lg !text-[#176B87]">
-              <p>Subtotal: ${total}</p>
+              <p>Subtotal: ${total.toFixed(2)}</p>
               <p>Tax (8.25%): ${tax.toFixed(2)}</p>
               <h4 >Total: ${grandTotal.toFixed(2)}</h4>
             </div>
