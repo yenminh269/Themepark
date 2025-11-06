@@ -1,14 +1,11 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 
-/**
- * ProtectedRoute Component
- * 
+/*
  * Protects routes based on authentication type and user role
  * Matches localStorage keys set by Login.jsx
  * 
  * @param {React.ReactNode} children - Component to render if authorized
- * @param {string} type - 'customer' or 'employee' - which type of user can access
  * @param {array} allowedRoles - (Optional) For employees, specific job titles allowed ['Manager', 'General Manager', 'Mechanical Employee']
  * 
  * 
@@ -50,15 +47,25 @@ function ProtectedRoute({ children, type = 'customer', allowedRoles = [] }) {
       return <Navigate to="/login" replace />;
     }
 
-    // If specific roles are required, check job_title
-    if (allowedRoles.length > 0) {
+    // Parse employee data once
     let employee = {};
     try {
-    employee = JSON.parse(employeeData);
+      employee = JSON.parse(employeeData);
     } catch (e) {
-    console.error('Error parsing employee data:', e);
-    return <Navigate to="/login" replace />;
+      console.error('Error parsing employee data:', e);
+      return <Navigate to="/login" replace />;
     }
+
+    // Check if employee needs to change password (first-time login)
+    if (employee.password_changed === false || employee.password_changed === 0) {
+      console.log('ProtectedRoute: Employee needs to change password, redirecting');
+      if (window.location.pathname !== '/change-password') {
+        return <Navigate to="/change-password" replace />;
+      }
+    }
+
+    // If specific roles are required, check job_title
+    if (allowedRoles.length > 0) {
 
     const jobTitle = employee.job_title;
       console.log('ProtectedRoute: Checking role - jobTitle:', jobTitle, 'allowedRoles:', allowedRoles);

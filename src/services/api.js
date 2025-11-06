@@ -39,20 +39,6 @@ async function fetchAPI(endpoint, data = null, fetchMethod = "GET", isFormData =
     }
 }
 
-// Get beautiful placeholder images for rides
-export const getRidePlaceholderImage = (rideName = '') => {
-    const images = [
-        'https://images.unsplash.com/photo-1594739584670-1e9be48f6ec3?w=800&h=600&fit=crop&q=80', // Roller coaster
-        'https://images.unsplash.com/photo-1570993492903-ba4c3088f100?w=800&h=600&fit=crop&q=80', // Ferris wheel
-        'https://images.unsplash.com/photo-1583416750470-965b2707b355?w=800&h=600&fit=crop&q=80', // Amusement park
-        'https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=800&h=600&fit=crop&q=80', // Theme park rides
-        'https://images.unsplash.com/photo-1575550959106-5a7defe28b56?w=800&h=600&fit=crop&q=80', // Carousel
-        'https://images.unsplash.com/photo-1486299267070-83823f5448dd?w=800&h=600&fit=crop&q=80', // Park view
-    ];
-    // Use ride name to consistently pick an image
-    const index = rideName ? rideName.length % images.length : Math.floor(Math.random() * images.length);
-    return images[index];
-};
 
 // Get full img url with fallback
 export const getImageUrl = (path, rideName = '') => {
@@ -99,6 +85,9 @@ export const api = {
     getTopProducts: async () => {
         return await fetchAPI('/admin/top-products');
     },
+    getWeeklyRevenue: async () => {
+        return await fetchAPI('/admin/weekly-revenue');
+    },
 
     // ===== EMPLOYEES =====
     getAllEmployees: async () => {
@@ -118,6 +107,9 @@ export const api = {
     },
     employeeLogin: async (formData) => {
         return await fetchAPI('/employee/login', formData, "POST", false);
+    },
+    changeEmployeePassword: async (formData) => {
+        return await fetchAPI('/employees/change-password', formData, "POST", false);
     },
 
     // ===== STORES =====
@@ -258,6 +250,30 @@ export const api = {
         if (!res.ok) {
             const body = await res.json().catch(() => ({}));
             throw new Error(body.error || 'Failed to create store order');
+        }
+
+        const body = await res.json();
+        return body;
+    },
+
+    // ===== UNIFIED ORDER (Rides + Store in single transaction with consolidated email) =====
+    createUnifiedOrder: async (orderData) => {
+        // orderData = { rideCart, storeCart, grandTotal, payment_method }
+        const token = getCustomerToken();
+        if (!token) throw new Error('No authentication token');
+
+        const res = await fetch(`${SERVER_URL}/api/unified-order`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(orderData),
+        });
+
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || 'Failed to create unified order');
         }
 
         const body = await res.json();

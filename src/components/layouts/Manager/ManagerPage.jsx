@@ -17,8 +17,8 @@ import {
   MdPerson
 } from "react-icons/md";
 import "./ManagerPage.css";
-
-const API_URL = "http://localhost:3001";
+import { SERVER_URL } from "../../../services/api";
+const API_URL = SERVER_URL;
 
 // SIDEBAR COMPONENT
 const Sidebar = ({ activeTab, setActiveTab, activeDepartment, setActiveDepartment, managerInfo, onLogout }) => {
@@ -125,11 +125,11 @@ const OverviewTab = ({ department, managerInfo }) => {
     try {
       setLoading(true);
       
-      const statsRes = await fetch(`${API_URL}/api/manager/dashboard-stats/${department}`);
+      const statsRes = await fetch(`${SERVER_URL}/api/manager/dashboard-stats/${department}`);
       const statsData = await statsRes.json();
       setStats(statsData);
 
-      const itemsRes = await fetch(`${API_URL}/api/manager/top-items/${department}?limit=5`);
+      const itemsRes = await fetch(`${SERVER_URL}/api/manager/top-items/${department}?limit=5`);
       const itemsData = await itemsRes.json();
       setTopItems(itemsData);
       

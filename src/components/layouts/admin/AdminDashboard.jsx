@@ -3,11 +3,11 @@ import {MdBarChart,MdAttachMoney,MdShoppingCart, MdPeople, MdTrendingUp
 } from 'react-icons/md';
 import StatCard from '../../card/StatCard';
 import ChartCard from '../../card/ChartCard';
-import DataTable from '../../data-table/DataTable';
 import { api } from '../../../services/api';
 import { useEffect, useState, useRef } from 'react';
 import Loading from './loading/Loading';
 import { hover } from 'framer-motion';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -23,6 +23,7 @@ const AdminDashboard = () => {
   const [orderDetails, setOrderDetails] = useState({});
   const [hasMoreOrders, setHasMoreOrders] = useState(true);
   const [topProducts, setTopProducts] = useState([]);
+  const [weeklyRevenue, setWeeklyRevenue] = useState([]);
   const ordersTableRef = useRef(null);
 
   useEffect(() => {
@@ -39,7 +40,8 @@ const AdminDashboard = () => {
       rideTicketSalesData,
       avgBrokenData,
       rideOrdersData,
-        topProductsData
+        topProductsData,
+        weeklyRevenueData
       ] = await Promise.all([
       api.getAvgRidesPerMonth(),
       api.getTotalRevenue(),
@@ -47,7 +49,8 @@ const AdminDashboard = () => {
       api.getRideTicketSales(),
       api.getAvgRidesBrokenMaintenance(),
         api.getRecentRideOrders(0, 5),
-        api.getTopProducts()
+        api.getTopProducts(),
+        api.getWeeklyRevenue()
       ]);
 
       setAvgTicketPerMonth(avgTicketsData || 0);
@@ -57,6 +60,7 @@ const AdminDashboard = () => {
       setAverageRidesBrokenMaintenance(avgBrokenData || 0);
       setRideOrders(rideOrdersData || []);
       setTopProducts(topProductsData || []);
+      setWeeklyRevenue(weeklyRevenueData || []);
       setOrderOffset(5);
 
       setError(null);
@@ -130,19 +134,10 @@ const AdminDashboard = () => {
 
   // Define columns for ride orders table
   const recentOrdersColumns = ['Order ID', 'Date', 'Amount', 'Status', 'Actions'];
-
-  const topProductsColumns = ['Product', 'Category', 'Sales', 'Revenue'];
-
-  const topProductsData = topProducts.map(product => [
-    product.product_name,
-    product.category,
-    product.total_quantity.toString(),
-    `$${parseFloat(product.total_revenue).toFixed(2)}`
-  ]);
   if(loading) return <Loading />
 
   return (
-    <Box pt={{ base: '20px', md: '40px' }} px={{ base: '20px', md: '40px' }}>
+    <Box pt={{ base: '20px', md: '40px' }}>
       {/* Error Message */}
       {error && (
         <Box bg="red.100" color="red.700" p="4" borderRadius="md" mb="20px">
@@ -191,131 +186,210 @@ const AdminDashboard = () => {
       {/* Charts Row */}
       <SimpleGrid columns={{ base: 1, md: 2 }} gap="20px" mb="20px">
         <ChartCard title="Weekly Revenue">
-          <Flex h="200px" align="center" justify="center">
-            <Text color="gray.400" fontSize="sm">
-              Chart Placeholder - Weekly Stats
-            </Text>
-          </Flex>
+          <Box h="250px" w="100%">
+            {weeklyRevenue.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={weeklyRevenue}
+                  margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="week"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `$${value}`}
+                  />
+                  <Tooltip
+                    formatter={(value) => `$${parseFloat(value).toFixed(2)}`}
+                    contentStyle={{ fontSize: '12px' }}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: '12px' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="total_revenue"
+                    stroke="#3A6F43"
+                    strokeWidth={2}
+                    name="Total Revenue"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="ride_revenue"
+                    stroke="#4299E1"
+                    strokeWidth={2}
+                    name="Ride Revenue"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="store_revenue"
+                    stroke="#9F7AEA"
+                    strokeWidth={2}
+                    name="Store Revenue"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <Flex h="100%" align="center" justify="center">
+                <Text color="gray.400" fontSize="sm">No revenue data available</Text>
+              </Flex>
+            )}
+          </Box>
         </ChartCard>
-        <ChartCard title="Sales by Category">
-          <Flex h="200px" align="center" justify="center">
-            <Text color="gray.400" fontSize="sm">
-              Pie Chart
-            </Text>
-          </Flex>
+        <ChartCard title="Top Merchandise Items">
+          <Box h="250px">
+            {topProducts.length > 0 ? (
+              <Flex h="100%" align="flex-end" justify="space-around" gap="8px">
+                {topProducts.slice(0, 5).map((product, index) => {
+                  const maxRevenue = Math.max(...topProducts.map(p => parseFloat(p.total_revenue)));
+                  const barHeight = (product.total_revenue / maxRevenue) * 100;
+
+                  return (
+                    <Flex key={index} direction="column" align="center" flex="1" h="100%">
+                      <Flex direction="column" justify="flex-end" h="85%" w="100%">
+                        <Flex direction="column" align="center" mb="4px">
+                          <Text fontSize="xs" fontWeight="600" color="green.600">
+                            ${product.total_revenue}
+                          </Text>
+                        </Flex>
+                        <Box
+                          w="100%"
+                          h={`${barHeight}%`}
+                          bg="green.400"
+                          borderRadius="md"
+                          transition="height 0.3s ease"
+                        />
+                      </Flex>
+                      <Text
+                        fontSize="xs"
+                        fontWeight="500"
+                        color="gray.700"
+                        mt="8px"
+                        textAlign="center"
+                        noOfLines={2}
+                        h="15%"
+                      >
+                        {product.product_name}
+                      </Text>
+                    </Flex>
+                  );
+                })}
+              </Flex>
+            ) : (
+              <Flex h="100%" align="center" justify="center">
+                <Text color="gray.400" fontSize="sm">No product data available</Text>
+              </Flex>
+            )}
+          </Box>
         </ChartCard>
       </SimpleGrid>
 
-      {/* Tables Row */}
-      <SimpleGrid columns={{ base: 1, xl: 2 }} gap="20px" mb="20px">
-        <Box>
-          <Box
-            ref={ordersTableRef}
-            p="20px"
-            bg="white"
-            borderRadius="20px"
-            boxShadow="sm"
+      {/* Recent Ride Orders Table */}
+      <Box mb="20px">
+        <Box
+          ref={ordersTableRef}
+          p="20px"
+          bg="white"
+          borderRadius="20px"
+          boxShadow="sm"
+        >
+          <Text
+            color="#3A6F43"
+            fontSize="lg"
+            fontWeight="700"
+            mb="20px"
           >
-            <Text
-              color="#3A6F43"
-              fontSize="lg"
-              fontWeight="700"
-              mb="20px"
-            >
-              Recent Ride Orders
-            </Text>
+            Recent Ride Orders
+          </Text>
 
-            <Box overflowX="auto">
-              <Table variant="simple" size="sm">
-                <Thead>
-                  <Tr>
-                    {recentOrdersColumns.map((column, index) => (
-                      <Th key={index} color="gray.500" fontSize="xs" fontWeight="700">
-                        {column}
-                      </Th>
-                    ))}
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {rideOrders.map((order) => {
-                    const orderDate = new Date(order.order_date).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    });
-                    const isExpanded = expandedOrders[order.order_id];
+          <Box overflowX="auto">
+            <Table variant="simple" size="sm">
+              <Thead>
+                <Tr>
+                  {recentOrdersColumns.map((column, index) => (
+                    <Th key={index} color="gray.500" fontSize="xs" fontWeight="700">
+                      {column}
+                    </Th>
+                  ))}
+                </Tr>
+              </Thead>
+              <Tbody>
+                {rideOrders.map((order) => {
+                  const orderDate = new Date(order.order_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  });
+                  const isExpanded = expandedOrders[order.order_id];
 
-                    return (
-                      <>
-                        <Tr key={order.order_id} _hover={{ bg: "#c6cbb8ff" }}>
-                          <Td color="gray.900" fontSize="md" fontWeight="500">{order.order_id}</Td>
-                          <Td color="gray.900" fontSize="md" fontWeight="500">{orderDate}</Td>
-                          <Td color="gray.900" fontSize="md" fontWeight="500">${parseFloat(order.total_amount).toFixed(2)}</Td>
-                          <Td color="gray.900" fontSize="md" fontWeight="500">{order.status}</Td>
-                          <Td>
-                            <button
-                              onClick={() => handleToggleOrderDetails(order.order_id)}
-                              className="py-1 underline"
-                              style={isExpanded ? { color: '#176B87' }: { } }
-                            >
-                              {isExpanded ? 'Hide' : 'View'} Details
-                            </button>
+                  return (
+                    <>
+                      <Tr key={order.order_id} _hover={{ bg: "#c6cbb8ff" }}>
+                        <Td color="gray.900" fontSize="md" fontWeight="500">{order.order_id}</Td>
+                        <Td color="gray.900" fontSize="md" fontWeight="500">{orderDate}</Td>
+                        <Td color="gray.900" fontSize="md" fontWeight="500">${parseFloat(order.total_amount).toFixed(2)}</Td>
+                        <Td color="gray.900" fontSize="md" fontWeight="500">{order.status}</Td>
+                        <Td>
+                          <button
+                            onClick={() => handleToggleOrderDetails(order.order_id)}
+                            className="py-1 underline"
+                            style={isExpanded ? { color: '#176B87' }: { } }
+                          >
+                            {isExpanded ? 'Hide' : 'View'} Details
+                          </button>
+                        </Td>
+                      </Tr>
+                      {isExpanded && (
+                        <Tr key={`details-${order.order_id}`}>
+                          <Td colSpan={5} bg="gray.50" p={4}>
+                            <Text fontWeight="bold" mb={2}>Order #{order.order_id} Details:</Text>
+                            {orderDetails[order.order_id] && orderDetails[order.order_id].length > 0 ? (
+                              <Box as="table" width="100%" fontSize="sm">
+                                <thead>
+                                  <tr>
+                                    <Text as="th" textAlign="left" p={2}>Ride Name</Text>
+                                    <Text as="th" textAlign="left" p={2}>Quantity</Text>
+                                    <Text as="th" textAlign="left" p={2}>Price/Ticket</Text>
+                                    <Text as="th" textAlign="left" p={2}>Subtotal</Text>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {orderDetails[order.order_id].map((detail, idx) => (
+                                    <tr key={idx}>
+                                      <Text as="td" p={2}>{detail.ride_name}</Text>
+                                      <Text as="td" p={2}>{detail.number_of_tickets}</Text>
+                                      <Text as="td" p={2}>${parseFloat(detail.price_per_ticket).toFixed(2)}</Text>
+                                      <Text as="td" p={2}>${(detail.number_of_tickets * parseFloat(detail.price_per_ticket)).toFixed(2)}</Text>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </Box>
+                            ) : (
+                              <Text>Loading details...</Text>
+                            )}
                           </Td>
                         </Tr>
-                        {isExpanded && (
-                          <Tr key={`details-${order.order_id}`}>
-                            <Td colSpan={5} bg="gray.50" p={4}>
-                              <Text fontWeight="bold" mb={2}>Order #{order.order_id} Details:</Text>
-                              {orderDetails[order.order_id] && orderDetails[order.order_id].length > 0 ? (
-                                <Box as="table" width="100%" fontSize="sm">
-                                  <thead>
-                                    <tr>
-                                      <Text as="th" textAlign="left" p={2}>Ride Name</Text>
-                                      <Text as="th" textAlign="left" p={2}>Quantity</Text>
-                                      <Text as="th" textAlign="left" p={2}>Price/Ticket</Text>
-                                      <Text as="th" textAlign="left" p={2}>Subtotal</Text>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {orderDetails[order.order_id].map((detail, idx) => (
-                                      <tr key={idx}>
-                                        <Text as="td" p={2}>{detail.ride_name}</Text>
-                                        <Text as="td" p={2}>{detail.number_of_tickets}</Text>
-                                        <Text as="td" p={2}>${parseFloat(detail.price_per_ticket).toFixed(2)}</Text>
-                                        <Text as="td" p={2}>${(detail.number_of_tickets * parseFloat(detail.price_per_ticket)).toFixed(2)}</Text>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </Box>
-                              ) : (
-                                <Text>Loading details...</Text>
-                              )}
-                            </Td>
-                          </Tr>
-                        )}
-                      </>
-                    );
-                  })}
-                </Tbody>
-              </Table>
-            </Box>
-
-            <Flex justify="center" mt={4}>
-              <button
-                onClick={hasMoreOrders ? handleShowMore : handleBackToTop}
-                className="px-4 py-2 underline"
-              >
-                {hasMoreOrders ? 'Show More' : 'Back to Top'}
-              </button>
-            </Flex>
+                      )}
+                    </>
+                  );
+                })}
+              </Tbody>
+            </Table>
           </Box>
+
+          <Flex justify="center" mt={4}>
+            <button
+              onClick={hasMoreOrders ? handleShowMore : handleBackToTop}
+              className="px-4 py-2 underline"
+            >
+              {hasMoreOrders ? 'Show More' : 'Back to Top'}
+            </button>
+          </Flex>
         </Box>
-        <DataTable
-          title="Top Products"
-          columns={topProductsColumns}
-          data={topProductsData}
-        />
-      </SimpleGrid>
+      </Box>
     </Box>
   );
 };

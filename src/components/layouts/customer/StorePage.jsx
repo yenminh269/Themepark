@@ -91,11 +91,8 @@ export default function StorePage() {
   };
 
   const handleCheckout = () => {
-    if (store?.available_online) {
-      navigate('/checkout'); // Go to unified checkout
-    } else {
-      navigate('/store-checkout', { state: { storeId: parseInt(storeId), storeName: store?.name } });
-    }
+    // Always use unified checkout for all stores
+    navigate('/checkout');
   };
 
   // Get current store cart items and total

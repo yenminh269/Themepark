@@ -21,6 +21,7 @@ export default function CheckoutPage() {
     cvv: "",
     email: user?.email || "",
     paymentMethod: "credit_card",
+    firstName: user?.first_name || ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -45,59 +46,21 @@ export default function CheckoutPage() {
       const rideItems = cart.filter(item => item.type === 'ride');
       const storeItems = cart.filter(item => item.type === 'store');
 
-      const orders = [];
-
-      // Create ride order if there are ride items
-      if (rideItems.length > 0) {
-        const rideSubtotal = rideItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const rideTax = round(rideSubtotal * TAX_RATE);
-        const rideTotal = round(rideSubtotal + rideTax);
-
-        const rideOrder = await api.createRideOrder({
-          cart: rideItems,
-          subtotal: rideSubtotal,
-          tax: rideTax,
-          total: rideTotal,
-          payment_method: form.paymentMethod,
-        });
-
-        orders.push({ type: 'ride', ...rideOrder });
-      }
-
-      // Create store order if there are store items
-      if (storeItems.length > 0) {
-        // Group store items by store
-        const storeGroups = storeItems.reduce((groups, item) => {
-          if (!groups[item.storeId]) {
-            groups[item.storeId] = [];
-          }
-          groups[item.storeId].push(item);
-          return groups;
-        }, {});
-
-        // Create separate order for each store (with tax)
-        for (const [storeId, items] of Object.entries(storeGroups)) {
-          const storeSubtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-          const storeTax = round(storeSubtotal * TAX_RATE);
-          const storeTotal = round(storeSubtotal + storeTax);
-
-          const storeOrder = await api.createStoreOrder({
-            store_id: parseInt(storeId, 10),
-            cart: items,
-            subtotal: storeSubtotal,
-            tax: storeTax,
-            total: storeTotal,
-            payment_method: form.paymentMethod,
-          });
-          orders.push({ type: 'store', ...storeOrder });
-        }
-      }
+      // Use unified order endpoint for single consolidated email
+      const result = await api.createUnifiedOrder({
+        rideCart: rideItems,
+        storeCart: storeItems,
+        grandTotal: grandTotal,
+        payment_method: form.paymentMethod,
+        email: form.email,
+        firstName: form.firstName
+      });
 
       // Clear cart after successful order
       clearCart();
 
       // Navigate to confirmation with order info
-      navigate("/confirmation", { state: { orders } });
+      navigate("/confirmation", { state: { orders: result.orders || [] } });
     } catch (error) {
       console.error('Checkout error:', error);
       alert('Failed to complete your order. Please try again.');
@@ -163,10 +126,10 @@ export default function CheckoutPage() {
           )}
 
           <div className="!flex !justify-end !mt-4">
-            <div className="!text-lg !font-semibold !text-[#176B87]">
+            <div className="!text-lg !text-[#176B87]">
               <p>Subtotal: ${total.toFixed(2)}</p>
               <p>Tax (8.25%): ${tax.toFixed(2)}</p>
-              <h4>Total: ${grandTotal.toFixed(2)}</h4>
+              <h4 >Total: ${grandTotal.toFixed(2)}</h4>
             </div>
           </div>
 
@@ -202,7 +165,6 @@ export default function CheckoutPage() {
                 required
               />
             </div>
-
             <div className="!flex-1">
               <label className="!block !text-sm !font-semibold !text-slate-700">
                 CVV
@@ -218,7 +180,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <div>
+          <div className="!flex !flex-col !gap-4">
             <label className="!block !text-sm !font-semibold !text-slate-700">
               Email for Receipt
             </label>
@@ -229,10 +191,10 @@ export default function CheckoutPage() {
               className="!w-full !p-3 !border !border-[#B4D4FF] !rounded-lg"
               placeholder="example@email.com"
               required
-            />
+            /> 
           </div>
 
-          <div>
+          <div className="!flex !gap-4"> 
             <label className="!block !text-sm !font-semibold !text-slate-700">
               Payment Method
             </label>
@@ -244,11 +206,22 @@ export default function CheckoutPage() {
               required
             >
               <option value="credit_card">💳 Credit Card</option>
-              <option value="cash">💵 Cash (In-Park Only)</option>
+              <option value="cash">💸 Cash (In-Park Only)</option>
             </select>
+            <label className="!block !text-sm !font-semibold !text-slate-700">
+              First Name
+            </label>
+            <input
+                name="firstName"
+                value={form.firstName}
+                onChange={handleChange}
+                className="!border !border-[#B4D4FF] !rounded-lg"
+                placeholder="First Name"
+                required
+              />
           </div>
 
-          <div className="!flex !justify-between !items-center !mt-6">
+          <div className="!flex !justify-between !items-center !mt-8">
             <button
               type="button"
               onClick={() => navigate("/tickets")}
