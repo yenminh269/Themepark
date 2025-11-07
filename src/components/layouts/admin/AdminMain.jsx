@@ -11,9 +11,7 @@ import RideLists from "./rides/RideList.jsx";
 import StoreLists from "./stores/StoreLists.jsx";
 import MerchandiseLists from "./merchandise/MerchandiseLists.jsx";
 import StoreInventoryLists from "./StoreInventoryLists.jsx";
-import RideGalleryWrapper from "./rides/RideGalleryWrapper.jsx";
 import RainHistory from "./RainHistory.jsx";
-import MostRiddenRide from "./reports/MostRidden.jsx";
 import CustomerSummary from "./reports/CustomerSum.jsx";
 import RideReport from "./reports/RideReport.jsx";
 import AdminProfile from "./profile/AdminProfile.jsx";
@@ -101,12 +99,10 @@ function AdminMain() {
           <Routes>
             <Route path="/" element={<AdminDashboard />} />
             {/* Analysis Section */}
-            <Route path="most-frequently-ridden-rides" element={<MostRiddenRide />} />
             <Route path="customer-summary" element={<CustomerSummary />} />
             <Route path="ride-report" element={<RideReport />} />
              {/* Rides Section */}
             <Route path="add/ride" element={<Add />} />
-            <Route path="view/rides" element={<RideGalleryWrapper />}/>
             <Route path="list/rides" element={<RideLists />} />
             {/* Stores Section */}
             <Route path="add/store" element={<Add store={true} />} />

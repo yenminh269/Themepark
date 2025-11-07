@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CustomButton from "../../../button/CustomButton";
 import "../Add.css";
 import { api } from '../../../../services/api';
@@ -17,6 +17,13 @@ function RideReport() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [type, setType] = useState("");
+  const [rideOption, setRideOption] = useState([]);
+
+  // Clear report data when type, group, or name changes
+  useEffect(() => {
+    setReportData(null);
+    setConclusion("");
+  }, [type, group, name]);
 
   const groupOption = [
   { value: 'all', label: 'All Rides' },
@@ -28,17 +35,32 @@ function RideReport() {
   const typeOption = [
   { value: 'total_rides', label: 'Total Rides Taken and Revenue' },
   { value: 'total_maintenance', label: 'Total Maintenance Activities' },
-  { value: 'most_popular', label: 'Most Popular Ride' },
-  { value: 'highest_maintenance', label: 'Highest Maintenance Percentage' },
+  { value: 'most_popular', label: 'Most Popular Ride' }
   ];
 
+  useEffect(() => {
+    const fetchRides = async () => {
+      try {
+        const rides = await api.getRidesNames();
+        // Transform the data to match react-select format
+        const rideOptions = rides.map(ride => ({
+          value: ride.name,
+          label: ride.name
+        }));
+        setRideOption(rideOptions);
+      } catch (error) {
+        setError(error.message);
+      }
+    };
+    fetchRides();
+  }, []);
 
   const handleCloseReport = () => {
     setReportData(null);
     setConclusion("");
   };
 
-  const generateConclusion = (data) => {
+  const generateMaintenanceConclusion = (data) => {
     if (!data || data.length === 0) return "";
 
     // Find ride with highest maintenance percentage
@@ -75,6 +97,29 @@ function RideReport() {
     return conclusionText;
   };
 
+  const generateMostPopularConclusion = (data) => {
+    if (!data || data.length === 0) return "";
+
+    const topRide = data[0]; // Already sorted by total_rides DESC
+    const totalRides = data.reduce((sum, item) => sum + (item.total_rides || 0), 0);
+    const topRidePercentage = ((topRide.total_rides / totalRides) * 100).toFixed(2);
+
+    let conclusionText = `<strong>${topRide.ride_name}</strong> is the most popular ride with ${topRide.total_rides.toLocaleString()} total tickets sold, representing ${topRidePercentage}% of all ride tickets in this period. `;
+
+    if (topRide.total_orders) {
+      conclusionText += `This ride had ${topRide.total_orders.toLocaleString()} orders with an average of ${topRide.avg_tickets_per_order} tickets per order.`;
+    }
+
+    // Add insight about top 3 rides if there are multiple
+    if (data.length >= 3) {
+      const top3Total = data.slice(0, 3).reduce((sum, item) => sum + (item.total_rides || 0), 0);
+      const top3Percentage = ((top3Total / totalRides) * 100).toFixed(2);
+      conclusionText += `<br><br>The top 3 most popular rides account for ${top3Percentage}% of all tickets sold.`;
+    }
+
+    return conclusionText;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -94,9 +139,11 @@ function RideReport() {
       const data = await api.getRideReport(params);
       setReportData(data);
 
-      // Only generate conclusion for maintenance-related reports
-      if (type === 'total_maintenance' || type === 'highest_maintenance') {
-        setConclusion(generateConclusion(data));
+      // Generate conclusion based on report type
+      if (type === 'total_maintenance') {
+        setConclusion(generateMaintenanceConclusion(data));
+      } else if (type === 'most_popular') {
+        setConclusion(generateMostPopularConclusion(data));
       }
     } catch (err) {
       setError(err.message || "Failed to fetch report data");
@@ -115,7 +162,6 @@ function RideReport() {
       if (type === 'total_rides') reportTitle = 'TOTAL RIDES TAKEN AND REVENUE REPORT';
       else if (type === 'total_maintenance') reportTitle = 'TOTAL MAINTENANCE ACTIVITIES REPORT';
       else if (type === 'most_popular') reportTitle = 'MOST POPULAR RIDE REPORT';
-      else if (type === 'highest_maintenance') reportTitle = 'HIGHEST MAINTENANCE PERCENTAGE REPORT';
 
       let reportText = `${reportTitle}
 Generated: ${new Date().toLocaleString()}
@@ -131,14 +177,18 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
           reportText += `  Ride: ${item.name}\n`;
           reportText += `  Total Tickets: ${item.total_tickets?.toLocaleString() || 0}\n`;
           reportText += `  Total Revenue: $${item.total_revenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}\n\n`;
-        } else if (type === 'total_maintenance' || type === 'highest_maintenance') {
+        } else if (type === 'total_maintenance') {
           reportText += `Ride: ${item.ride_name}\n`;
           reportText += `  Total Rides: ${item.total_rides?.toLocaleString() || 0}\n`;
           reportText += `  Maintenance Count: ${item.total_maintenance_count || 0}\n`;
           reportText += `  Maintenance Rate: ${parseFloat(item.percent_needing_maintenance || 0).toFixed(2)}%\n\n`;
         } else if (type === 'most_popular') {
-          reportText += `Rank ${index + 1}: ${item.ride_name}\n`;
-          reportText += `  Total Rides: ${item.total_rides?.toLocaleString() || 0}\n\n`;
+          reportText += `Rank by Tickets: ${item.rank_by_tickets || index + 1}\n`;
+          reportText += `Ride: ${item.ride_name}\n`;
+          reportText += `  Total Tickets: ${item.total_rides?.toLocaleString() || 0}\n`;
+          reportText += `  Total Orders: ${item.total_orders?.toLocaleString() || 0}\n`;
+          reportText += `  Avg Tickets per Order: ${item.avg_tickets_per_order || '0.00'}\n`;
+          reportText += `  Rank by Orders: ${item.rank_by_orders || '-'}\n\n`;
         }
       });
 
@@ -188,56 +238,48 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
   };
 
   return (
-      <div className=" w-full max-w-5xl">
-        <form
-          onSubmit={handleSubmit}
+  <div className=" w-full max-w-5xl">
+    <form onSubmit={handleSubmit}
           className="flex flex-col px-5 rounded w-full mb-6"
           style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
-        >
-          <h2 className="text-2xl font-bold mb-4 pt-3" style={{ color: '#4B5945' }}>
-            📋 Ride Activity Report
-          </h2>
-
-          <div className="flex-1">
-              <FormControl isRequired>
-                  <FormLabel color="#4B5945" fontWeight="500">Group</FormLabel>
-                    <Select
-                       options={groupOption}
-                       placeholder="Select group"
-                       className="custom-react-select"
-                         classNamePrefix="react-select"
-                         onChange={(option) => setGroup(option.value)}
-                      />
-              </FormControl>
-          </div>
-          {group === 'ride' && (
-            <div className="mt-2 flex-1">
-              <FormControl isRequired>
-                <FormLabel color="#4B5945" fontWeight="500">Ride Name</FormLabel>
-                <input
-                  placeholder="Type ride name"
-                  type="text"
-                  className="custom-input"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </FormControl>
-            </div>
-          )}
-          <div className="mb-2 flex-1">
-              <FormControl isRequired>
-                  <FormLabel color="#4B5945" fontWeight="500">Type</FormLabel>
-                    <Select
-                       options={typeOption}
-                       placeholder="Select group"
-                       className="custom-react-select"
-                         classNamePrefix="react-select"
-                         onChange={(option) => setType(option.value)}
-                      />
-              </FormControl>
-          </div>
-    
-          <div className="flex gap-2 justify-between">
+    >
+      <h2 className="text-2xl text-center font-extrabold mb-4 pt-3" style={{ color: '#4B5945' }}>
+         Ride Activity Report
+      </h2>
+      <div className="flex gap-4">
+        <FormControl isRequired>
+          <FormLabel color="#4B5945" fontWeight="500">Group</FormLabel>
+             <Select options={groupOption}
+                 placeholder="Select group"
+                className="custom-react-select"
+                classNamePrefix="react-select"
+               onChange={(option) => setGroup(option.value)}
+             />
+       </FormControl>
+       <FormControl isRequired>
+           <FormLabel color="#4B5945" fontWeight="500">Type</FormLabel>
+              <Select options={typeOption}
+                placeholder="Select group"
+                 className="custom-react-select"
+                  classNamePrefix="react-select"
+                 onChange={(option) => setType(option.value)}
+            />
+         </FormControl>
+      </div>
+      {group === 'ride' && (
+      <div className="mt-2 flex-1">
+        <FormControl isRequired>
+          <FormLabel color="#4B5945" fontWeight="500">Ride Name</FormLabel>
+           <Select options={rideOption}
+                 placeholder="Select ride"
+                className="custom-react-select"
+                classNamePrefix="react-select"
+               onChange={(option) => setName(option.value)}
+             />
+          </FormControl>
+      </div>
+      )}
+      <div className="flex gap-2 justify-between">
                 <FormControl isRequired>
                   <FormLabel color="#4B5945" fontWeight="500">Activity date from</FormLabel>
                   <input
@@ -272,14 +314,14 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
               >Save Report
               </button>
             )}
-          </div>
+     </div>
 
-          {error && (
-            <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {error}
-            </div>
-          )}
-        </form>
+    {error && (
+      <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+         {error}
+       </div>
+    )}
+  </form>
 
         {reportData && reportData.length > 0 && (
           <div
@@ -294,10 +336,9 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
             >X
             </button>
             <h3 className="text-xl font-bold mb-4" style={{ color: '#4B5945' }}>
-              {type === 'total_rides' && 'Total Rides Taken and Revenue Report'}
-              {type === 'total_maintenance' && 'Total Maintenance Activities Report'}
-              {type === 'most_popular' && 'Most Popular Ride Report'}
-              {type === 'highest_maintenance' && 'Highest Maintenance Percentage Report'}
+              {type === 'total_rides' && '📋Total Rides Taken and Revenue Report'}
+              {type === 'total_maintenance' && '📋Total Maintenance Activities Report'}
+              {type === 'most_popular' && '📋Most Popular Ride Report'}
             </h3>
 
             <div className="overflow-x-auto w-full">
@@ -314,7 +355,7 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
                         <th className="py-3 !px-6 border !border-black font-semibold">Total Revenue</th>
                       </>
                     )}
-                    {(type === 'total_maintenance' || type === 'highest_maintenance') && (
+                    {(type === 'total_maintenance') && (
                       <>
                         <th className="py-3 !px-6 border !border-black font-semibold">Ride Name</th>
                         <th className="py-3 !px-6 border !border-black font-semibold">Total Rides</th>
@@ -324,9 +365,12 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
                     )}
                     {type === 'most_popular' && (
                       <>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Rank</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold">Rank by Tickets</th>
                         <th className="py-3 !px-6 border !border-black font-semibold">Ride Name</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Total Rides</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold">Total Tickets</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold">Total Orders</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold">Avg Tickets/Order</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold">Rank by Orders</th>
                       </>
                     )}
                   </tr>
@@ -358,7 +402,7 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
                           </td>
                         </>
                       )}
-                      {(type === 'total_maintenance' || type === 'highest_maintenance') && (
+                      {(type === 'total_maintenance') && (
                         <>
                           <td className="py-3 !px-6 border !border-gray-500">
                             {item.ride_name}
@@ -377,13 +421,22 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
                       {type === 'most_popular' && (
                         <>
                           <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {index + 1}
+                            {item.rank_by_tickets || index + 1}
                           </td>
                           <td className="py-3 !px-6 border !border-gray-500">
                             {item.ride_name}
                           </td>
                           <td className="py-3 !px-6 border !border-gray-500 text-center">
                             {item.total_rides?.toLocaleString() || 0}
+                          </td>
+                          <td className="py-3 !px-6 border !border-gray-500 text-center">
+                            {item.total_orders?.toLocaleString() || 0}
+                          </td>
+                          <td className="py-3 !px-6 border !border-gray-500 text-center">
+                            {item.avg_tickets_per_order?.toLocaleString() || '0.00'}
+                          </td>
+                          <td className="py-3 !px-6 border !border-gray-500 text-center">
+                            {item.rank_by_orders || '-'}
                           </td>
                         </>
                       )}
@@ -412,10 +465,10 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
 
         {reportData && reportData.length === 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mt-4">
-            <p className="text-yellow-800">No ride maintenance data available.</p>
+            <p className="text-yellow-800">No ride data available.</p>
           </div>
         )}
-      </div>
+  </div>
 
   );
 }

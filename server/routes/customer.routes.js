@@ -249,4 +249,71 @@ router.put("/:id", requireCustomerAuth, (req, res) => {
   );
 });
 
+// CHANGE PASSWORD ROUTE
+router.post("/change-password", requireCustomerAuth, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    const customerId = req.customer_id;
+
+    // Validation
+    if (!current_password || !new_password) {
+      return res.status(400).json({ error: "Current password and new password are required" });
+    }
+
+    if (new_password.length < 8) {
+      return res.status(400).json({ error: "New password must be at least 8 characters long" });
+    }
+
+    // Get customer's current password hash
+    const sql = "SELECT password, email FROM customer WHERE customer_id = ?";
+
+    db.query(sql, [customerId], async (err, rows) => {
+      if (err) {
+        console.error("Change password query error:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      const customer = rows[0];
+
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(current_password, customer.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(401).json({ error: "Current password is incorrect" });
+      }
+
+      // Check if new password is same as current
+      const isSamePassword = await bcrypt.compare(new_password, customer.password);
+      if (isSamePassword) {
+        return res.status(400).json({ error: "New password must be different from current password" });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(new_password, 10);
+
+      // Update password in database
+      const updateSql = "UPDATE customer SET password = ? WHERE customer_id = ?";
+
+      db.query(updateSql, [hashedNewPassword, customerId], (updateErr, result) => {
+        if (updateErr) {
+          console.error("Password update error:", updateErr);
+          return res.status(500).json({ error: "Failed to update password" });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: "Customer not found" });
+        }
+
+        return res.json({ message: "Password changed successfully" });
+      });
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;

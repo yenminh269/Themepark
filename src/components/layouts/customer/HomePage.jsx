@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import PageFooter from "./PageFooter";
+import RideGalleryWrapper from "./RideGalleryWrapper";
 import "./Homepage.css";
 
 export default function HomePage() {
@@ -25,9 +26,9 @@ export default function HomePage() {
           <div className="!absolute !bottom-10 !right-10 !w-96 !h-96 !bg-[#86B6F6] !rounded-full !blur-3xl"></div>
         </div>
 
-        <div className="!relative !flex !items-center !justify-center !px-6 !py-20">
+        <div className="!relative !flex !items-center !justify-center !px-6 !py-10">
           <div className="!max-w-6xl !w-full">
-            <div className="!text-center !mb-16">
+            <div className="!text-center !mb-8">
               <div className="!inline-block !px-4 !py-2 !bg-white/80 !rounded-full !text-sm !font-semibold !text-[#176B87] !mb-6 !shadow-md">
                 🎉 Welcome to the Most Exciting Theme Park!
               </div>
@@ -50,6 +51,14 @@ export default function HomePage() {
                   🎢 Get Your Tickets Now
                 </button>
               </div>
+            </div>
+
+            {/* Ride Gallery */}
+            <div className="!mb-16 !bg-white/80 backdrop-blur-sm !rounded-2xl !p-8 !shadow-xl">
+              <h2 className="!text-3xl !font-bold !text-center !text-[#176B87] !mb-6">
+                🎢 Our Amazing Rides
+              </h2>
+              <RideGalleryWrapper />
             </div>
 
             {/* Image Gallery Preview */}

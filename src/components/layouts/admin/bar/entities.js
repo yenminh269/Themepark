@@ -12,11 +12,6 @@ const entities = [
       category: 'REPORT SECTION'
     },
     {
-      name: 'Most Frequently Ridden Rides per Month',
-      path: '/admin/most-frequently-ridden-rides',
-      icon: MdOutlineAnalytics
-    },
-    {
       name: 'Customer Summary',
       path: '/admin/customer-summary',
       icon: MdOutlineSupervisedUserCircle
@@ -24,7 +19,7 @@ const entities = [
     {
       name: 'Ride Report',
       path: '/admin/ride-report',
-      icon: MdReport
+      icon: MdOutlineAnalytics
     },
     {
       category: 'RIDES SECTION'
@@ -33,11 +28,6 @@ const entities = [
       name: 'Add New Ride',
       path: '/admin/add/ride',
       icon: MdAdd
-    },
-    {
-      name: 'Ride Gallery',
-      path: '/admin/view/rides',
-      icon: MdOutlineReviews
     },
     {
       name: 'Ride Lists',

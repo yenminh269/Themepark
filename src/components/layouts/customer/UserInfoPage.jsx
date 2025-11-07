@@ -4,7 +4,7 @@ import { useToast } from "@chakra-ui/react";
 import { useAuth } from "./AuthContext";
 import PageFooter from "./PageFooter";
 import "./Homepage.css";
-import { fetchCurrentCustomer, updateCustomer, api } from "../../../services/api";
+import { fetchCurrentCustomer, updateCustomer, changeCustomerPassword, api } from "../../../services/api";
 
 export default function UserInfoPage() {
 const { user, signout } = useAuth();
@@ -25,6 +25,19 @@ const { user, signout } = useAuth();
     phone: "",
     gender: "",
     dob: "",
+  });
+
+  // Password change state
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
   });
 
   // Fetch customer data from backend
@@ -160,6 +173,96 @@ const { user, signout } = useAuth();
     }
   };
 
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast({
+        title: 'Missing fields',
+        description: 'Please fill in all password fields',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+        position: 'top'
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: 'Password mismatch',
+        description: 'New password and confirmation do not match',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top'
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      toast({
+        title: 'Weak password',
+        description: 'Password must be at least 8 characters long',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top'
+      });
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      toast({
+        title: 'Same password',
+        description: 'New password must be different from current password',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top'
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      await changeCustomerPassword(passwordData.currentPassword, passwordData.newPassword);
+      toast({
+        title: 'Success!',
+        description: 'Password changed successfully',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+        position: 'top'
+      });
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to change password',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top'
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
   return (
     <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
       {/* Navbar is now global in App.jsx */}
@@ -188,6 +291,16 @@ const { user, signout } = useAuth();
           >
             Order History
           </button>
+          <button
+            onClick={() => setActiveTab("password")}
+            className={`!py-2 !px-4 !rounded-md !font-semibold ${
+              activeTab === "password"
+                ? "!bg-[#176B87] !text-white !border-none"
+                : "!bg-white !border !border-[#B4D4FF] !text-[#176B87] hover:!bg-[#EEF5FF]"
+            }`}
+          >
+            Change Password
+          </button>
         </aside>
 
         {/* Right Content */}
@@ -209,7 +322,7 @@ const { user, signout } = useAuth();
               {!loading && !error && (
                 <form onSubmit={handleSave} className="!space-y-4">
                   <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-4">
-                    Personal Information
+                    👤Personal Information
                   </h2>
 
                   <div className="!grid !grid-cols-1 md:!grid-cols-2 !gap-4">
@@ -299,7 +412,7 @@ const { user, signout } = useAuth();
                 </form>
               )}
             </>
-          ) : (
+          ) : activeTab === "orders" ? (
             <div>
             <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-6">
             📦 Order History
@@ -462,7 +575,101 @@ const { user, signout } = useAuth();
                 </div>
               )}
             </div>
-          )}
+          ) : activeTab === "password" ? (
+            <div>
+              <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-6">
+                🛡️ Change Password
+              </h2>
+              <form onSubmit={handlePasswordChange} className="!max-w-xl !space-y-4">
+                <div>
+                  <label className="!block !text-sm !font-semibold !text-slate-700 !mb-2">
+                    Current Password
+                  </label>
+                  <div className="!relative">
+                    <input
+                      type={showPasswords.current ? 'text' : 'password'}
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                      placeholder="Enter current password"
+                      className="!w-full !p-3 !pr-12 !rounded-lg !border !border-[#B4D4FF] focus:!border-[#176B87] focus:!outline-none"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('current')}
+                      className="!absolute !right-3 !top-1/2 !-translate-y-1/2 !text-gray-500 hover:!text-[#176B87] !transition !border-none !bg-transparent"
+                    >
+                      {showPasswords.current ? '👁️' : '👁️‍🗨️'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="!block !text-sm !font-semibold !text-slate-700 !mb-2">
+                    New Password
+                  </label>
+                  <div className="!relative">
+                    <input
+                      type={showPasswords.new ? 'text' : 'password'}
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      placeholder="Enter new password (min 8 characters)"
+                      className="!w-full !p-3 !pr-12 !rounded-lg !border !border-[#B4D4FF] focus:!border-[#176B87] focus:!outline-none"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('new')}
+                      className="!absolute !right-3 !top-1/2 !-translate-y-1/2 !text-gray-500 hover:!text-[#176B87] !transition !border-none !bg-transparent"
+                    >
+                      {showPasswords.new ? '👁️' : '👁️‍🗨️'}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="!block !text-sm !font-semibold !text-slate-700 !mb-2">
+                    Confirm New Password
+                  </label>
+                  <div className="!relative">
+                    <input
+                      type={showPasswords.confirm ? 'text' : 'password'}
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                      placeholder="Re-type new password"
+                      className="!w-full !p-3 !pr-12 !rounded-lg !border !border-[#B4D4FF] focus:!border-[#176B87] focus:!outline-none"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('confirm')}
+                      className="!absolute !right-3 !top-1/2 !-translate-y-1/2 !text-gray-500 hover:!text-[#176B87] !transition !border-none !bg-transparent"
+                    >
+                      {showPasswords.confirm ? '👁️' : '👁️‍🗨️'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="!bg-blue-50 !border !border-blue-200 !rounded-lg !p-4">
+                  <p className="!text-sm !text-blue-800">
+                    <strong>Password requirements:</strong>
+                    <br />
+                    • Minimum 8 characters
+                    <br />
+                    • Must be different from current password
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="!w-full !px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition disabled:!opacity-50 disabled:!cursor-not-allowed !border-none"
+                >
+                  {isChangingPassword ? 'Changing Password...' : 'Change Password'}
+                </button>
+              </form>
+            </div>
+          ) : null}
         </section>
       </main>
 

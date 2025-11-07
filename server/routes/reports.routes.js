@@ -104,50 +104,6 @@ router.get('/most-ridden', async (req, res) => {
   }
 });
 
-// GET /ride-maintenance - Ride maintenance report
-router.get('/ride-maintenance', async (req, res) => {
-  try {
-    const sql = `
-      SELECT
-        r.name AS ride_name,
-        rod.ride_id,
-        SUM(rod.number_of_tickets) AS total_rides,
-        IFNULL(m_count.total_maintenance_count, 0) AS total_maintenance_count,
-        ROUND(
-          CASE
-            WHEN IFNULL(m_count.total_maintenance_count, 0) = 0 THEN 0
-            ELSE
-              (NULLIF(IFNULL(m_count.total_maintenance_count, 0), 0) / SUM(rod.number_of_tickets)) * 100
-          END,
-          2) as percent_needing_maintenance
-      FROM ride_order_detail AS rod
-      LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
-      LEFT JOIN (
-        SELECT ride_id, COUNT(*) AS total_maintenance_count
-        FROM maintenance
-        GROUP BY ride_id
-      ) AS m_count ON m_count.ride_id = rod.ride_id
-      GROUP BY r.name, rod.ride_id
-      ORDER BY r.name ASC
-    `;
-
-    db.query(sql, (err, results) => {
-      if (err) {
-        console.error('Error fetching ride maintenance report:', err);
-        return res.status(500).json({
-          message: 'Error fetching ride maintenance report',
-          error: err.message
-        });
-      }
-
-      res.json(results);
-    });
-  } catch (err) {
-    console.error('Error:', err);
-    res.status(500).json({ error: 'Failed to fetch ride maintenance report' });
-  }
-});
-
 // GET /ride-report - Dynamic ride report based on type
 router.get('/ride-report', async (req, res) => {
   try {
@@ -217,7 +173,7 @@ router.get('/ride-report', async (req, res) => {
           LEFT JOIN (
             SELECT ride_id, COUNT(*) AS total_maintenance_count
             FROM maintenance
-            WHERE date >= ? AND date <= ?
+            WHERE scheduled_date >= ? AND scheduled_date <= ?
             GROUP BY ride_id
           ) AS m_count ON m_count.ride_id = rod.ride_id
           WHERE ro.order_date >= ? AND ro.order_date <= ?
@@ -236,50 +192,20 @@ router.get('/ride-report', async (req, res) => {
         sql = `
           SELECT
             r.name AS ride_name,
-            SUM(rod.number_of_tickets) AS total_rides
+            SUM(rod.number_of_tickets) AS total_rides,
+            COUNT(DISTINCT ro.order_id) AS total_orders,
+            ROUND(SUM(rod.number_of_tickets) / COUNT(DISTINCT ro.order_id), 2) AS avg_tickets_per_order,
+            RANK() OVER (ORDER BY SUM(rod.number_of_tickets) DESC) AS rank_by_tickets,
+            RANK() OVER (ORDER BY COUNT(DISTINCT ro.order_id) DESC) AS rank_by_orders
           FROM ride_order_detail AS rod
           LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
           LEFT JOIN ride_order AS ro ON rod.order_id = ro.order_id
           WHERE ro.order_date >= ? AND ro.order_date <= ?
           ${group === 'ride' && rideName ? 'AND r.name = ?' : ''}
-          GROUP BY r.name, rod.ride_id
+          GROUP BY r.name
           ORDER BY total_rides DESC
         `;
         params = [startDate, endDate];
-        if (group === 'ride' && rideName) {
-          params.push(rideName);
-        }
-        break;
-
-      case 'highest_maintenance':
-        // Highest Maintenance Percentage
-        sql = `
-          SELECT
-            r.name AS ride_name,
-            rod.ride_id,
-            SUM(rod.number_of_tickets) AS total_rides,
-            IFNULL(m_count.total_maintenance_count, 0) AS total_maintenance_count,
-            ROUND(
-              CASE
-                WHEN IFNULL(m_count.total_maintenance_count, 0) = 0 THEN 0
-                ELSE (NULLIF(IFNULL(m_count.total_maintenance_count, 0), 0) / SUM(rod.number_of_tickets)) * 100
-              END,
-              2) as percent_needing_maintenance
-          FROM ride_order_detail AS rod
-          LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
-          LEFT JOIN ride_order AS ro ON rod.order_id = ro.order_id
-          LEFT JOIN (
-            SELECT ride_id, COUNT(*) AS total_maintenance_count
-            FROM maintenance
-            WHERE date >= ? AND date <= ?
-            GROUP BY ride_id
-          ) AS m_count ON m_count.ride_id = rod.ride_id
-          WHERE ro.order_date >= ? AND ro.order_date <= ?
-          ${group === 'ride' && rideName ? 'AND r.name = ?' : ''}
-          GROUP BY r.name, rod.ride_id
-          ORDER BY percent_needing_maintenance DESC
-        `;
-        params = [startDate, endDate, startDate, endDate];
         if (group === 'ride' && rideName) {
           params.push(rideName);
         }

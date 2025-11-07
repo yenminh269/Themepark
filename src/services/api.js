@@ -62,6 +62,10 @@ export const api = {
     getAvgRidesPerMonth: async () => {
         return await fetchAPI('/rides/avg-month');
     },
+    getRidesNames: async () => {
+        return await fetchAPI('/rides/names');
+    },
+
 
     // ===== ADMIN DASHBOARD =====
     getTotalRevenue: async () => {
@@ -292,9 +296,6 @@ export const api = {
     getAvgMonthlyCustomers: async (year) => {
         return await fetchAPI(`/api/reports/avg-monthly-customers?year=${year}`);
     },
-    getRideMaintenanceReport: async () => {
-        return await fetchAPI('/api/reports/ride-maintenance');
-    },
     getRideReport: async (params) => {
         const queryParams = new URLSearchParams();
         if (params.group) queryParams.append('group', params.group);
@@ -446,6 +447,32 @@ export function logoutCustomer() {
     } catch {
         // ignore if running in environments without CustomEvent
     }
+}
+
+// CHANGE CUSTOMER PASSWORD
+export async function changeCustomerPassword(currentPassword, newPassword) {
+    const token = getCustomerToken();
+    if (!token) throw new Error('No authentication token');
+
+    const res = await fetch(`${SERVER_URL}/api/customer/change-password`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword
+        }),
+    });
+
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to change password');
+    }
+
+    const body = await res.json();
+    return body;
 }
 
 // Backwards-compatible wrapper methods for components that call `api.customerSignup` / `api.customerLogin`

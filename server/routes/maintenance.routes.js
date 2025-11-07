@@ -139,7 +139,7 @@ ORDER BY m.scheduled_date DESC
 });
 
 // GET /employee/:employeeId - Get maintenance schedules for a specific employee
-router.get('/employee/:employeeId', async (req, res) => {
+router.get('/:employeeId', async (req, res) => {
   const { employeeId } = req.params;
 
   const sql = `

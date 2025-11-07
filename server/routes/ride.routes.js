@@ -56,6 +56,19 @@ router.get('/', async (req, res) => {
   });
 });
 
+// Get all ride names
+router.get('/names', async (req, res) => {
+  db.query(`SELECT name FROM ride;`, (err, results) => {
+    if (err) {
+      return res.status(500).json({
+        message: 'Error fetching ride names',
+        error: err.message
+      });
+    }
+    res.status(200).json({ data: results });
+  });
+});
+
 // Get average ride tickets sold per month
 router.get('/avg-month', async (req, res) => {
   try {
