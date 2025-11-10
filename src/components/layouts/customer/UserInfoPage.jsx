@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@chakra-ui/react";
 import { useAuth } from "./AuthContext";
 import PageFooter from "./PageFooter";
+import Loading from '../admin/loading/Loading'
 import "./Homepage.css";
 import { fetchCurrentCustomer, updateCustomer, changeCustomerPassword, api } from "../../../services/api";
 
@@ -83,28 +84,28 @@ const { user, signout } = useAuth();
   // Fetch orders when Orders tab is active
   useEffect(() => {
   if (activeTab === 'orders') {
-  const fetchOrders = async () => {
-  setOrdersLoading(true);
-  try {
-  const [rideOrderData, storeOrderData] = await Promise.all([
-      api.getRideOrders(),
-      api.getStoreOrders()
-  ]);
-  setRideOrders(rideOrderData);
-  setStoreOrders(storeOrderData);
-  } catch (err) {
-  console.error('Error fetching orders:', err);
-    // If authentication error, sign out
-  if (err.message.includes("token") || err.message.includes("authentication")) {
-      signout();
-      }
-    } finally {
-        setOrdersLoading(false);
+    const fetchOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const [rideOrderData, storeOrderData] = await Promise.all([
+          api.getRideOrders(),
+          api.getStoreOrders()
+      ]);
+      setRideOrders(rideOrderData);
+      setStoreOrders(storeOrderData);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      // If authentication error, sign out
+    if (err.message.includes("token") || err.message.includes("authentication")) {
+        signout();
         }
-      };
-      fetchOrders();
-    }
-  }, [activeTab, signout]);
+      } finally {
+          setOrdersLoading(false);
+          }
+        };
+        fetchOrders();
+      }
+    }, [activeTab, signout]);
 
 
   const formatPhoneNumber = (value) => {
@@ -309,6 +310,7 @@ const { user, signout } = useAuth();
             <>
               {loading && (
                 <div className="!text-center !py-10">
+                  <Loading />
                   <p className="!text-lg !text-[#176B87]">Loading customer information...</p>
                 </div>
               )}
@@ -420,7 +422,8 @@ const { user, signout } = useAuth();
 
             {ordersLoading ? (
             <div className="!text-center !py-10">
-            <p className="!text-lg !text-[#176B87]">Loading orders...</p>
+              <Loading />
+              <p className="!text-lg !text-[#176B87]">Loading orders...</p>
             </div>
             ) : (rideOrders.length === 0 && storeOrders.length === 0) ? (
             <div className="!text-center !py-10 !bg-white/50 !rounded-xl">

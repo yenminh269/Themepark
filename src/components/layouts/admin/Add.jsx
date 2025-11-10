@@ -153,9 +153,8 @@ function Add({ store = false }) {
   );
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      <Form onSubmit={handleSubmit} className=" p-3 rounded w-full max-w-2xl" style={{ boxShadow: '-8px -8px 12px rgba(0,0,0,0.25)' }}>
-
+    <div className="flex justify-center items-center ">
+      <Form onSubmit={handleSubmit} className=" p-3 rounded w-full max-w-2xl" style={{ boxShadow: '-8px -5px 12px 8px rgba(0,0,0,0.25)' }}>
         {/* Row 1: Name + Price (for rides only) */}
         <div className="flex gap-4 flex-wrap">
           <Input required type="text" label="Name" className="custom-input" labelClassName="custom-form-label" value={name} onChange={e => setName(e.target.value)} />
@@ -200,7 +199,7 @@ function Add({ store = false }) {
         <ImageInputToggle useLink={useLink} setUseLink={setUseLink} photoFile={photoPath} setPhotoFile={setPhotoPath} photoLink={photoLink} setPhotoLink={setPhotoLink} />
 
         <div className="flex justify-center">
-          <CustomButton text={isStore ? "Add New Store" : "Add New Ride"} className="custom-button" />
+          <CustomButton text={isStore ? "🏬 Add New Store" : "🎠 Add New Ride"} className="custom-button" />
         </div>
       </Form>
     </div>

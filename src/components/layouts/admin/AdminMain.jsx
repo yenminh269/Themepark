@@ -19,33 +19,40 @@ import './AdminMain.css'
 
 function AdminMain() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const isMobile = useBreakpointValue({ base: true, lg: false });
 
   function toggleDropdown() {
     setIsExpanded((prev) => !prev);
   }
 
+  function toggleSidebar() {
+    setSidebarOpen((prev) => !prev);
+  }
+
+  function closeSidebar() {
+    setSidebarOpen(false);
+  }
+
   if (!isMobile && isExpanded) setIsExpanded(false);
 
   return (
     <Flex h="100vh"  w="100vw" overflow="hidden" bg="#D1D8BE">
-      {/* Sidebar */}
-      <Box
-        w={{ base: "0", lg: "280px" }} bg="#4B5945"
-        color="white" position="fixed"top="0"
-        left="0" h="100vh"
-        display={{ base: "none", lg: "block" }}
-      >
-        <Sidebar />
-      </Box>
+      {/* Desktop Sidebar */}
+      <Sidebar 
+        isOpen={sidebarOpen}
+        onToggle={toggleSidebar}
+        onClose={closeSidebar}
+      />
 
       {/* Main content area */}
       <Box
-        ml={{ base: 0, lg: "280px" }}
-        w={{ base: "100%", lg: "calc(100% - 280px)" }}
+        ml={{ base: 0, lg: sidebarOpen ? "280px" : "0" }}
+        w={{ base: "100%", lg: sidebarOpen ? "calc(100% - 280px)" : "100%" }}
         h="100vh"
         overflowY="auto"
         className="custom-scrollbar"
+        transition="all 0.3s ease"
       >
         {/* Mobile Header */}
         {isMobile && (

@@ -141,7 +141,7 @@ export const api = {
         return await fetchAPI('/maintenances-employee/id');
     },
     RideStatusCheck: async () => {
-        return await fetchAPI('/api/ride-status-check', null, "POST", false);
+        return await fetchAPI('/api/maintenance/ride-status-check', null, "POST", false);
     },
 
     // ===== MERCHANDISE =====

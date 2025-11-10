@@ -8,7 +8,7 @@ import InputLogin from '../../input/InputLogin';
 import { api } from '../../../services/api';
 import carnivalImg from '../../../assets/carnival.jpg';
 
-function Login({setAdmin}){
+function Login(){
     const [isE,setIsE] = useState(false);
     const [validated, setValidated] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -49,11 +49,6 @@ function Login({setAdmin}){
                 // Store employee info in localStorage
                 localStorage.setItem('employee', JSON.stringify(employeeData));
                 localStorage.setItem('employee_info', JSON.stringify(employeeData));
-
-                // Set admin state if setAdmin function is provided
-                if (setAdmin) {
-                    setAdmin(true);
-                }
 
                 // Redirect based on job title
                 const jobTitle = employeeData.job_title;

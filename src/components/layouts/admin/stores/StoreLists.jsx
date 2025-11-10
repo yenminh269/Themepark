@@ -215,7 +215,7 @@ function StoreLists() {
       />
 
       <DataTable
-        title="Stores"
+        title="Manage Stores"
         columns={StoreAttr}
         data={displayData}
         onEdit={handleEdit}

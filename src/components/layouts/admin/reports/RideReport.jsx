@@ -238,7 +238,7 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
   };
 
   return (
-  <div className=" w-full max-w-5xl">
+  <div className="w-full max-w-5xl mx-auto my-6">
     <form onSubmit={handleSubmit}
           className="flex flex-col px-5 rounded w-full mb-6"
           style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
@@ -326,7 +326,7 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
         {reportData && reportData.length > 0 && (
           <div
             className="flex flex-col items-center justify-center p-6 mt-4 rounded w-full relative"
-            style={{ boxShadow: '-8px -8px 12px rgba(0,0,0,0.25)' }}
+            style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
           >
             <button
               onClick={handleCloseReport}

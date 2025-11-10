@@ -107,7 +107,6 @@ async function sendConsolidatedEmail(email, first_name, orderDetails) {
     };
 
     await sgMail.send(msg);
-    console.log(`Consolidated email sent successfully to ${email}`);
   } catch (error) {
     console.error('Error sending consolidated email:', error);
     // Don't throw error - we don't want to fail the order if email fails
@@ -298,6 +297,7 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
     // Process store orders if any (grouped by store)
     if (storeCart.length > 0) {
       // Group store items by store_id
+      console.log('storeCart received:', JSON.stringify(storeCart, null, 2));
       const storeGroups = storeCart.reduce((groups, item) => {
         const storeId = item.storeId;
         if (!groups[storeId]) {
@@ -306,9 +306,12 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
         groups[storeId].push(item);
         return groups;
       }, {});
+      console.log('Grouped stores:', Object.keys(storeGroups));
+      console.log('Store groups detail:', JSON.stringify(storeGroups, null, 2));
 
       // Create order for each store
       for (const [storeId, items] of Object.entries(storeGroups)) {
+        console.log(`Creating order for store ${storeId} with ${items.length} items`);
         // Verify inventory
         for (const item of items) {
           const checkSql = `
@@ -405,7 +408,7 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
         grandTotal: grandTotal,
       });
     }
-
+    console.log('Order created successfully');
     res.json({
       message: 'Order created successfully',
       orders: createdOrders,
