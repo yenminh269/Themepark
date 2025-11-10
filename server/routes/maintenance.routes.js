@@ -184,15 +184,13 @@ router.get('/:employeeId', async (req, res) => {
 });
 
 // POST /update-status - Update ride statuses based on today's maintenance schedules
-router.post('/update-status', async (req, res) => {
+router.post('/ride-status-check', async (req, res) => {
   const sql = `
     UPDATE ride
     SET status = 'maintenance'
     WHERE ride_id IN (
-      SELECT ride_id FROM maintenance WHERE DATE(scheduled_date) = CURDATE()
-    )
-  `;
-
+      SELECT ride_id FROM maintenance WHERE scheduled_date = CURDATE() AND
+      status = 'scheduled')`;
   try {
     const result = await new Promise((resolve, reject) => {
       db.query(sql, (err, result) => {

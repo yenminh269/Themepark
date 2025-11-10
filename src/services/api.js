@@ -140,8 +140,8 @@ export const api = {
     getEmployeeMaintenances: async () => {
         return await fetchAPI('/maintenances-employee/id');
     },
-    updateRideMaintenanceStatus: async () => {
-        return await fetchAPI('/api/update-ride-maintenance-status', null, "POST", false);
+    RideStatusCheck: async () => {
+        return await fetchAPI('/api/ride-status-check', null, "POST", false);
     },
 
     // ===== MERCHANDISE =====
@@ -194,30 +194,6 @@ export const api = {
         return body.data || [];
     },
 
-    createRideOrder: async (payload) => {
-    // payload = { cart, subtotal, tax, total, payment_method }
-        const token = getCustomerToken();
-        if (!token) throw new Error('No authentication token');
-
-        const res = await fetch(`${SERVER_URL}/api/ride-orders`, {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error(body.error || 'Failed to create order');
-        }
-
-        const body = await res.json();
-        return body.order || body; // keep compatibility with your current handler
-    },
-
-
     // ===== STORE ORDERS =====
     getStoreOrders: async () => {
         const token = getCustomerToken();
@@ -236,28 +212,6 @@ export const api = {
 
         const body = await res.json();
         return body.data || [];
-    },
-
-    createStoreOrder: async (orderData) => {
-        const token = getCustomerToken();
-        if (!token) throw new Error('No authentication token');
-
-        const res = await fetch(`${SERVER_URL}/api/store-orders`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(orderData),
-        });
-
-        if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error(body.error || 'Failed to create store order');
-        }
-
-        const body = await res.json();
-        return body;
     },
 
     // ===== UNIFIED ORDER (Rides + Store in single transaction with consolidated email) =====

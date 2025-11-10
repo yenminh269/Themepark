@@ -73,7 +73,7 @@ function RideLists() {
     }
   };
     //Conditional rendering AFTER hooks
-    if (loading) return <Loading isLoading={loading} />;
+  if (loading) return <Loading isLoading={loading} />;
 
   return (
     <Box position="relative" p={4}>

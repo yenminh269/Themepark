@@ -40,7 +40,7 @@ function Login({setAdmin}){
 
                 // Update ride statuses based on today's maintenance
                 try {
-                    await api.updateRideMaintenanceStatus();
+                    await api.RideStatusCheck();
                 } catch (error) {
                     console.error('Failed to update ride maintenance status:', error);
                     // Don't block login if this fails
@@ -86,7 +86,7 @@ function Login({setAdmin}){
 
                 // Update ride statuses based on today's maintenance
                 try {
-                    await api.updateRideMaintenanceStatus();
+                    await api.RideStatusCheck();
                 } catch (error) {
                     console.error('Failed to update ride maintenance status:', error);
                     // Don't block login if this fails
