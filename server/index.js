@@ -163,7 +163,6 @@ app.post("/api/customer/signup", async (req, res) => {
 });
 
 //LOGIN ROUTE
-
 app.post("/api/customer/login", (req, res) => {
   const { email, password } = req.body;
 
@@ -290,22 +289,22 @@ app.put("/api/customer/:id", requireCustomerAuth, (req, res) => {
     return res.status(403).json({ error: "Unauthorized to update this customer" });
   }
 
-  const { first_name, last_name, gender, email, dob, phone } = req.body;
+  const { first_name, last_name, gender,phone } = req.body;
 
   // Validate required fields
-  if (!first_name || !last_name || !gender || !email || !dob || !phone) {
+  if (!first_name || !last_name || !gender || !phone) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
   const sql = `
     UPDATE customer
-    SET first_name = ?, last_name = ?, gender = ?, email = ?, dob = ?, phone = ?
+    SET first_name = ?, last_name = ?, gender = ?, phone = ?
     WHERE customer_id = ?
   `;
 
   db.query(
     sql,
-    [first_name, last_name, gender, email, dob, phone, customerId],
+    [first_name, last_name, gender, phone, customerId],
     (err, result) => {
       if (err) {
         console.error("UPDATE customer error:", err);
@@ -313,28 +312,34 @@ app.put("/api/customer/:id", requireCustomerAuth, (req, res) => {
       }
 
       if (result.affectedRows === 0) {
-        return res.status(404).json({ error: "Customer not found" });
+      return res.status(404).json({ error: "Customer not found" });
       }
 
-      return res.json({
-        message: "Customer information updated successfully",
-        customer: {
-          customer_id: parseInt(customerId),
-          first_name,
-          last_name,
-          gender,
-          email,
-          dob,
-          phone,
-        },
+      // Fetch the updated customer data
+      const selectSql = `SELECT customer_id, first_name, last_name, gender, email, dob, phone FROM customer WHERE customer_id = ?`;
+      db.query(selectSql, [customerId], (selectErr, selectResult) => {
+      if (selectErr) {
+        console.error("SELECT customer error:", selectErr);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      if (selectResult.length === 0) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+      const customer = selectResult[0];
+        return res.json({
+          message: "Customer information updated successfully",
+          customer,
+        });
       });
     }
   );
 });
-//ROUTES BY MINCY
+
+//ROUTES BY MINH
 // Add a new ride (supports both uploaded photo OR URL)
 app.post('/ride/add', upload.single('photo'), (req, res) => {
-    const { name, price, capacity, description, status, open_time, close_time, photo_url } = req.body;
+    const { name, price, capacity, description, open_time, close_time, photo_url } = req.body;
     // Decide which photo path to use
     let photo_path = null;
     if (photo_url && photo_url.startsWith('http')) {
@@ -345,15 +350,16 @@ app.post('/ride/add', upload.single('photo'), (req, res) => {
         photo_path = `/uploads/ride_photos/${req.file.filename}`;
     }
 
-    if (!name || !price || !capacity || !description || !status || !open_time || !close_time || !photo_path) {
+    // Status is not required - database trigger sets it to 'open' automatically
+    if (!name || !price || !capacity || !description || !open_time || !close_time || !photo_path) {
         return res.status(400).json({ message: 'All fields are required, including either photo or photo URL.' });
     }
     const sql = `
-        INSERT INTO ride (name, price, capacity, description, status, open_time, close_time, photo_path)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO ride (name, price, capacity, description, open_time, close_time, photo_path)
+        VALUES (?, ?, ?, ?, ?, ?, ?);
     `;
 
-    db.query(sql, [name, price, capacity, description, status, open_time, close_time, photo_path],
+    db.query(sql, [name, price, capacity, description, open_time, close_time, photo_path],
         (err, result) => {
             if (err) {
                 console.error("Error inserting new ride:", err);
@@ -386,10 +392,9 @@ app.get('/rides', async (req, res) => {
 
 // Get all employees - EXCLUDE password
 app.get('/employees', async (req, res) => {
-  const sql = `SELECT employee_id, first_name, last_name, gender, email, 
-               job_title, phone, ssn, hire_date, terminate_date 
-               FROM employee 
-               WHERE deleted_at IS NULL`;
+  const sql = `SELECT employee_id, first_name, last_name, gender, email,
+               job_title, phone, ssn, hire_date, terminate_date
+               FROM employee`;
   db.query(sql, (err, results) => {
     if(err){
       return res.status(500).json({
@@ -553,6 +558,123 @@ ORDER BY m.scheduled_date DESC
   }
 });
 
+// Get maintenance schedules for a specific employee
+app.get('/api/employee-maintenances/:employeeId', async (req, res) => {
+  const { employeeId } = req.params;
+
+  const sql = `
+    SELECT
+      m.maintenance_id,
+      m.ride_id,
+      r.name as ride_name,
+      m.description,
+      DATE(m.scheduled_date) as scheduled_date,
+      m.status,
+      m.created_at,
+      m.updated_at,
+      emj_current.worked_hour
+    FROM maintenance m
+    INNER JOIN employee_maintenance_job emj_current
+      ON m.maintenance_id = emj_current.maintenance_id
+      AND emj_current.employee_id = ?
+    LEFT JOIN ride r ON m.ride_id = r.ride_id
+    ORDER BY m.scheduled_date DESC
+  `;
+
+  try {
+    const results = await new Promise((resolve, reject) => {
+      db.query(sql, [employeeId], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+
+    res.json({
+      message: 'Employee maintenance schedules retrieved successfully',
+      data: results,
+      count: results.length
+    });
+  } catch (err) {
+    console.error('Error fetching employee maintenance schedules:', err);
+    return res.status(500).json({
+      message: 'Error fetching employee maintenance schedules',
+      error: err.message
+    });
+  }
+});
+
+// Update ride statuses based on today's maintenance schedules
+app.post('/api/update-ride-maintenance-status', async (req, res) => {
+  const sql = `
+    UPDATE ride
+    SET status = 'maintenance'
+    WHERE ride_id IN (
+      SELECT ride_id FROM maintenance WHERE DATE(scheduled_date) = CURDATE()
+    )
+  `;
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      db.query(sql, (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    res.json({
+      success: true,
+      message: 'Ride statuses updated successfully',
+      data: {
+        affectedRows: result.affectedRows
+      }
+    });
+  } catch (err) {
+    console.error('Error updating ride statuses:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating ride statuses',
+      error: err.message
+    });
+  }
+});
+
+// Update maintenance status
+app.put('/api/maintenance/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!status) {
+    return res.status(400).json({ error: 'Status is required' });
+  }
+
+  const sql = 'UPDATE maintenance SET status = ? WHERE maintenance_id = ?';
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      db.query(sql, [status, id], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Maintenance task not found' });
+    }
+
+    res.json({
+      message: 'Maintenance status updated successfully',
+      maintenance_id: id,
+      status: status
+    });
+  } catch (err) {
+    console.error('Error updating maintenance status:', err);
+    return res.status(500).json({
+      message: 'Error updating maintenance status',
+      error: err.message
+    });
+  }
+});
+
 //Update an employee
 app.put('/employees/:id', async (req, res) => {
   const {
@@ -612,21 +734,21 @@ app.post(`/employees/add`, async(req, res) => {
   })           
 })
 
-//Delete new employee
+//Delete an employee
 app.delete('/employees/:id', async (req, res) => {
   const id = req.params.id;
   const sql = ` UPDATE employee
-  SET deleted_at = NOW()
+  SET deleted_at = NOW(), terminate_date = NOW()
   WHERE employee_id = ?;
 `;
   db.query(sql, [id], (err, result) => {
     if (err) {
       return res.status(500).json({
-        message: 'Error deleting employee',
+        message: 'Error terminating employee',
         error: err.message
       });
     }
-    res.json({ message: "Employee marked as deleted successfully", data: result});
+    res.json({ message: "Employee terminated successfully", data: result});
   });
 });
 
@@ -686,12 +808,44 @@ app.get('/stores', async (req, res) => {
     });
 })
 
+//Get stores assigned to a specific employee with their shift schedules
+app.get('/employee/:employeeId/stores', async (req, res) => {
+    const { employeeId } = req.params;
+    const sql = `
+        SELECT
+            s.store_id,
+            s.name,
+            s.type,
+            s.status,
+            s.description,
+            s.open_time,
+            s.close_time,
+            esj.work_date,
+            esj.shift_start,
+            esj.shift_end
+        FROM store s
+        INNER JOIN employee_store_job esj ON s.store_id = esj.store_id
+        WHERE esj.employee_id = ?
+        ORDER BY esj.work_date DESC, esj.shift_start
+    `;
+
+    db.query(sql, [employeeId], (err, results) => {
+        if(err){
+            console.error('❌ Database error:', err);
+            return res.status(500).json({
+                message: 'Error fetching employee stores',
+                error: err.message
+            });
+        }
+        res.json({ data: results });
+    });
+});
+
 //Update a store
 app.put('/store/:id', async (req, res) => {
   const {name, type, status, description, open_time, close_time} = req.body;
   const openTime = open_time.length === 5 ? open_time + ':00' : open_time;
   const closeTime = close_time.length === 5 ? close_time + ':00' : close_time;
-  console.log(req.body);
   const id = req.params.id;
   const sql = `
     UPDATE store
@@ -746,10 +900,10 @@ app.post('/employee/login', async (req, res) => {
   }
 
   try {
-    // Find employee by email (allow deleted and terminated employees to login)
+    // Find employee by email (only allow active employees - exclude deleted ones)
     const sql = `SELECT employee_id, email, password, first_name, last_name, job_title
                  FROM employee
-                 WHERE email = ?`;
+                 WHERE email = ? AND deleted_at IS NULL AND terminate_date IS NULL`;
     const employees = await new Promise((resolve, reject) => {
       db.query(sql, [email], (err, results) => {
         if (err) reject(err);
@@ -762,12 +916,9 @@ app.post('/employee/login', async (req, res) => {
         message: 'Invalid email or password'
       });
     }
-
     const employee = employees[0];
-
     // Check password - support both plain text and hashed passwords
     let isPasswordValid = false;
-
     // Try plain text comparison first
     if (password === employee.password) {
       isPasswordValid = true;
@@ -787,15 +938,29 @@ app.post('/employee/login', async (req, res) => {
       });
     }
 
+    // Fetch full employee details including phone and hire_date
+    const detailSql = `SELECT employee_id, email, first_name, last_name, job_title, phone, hire_date, gender
+                       FROM employee
+                       WHERE employee_id = ?`;
+    const employeeDetails = await new Promise((resolve, reject) => {
+      db.query(detailSql, [employee.employee_id], (err, results) => {
+        if (err) reject(err);
+        else resolve(results[0]);
+      });
+    });
+
     // Return employee info (excluding password)
     res.json({
       message: 'Login successful',
       data: {
-        employee_id: employee.employee_id,
-        email: employee.email,
-        first_name: employee.first_name,
-        last_name: employee.last_name,
-        job_title: employee.job_title,
+        employee_id: employeeDetails.employee_id,
+        email: employeeDetails.email,
+        first_name: employeeDetails.first_name,
+        last_name: employeeDetails.last_name,
+        job_title: employeeDetails.job_title,
+        phone: employeeDetails.phone,
+        hire_date: employeeDetails.hire_date,
+        gender: employeeDetails.gender,
         is_employee: true
       }
     });
@@ -887,7 +1052,6 @@ app.delete('/api/merchandise/:id', (req, res) => {
   });
 });
 
-// ==================== STORE INVENTORY MANAGEMENT ====================
 // Get inventory for all stores
 app.get('/api/store-inventory', (req, res) => {
   // First check if store_inventory table has any data
@@ -1278,9 +1442,20 @@ app.delete('/api/employee-schedules/:id', (req, res) => {
 });
 
 // ==================== RAIN OUT MANAGEMENT ====================
-// Get rain out records
+// Get rain out records with employee information
 app.get('/api/rain-outs', (req, res) => {
-  const sql = 'SELECT * FROM rain_out ORDER BY rain_out_date DESC';
+  const sql = `
+    SELECT
+      r.*,
+      e1.first_name AS activate_emp_first_name,
+      e1.last_name AS activate_emp_last_name,
+      e2.first_name AS clear_emp_first_name,
+      e2.last_name AS clear_emp_last_name
+    FROM rain_out r
+    LEFT JOIN employee e1 ON r.activate_emp = e1.employee_id
+    LEFT JOIN employee e2 ON r.clear_emp = e2.employee_id
+    ORDER BY r.rain_out_date DESC
+  `;
   db.query(sql, (err, results) => {
     if (err) {
       console.error('Error fetching rain outs:', err);
@@ -1292,28 +1467,62 @@ app.get('/api/rain-outs', (req, res) => {
 
 // Create rain out record
 app.post('/api/rain-outs', (req, res) => {
-  const { rain_out_date, note } = req.body;
+  const { rain_out_date, note, activate_emp } = req.body;
 
   if (!rain_out_date) {
     return res.status(400).json({ error: 'Rain out date is required' });
   }
 
-  const sql = `
-    INSERT INTO rain_out (rain_out_date, note, status)
-    VALUES (?, ?, 'active')
-  `;
+  if (!activate_emp) {
+    return res.status(400).json({ error: 'Employee ID is required' });
+  }
 
-  db.query(sql, [rain_out_date, note], (err, result) => {
-    if (err) {
-      console.error('Error creating rain out:', err);
-      if (err.code === 'ER_DUP_ENTRY') {
-        return res.status(409).json({ error: 'Rain out already exists for this date' });
-      }
-      return res.status(500).json({ error: 'Failed to create rain out', message: err.message });
+  // First, check if a rain out already exists for this date
+  const checkSql = 'SELECT rain_out_id, status FROM rain_out WHERE rain_out_date = ?';
+
+  db.query(checkSql, [rain_out_date], (checkErr, checkResults) => {
+    if (checkErr) {
+      console.error('Error checking rain out:', checkErr);
+      return res.status(500).json({ error: 'Failed to check rain out status' });
     }
-    res.json({
-      message: 'Rain out recorded successfully',
-      rain_out_id: result.insertId
+
+    if (checkResults.length > 0) {
+      // Rain out already exists for this date
+      const existingRainOut = checkResults[0];
+      if (existingRainOut.status === 'active') {
+        return res.status(409).json({
+          error: 'A rain out for this date is already active',
+          message: 'A rain out for this date is already active'
+        });
+      } else {
+        return res.status(409).json({
+          error: 'A rain out for this date already exists',
+          message: 'A rain out for this date already exists'
+        });
+      }
+    }
+
+    // No existing rain out, proceed with insertion
+    const insertSql = `
+      INSERT INTO rain_out (rain_out_date, note, status, activate_emp)
+      VALUES (?, ?, 'active', ?)
+    `;
+
+    db.query(insertSql, [rain_out_date, note, activate_emp], (err, result) => {
+      if (err) {
+        console.error('Error creating rain out:', err);
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(409).json({
+            error: 'Rain out already exists for this date',
+            message: 'Rain out already exists for this date'
+          });
+        }
+        return res.status(500).json({ error: 'Failed to create rain out', message: err.message });
+      }
+      res.json({
+        message: 'Rain out recorded successfully',
+        rain_out_id: result.insertId
+      });
     });
   });
 });
@@ -1321,15 +1530,28 @@ app.post('/api/rain-outs', (req, res) => {
 // Update rain out status
 app.put('/api/rain-outs/:id', (req, res) => {
   const rainOutId = req.params.id;
-  const { status, note } = req.body;
+  const { status, note, clear_emp } = req.body;
 
   let sql, params;
-  if (note !== undefined) {
-    sql = 'UPDATE rain_out SET status = ?, note = ? WHERE rain_out_id = ?';
-    params = [status, note, rainOutId];
+
+  // If status is 'cleared', also update clear_emp and resolved_at
+  if (status === 'cleared' && clear_emp) {
+    if (note !== undefined) {
+      sql = 'UPDATE rain_out SET status = ?, note = ?, clear_emp = ?, resolved_at = NOW() WHERE rain_out_id = ?';
+      params = [status, note, clear_emp, rainOutId];
+    } else {
+      sql = 'UPDATE rain_out SET status = ?, clear_emp = ?, resolved_at = NOW() WHERE rain_out_id = ?';
+      params = [status, clear_emp, rainOutId];
+    }
   } else {
-    sql = 'UPDATE rain_out SET status = ? WHERE rain_out_id = ?';
-    params = [status, rainOutId];
+    // Regular update without clear_emp
+    if (note !== undefined) {
+      sql = 'UPDATE rain_out SET status = ?, note = ? WHERE rain_out_id = ?';
+      params = [status, note, rainOutId];
+    } else {
+      sql = 'UPDATE rain_out SET status = ? WHERE rain_out_id = ?';
+      params = [status, rainOutId];
+    }
   }
 
   db.query(sql, params, (err, result) => {
@@ -1340,13 +1562,40 @@ app.put('/api/rain-outs/:id', (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Rain out not found' });
     }
-    res.json({ message: 'Rain out updated successfully' });
+
+    // If status is 'cleared', manually update ride statuses (as backup to trigger)
+    if (status === 'cleared') {
+      const updateRidesSql = `
+        UPDATE ride
+        SET status = 'open'
+        WHERE status = 'closed'
+        AND ride_id NOT IN (
+          SELECT DISTINCT ride_id
+          FROM maintenance
+          WHERE status != 'done'
+        )
+      `;
+
+      db.query(updateRidesSql, (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error('Error updating ride statuses after clearing rain:', updateErr);
+          // Don't fail the whole request, just log the error
+        } else {
+          console.log(`Updated ${updateResult.affectedRows} rides to 'open' status`);
+        }
+        res.json({
+          message: 'Rain out updated successfully',
+          ridesUpdated: updateResult ? updateResult.affectedRows : 0
+        });
+      });
+    } else {
+      res.json({ message: 'Rain out updated successfully' });
+    }
   });
 });
 
 
 //add by yosan
-// Add this route to your server/index.js
 app.post("/api/employee/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -1389,18 +1638,7 @@ app.post("/api/employee/login", async (req, res) => {
 
         console.log('Login successful for:', employee.email);
 
-        res.json({
-          success: true,
-          employee: {
-            employee_id: employee.employee_id,
-            first_name: employee.first_name,
-            last_name: employee.last_name,
-            email: employee.email,
-            job_title: employee.job_title
-          }
         });
-      }
-    );
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Server error" });
@@ -1435,6 +1673,181 @@ app.get('/api/manager/info', (req, res) => {
   });
 });
 
+// Get all employees (no department filter)
+app.get('/api/manager/employees/all', (req, res) => {
+  const sql = `
+    SELECT 
+      e.employee_id,
+      COALESCE(e.first_name, '') as first_name,
+      COALESCE(e.last_name, '') as last_name,
+      COALESCE(e.email, '') as email,
+      COALESCE(e.phone, '') as phone,
+      e.job_title,
+      e.hire_date,
+      COUNT(DISTINCT esj.work_date) as total_shifts,
+      0 as total_hours
+    FROM employee e
+    LEFT JOIN employee_store_job esj ON e.employee_id = esj.employee_id
+      AND MONTH(esj.work_date) = MONTH(CURRENT_DATE())
+      AND YEAR(esj.work_date) = YEAR(CURRENT_DATE())
+    WHERE e.job_title = 'Sales Employee'
+      AND e.deleted_at IS NULL
+      AND e.terminate_date IS NULL
+    GROUP BY e.employee_id, e.first_name, e.last_name, e.email, 
+             e.phone, e.job_title, e.hire_date
+    ORDER BY e.first_name, e.last_name
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching employees:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get all stores (no department filter)
+app.get('/api/manager/stores/all', (req, res) => {
+  const sql = `
+    SELECT 
+      store_id,
+      name,
+      type,
+      status,
+      description,
+      open_time,
+      close_time,
+      photo_path
+    FROM store
+    WHERE deleted_at IS NULL
+    ORDER BY type, name
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching stores:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get all inventory
+app.get('/api/manager/inventory/all', (req, res) => {
+  const sql = `
+    SELECT 
+      m.item_id,
+      m.name,
+      m.type,
+      m.price,
+      m.description,
+      m.image_url,
+      si.store_id,
+      s.name as store_name,
+      si.stock_quantity,
+      CASE 
+        WHEN si.stock_quantity < 10 THEN 'critical'
+        WHEN si.stock_quantity < 20 THEN 'low'
+        ELSE 'normal'
+      END as stock_status
+    FROM store_inventory si
+    JOIN merchandise m ON si.item_id = m.item_id
+    JOIN store s ON si.store_id = s.store_id
+    WHERE s.deleted_at IS NULL
+    ORDER BY s.name, stock_status, m.name
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching inventory:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get all schedules (no department filter)
+app.get('/api/manager/schedules/all', (req, res) => {
+  const { start_date, end_date } = req.query;
+  
+  const sql = `
+    SELECT 
+      esj.employee_id,
+      esj.store_id,
+      esj.work_date,
+      esj.shift_start,
+      esj.shift_end,
+      COALESCE(e.first_name, 'Unknown') as first_name,
+      COALESCE(e.last_name, 'Employee') as last_name,
+      COALESCE(e.email, '') as email,
+      COALESCE(s.name, 'Unknown Store') as store_name
+    FROM employee_store_job esj
+    JOIN employee e ON esj.employee_id = e.employee_id
+    JOIN store s ON esj.store_id = s.store_id
+    WHERE e.job_title = 'Sales Employee'
+      ${start_date ? 'AND esj.work_date >= ?' : ''}
+      ${end_date ? 'AND esj.work_date <= ?' : ''}
+    ORDER BY esj.work_date DESC, esj.shift_start
+  `;
+
+  const params = [];
+  if (start_date) params.push(start_date);
+  if (end_date) params.push(end_date);
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching schedules:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get sales by store
+app.get('/api/manager/sales-by-store', (req, res) => {
+  const sql = `
+    SELECT 
+      s.store_id,
+      s.name as store_name,
+      s.type as store_type,
+      COUNT(DISTINCT so.store_order_id) as total_orders,
+      COALESCE(SUM(so.total_amount), 0) as total_revenue
+    FROM store s
+    LEFT JOIN store_order so ON s.store_id = so.store_id
+      AND MONTH(so.order_date) = MONTH(CURRENT_DATE())
+      AND YEAR(so.order_date) = YEAR(CURRENT_DATE())
+    WHERE s.deleted_at IS NULL
+    GROUP BY s.store_id, s.name, s.type
+    ORDER BY total_revenue DESC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching store sales:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Delete item from store inventory
+app.delete('/api/manager/inventory/:storeId/:itemId', (req, res) => {
+  const { storeId, itemId } = req.params;
+  
+  const sql = 'DELETE FROM store_inventory WHERE store_id = ? AND item_id = ?';
+
+  db.query(sql, [storeId, itemId], (err, result) => {
+    if (err) {
+      console.error('Error deleting inventory:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Inventory item not found' });
+    }
+    res.json({ message: 'Item removed from store successfully' });
+  });
+});
 // Get dashboard stats
 app.get('/api/manager/dashboard-stats/:department', (req, res) => {
   const { department } = req.params;
@@ -1552,7 +1965,7 @@ app.get('/api/manager/top-items/:department', (req, res) => {
       m.price,
       m.image_url,
       SUM(sod.quantity) as total_sold,
-      SUM(sod.quantity * sod.unit_price) as total_revenue
+      SUM(sod.quantity * sod.price_per_item) as total_revenue
     FROM store_order_detail sod
     JOIN merchandise m ON sod.item_id = m.item_id
     JOIN store_order so ON sod.store_order_id = so.store_order_id
@@ -1573,7 +1986,6 @@ app.get('/api/manager/top-items/:department', (req, res) => {
     res.json(results);
   });
 });
-
 // Get employees by department
 app.get('/api/manager/employees/:department', (req, res) => {
   const { department } = req.params;
@@ -1582,14 +1994,13 @@ app.get('/api/manager/employees/:department', (req, res) => {
   const sql = `
     SELECT 
       e.employee_id,
-      e.first_name,
-      e.last_name,
-      e.email,
-      e.phone,
+      COALESCE(e.first_name, '') as first_name,
+      COALESCE(e.last_name, '') as last_name,
+      COALESCE(e.email, '') as email,
+      COALESCE(e.phone, '') as phone,
       e.job_title,
       e.hire_date,
-      COUNT(DISTINCT esj.work_date) as total_shifts,
-      COALESCE(SUM(esj.worked_hour), 0) as total_hours
+      COUNT(DISTINCT esj.work_date) as total_shifts
     FROM employee e
     LEFT JOIN employee_store_job esj ON e.employee_id = esj.employee_id
       AND MONTH(esj.work_date) = MONTH(CURRENT_DATE())
@@ -1605,6 +2016,112 @@ app.get('/api/manager/employees/:department', (req, res) => {
   db.query(sql, [jobTitle], (err, results) => {
     if (err) {
       console.error('Error fetching employees:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get scheduled employees count
+app.get('/api/manager/scheduled-employees', (req, res) => {
+  const sql = `
+    SELECT COUNT(DISTINCT e.employee_id) as scheduled_count
+    FROM employee e
+    JOIN employee_store_job esj ON e.employee_id = esj.employee_id
+    WHERE e.job_title = 'Sales Employee'
+      AND e.deleted_at IS NULL
+      AND e.terminate_date IS NULL
+      AND esj.work_date >= CURDATE()
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching scheduled employees:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ scheduled_count: results[0].scheduled_count || 0 });
+  });
+});
+
+// Get sales by store with date filter
+app.get('/api/manager/sales-by-store-filtered', (req, res) => {
+  const { start_date, end_date, store_id } = req.query;
+  
+  let sql = `
+    SELECT 
+      s.store_id,
+      s.name as store_name,
+      s.type as store_type,
+      COUNT(DISTINCT so.store_order_id) as total_orders,
+      COALESCE(SUM(so.total_amount), 0) as total_revenue,
+      MAX(so.order_date) as latest_order_date,
+      (SELECT total_amount FROM store_order 
+       WHERE store_id = s.store_id 
+       ORDER BY order_date DESC LIMIT 1) as latest_order_amount
+    FROM store s
+    LEFT JOIN store_order so ON s.store_id = so.store_id
+  `;
+
+  const params = [];
+  const conditions = ['s.deleted_at IS NULL'];
+
+  if (start_date && end_date) {
+    conditions.push('(so.order_date BETWEEN ? AND ? OR so.order_date IS NULL)');
+    params.push(start_date, end_date);
+  }
+
+  if (store_id && store_id !== 'all') {
+    conditions.push('s.store_id = ?');
+    params.push(store_id);
+  }
+
+  sql += ' WHERE ' + conditions.join(' AND ');
+  sql += ` GROUP BY s.store_id, s.name, s.type
+           ORDER BY total_revenue DESC`;
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching filtered store sales:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Get top items with date filter
+app.get('/api/manager/top-items-filtered', (req, res) => {
+  const { start_date, end_date, limit = 5 } = req.query;
+  
+  let sql = `
+    SELECT 
+      m.item_id,
+      m.name,
+      m.type,
+      m.price,
+      m.image_url,
+      COUNT(sod.order_detail_id) as total_sold,
+      SUM(sod.quantity * sod.unit_price) as total_revenue
+    FROM merchandise m
+    JOIN store_order_detail sod ON m.item_id = sod.item_id
+    JOIN store_order so ON sod.store_order_id = so.store_order_id
+  `;
+
+  const params = [];
+  
+  if (start_date && end_date) {
+    sql += ' WHERE so.order_date BETWEEN ? AND ?';
+    params.push(start_date, end_date);
+  }
+
+  sql += ` GROUP BY m.item_id, m.name, m.type, m.price, m.image_url
+           ORDER BY total_revenue DESC
+           LIMIT ?`;
+  
+  params.push(parseInt(limit));
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching filtered top items:', err);
       return res.status(500).json({ error: 'Database error' });
     }
     res.json(results);
@@ -1641,33 +2158,88 @@ app.get('/api/manager/stores/:department', (req, res) => {
   });
 });
 
-// Assign employee to store
 app.post('/api/manager/assign-employee', (req, res) => {
-  const { employee_id, store_id, work_date, worked_hour, shift_start, shift_end } = req.body;
+  const { employee_id, store_id, work_date, shift_start, shift_end } = req.body;
   
-  if (!employee_id || !store_id || !work_date || !worked_hour) {
-    return res.status(400).json({ error: 'Missing required fields' });
+  console.log('Received assignment request:', req.body); // Debug
+  
+  if (!employee_id) {
+    return res.status(400).json({ error: 'Employee ID is required' });
+  }
+  if (!store_id) {
+    return res.status(400).json({ error: 'Store ID is required' });
+  }
+  if (!work_date) {
+    return res.status(400).json({ error: 'Work date is required' });
+  }
+  if (!shift_start) {
+    return res.status(400).json({ error: 'Shift start time is required' });
+  }
+  if (!shift_end) {
+    return res.status(400).json({ error: 'Shift end time is required' });
   }
 
-  const sql = `
-    INSERT INTO employee_store_job 
-      (employee_id, store_id, work_date, worked_hour, shift_start, shift_end)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ON DUPLICATE KEY UPDATE
-      worked_hour = VALUES(worked_hour),
-      shift_start = VALUES(shift_start),
-      shift_end = VALUES(shift_end)
+  // Check if employee exists and is a Sales Employee
+  const checkEmployeeSql = `
+    SELECT employee_id, job_title 
+    FROM employee 
+    WHERE employee_id = ? 
+      AND job_title = 'Sales Employee'
+      AND deleted_at IS NULL 
+      AND terminate_date IS NULL
   `;
-
-  db.query(sql, [employee_id, store_id, work_date, worked_hour, shift_start, shift_end], 
-    (err, result) => {
-      if (err) {
-        console.error('Error assigning employee:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      res.json({ message: 'Employee assigned successfully' });
+  
+  db.query(checkEmployeeSql, [employee_id], (err, empResults) => {
+    if (err) {
+      console.error('Error checking employee:', err);
+      return res.status(500).json({ error: 'Database error checking employee' });
     }
-  );
+    
+    if (empResults.length === 0) {
+      return res.status(404).json({ error: 'Employee not found or not a Sales Employee' });
+    }
+
+    // Check if store exists
+    const checkStoreSql = `
+      SELECT store_id 
+      FROM store 
+      WHERE store_id = ? AND deleted_at IS NULL
+    `;
+    
+    db.query(checkStoreSql, [store_id], (err, storeResults) => {
+      if (err) {
+        console.error('Error checking store:', err);
+        return res.status(500).json({ error: 'Database error checking store' });
+      }
+      
+      if (storeResults.length === 0) {
+        return res.status(404).json({ error: 'Store not found' });
+      }
+
+      // Insert or update the assignment
+      const sql = `
+        INSERT INTO employee_store_job 
+          (employee_id, store_id, work_date, shift_start, shift_end)
+        VALUES (?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          shift_start = VALUES(shift_start),
+          shift_end = VALUES(shift_end)
+      `;
+
+      db.query(sql, [employee_id, store_id, work_date, shift_start, shift_end], 
+        (err, result) => {
+          if (err) {
+            console.error('Error assigning employee:', err);
+            return res.status(500).json({ error: 'Failed to assign employee: ' + err.message });
+          }
+          res.json({ 
+            message: 'Employee assigned successfully',
+            affectedRows: result.affectedRows 
+          });
+        }
+      );
+    });
+  });
 });
 
 // Remove employee assignment
@@ -1802,7 +2374,7 @@ app.get('/api/manager/schedules/:department', (req, res) => {
   const { department } = req.params;
   const { start_date, end_date } = req.query;
   
-  const jobTitle = 'Sales Employee'; // Only Sales Employee
+  const jobTitle = 'Sales Employee'; // Both departments use Sales Employee
   const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
   
   const sql = `
@@ -1810,13 +2382,12 @@ app.get('/api/manager/schedules/:department', (req, res) => {
       esj.employee_id,
       esj.store_id,
       esj.work_date,
-      esj.worked_hour,
       esj.shift_start,
       esj.shift_end,
-      e.first_name,
-      e.last_name,
-      e.email,
-      s.name as store_name
+      COALESCE(e.first_name, 'Unknown') as first_name,
+      COALESCE(e.last_name, 'Employee') as last_name,
+      COALESCE(e.email, '') as email,
+      COALESCE(s.name, 'Unknown Store') as store_name
     FROM employee_store_job esj
     JOIN employee e ON esj.employee_id = e.employee_id
     JOIN store s ON esj.store_id = s.store_id
@@ -1949,7 +2520,7 @@ app.get('/api/manager/employee-performance/:department', (req, res) => {
 
 
 
-//
+//MINCY
 // Get manager dashboard data by department
 app.get('/api/manager/dashboard/:department', (req, res) => {
   const department = req.params.department;
@@ -2272,6 +2843,392 @@ app.get('/api/ride-orders', requireCustomerAuth, async (req, res) => {
   } catch (err) {
     console.error('Error fetching ride orders:', err);
     res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
+//==================== ADMIN DASHBOARD STATS ====================
+// Get average ride tickets sold per month
+app.get('/rides/avg-month', async (req, res) => {
+  try {
+    const sql = `
+      SELECT AVG(monthly_tickets) as avg_tickets_per_month
+      FROM (
+        SELECT
+          DATE_FORMAT(ro.order_date, '%Y-%m') as month,
+          SUM(rod.number_of_tickets) as monthly_tickets
+        FROM ride_order ro
+        JOIN ride_order_detail rod ON ro.order_id = rod.order_id
+        WHERE ro.status = 'completed'
+        GROUP BY DATE_FORMAT(ro.order_date, '%Y-%m')
+      ) as monthly_data
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching average ride tickets per month:', err);
+        return res.status(500).json({
+          message: 'Error fetching average ride tickets per month',
+          error: err.message
+        });
+      }
+      const avgTickets = results[0]?.avg_tickets_per_month || 0;
+      res.json({ data: Math.round(avgTickets) });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch average tickets' });
+  }
+});
+
+// Get total revenue (rides + stores)
+app.get('/admin/total-revenue', async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        (SELECT COALESCE(SUM(total_amount), 0) FROM ride_order WHERE status = 'completed') as ride_revenue,
+        (SELECT COALESCE(SUM(total_amount), 0) FROM store_order WHERE status = 'completed') as store_revenue
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching total revenue:', err);
+        return res.status(500).json({
+          message: 'Error fetching total revenue',
+          error: err.message
+        });
+      }
+      const rideRevenue = parseFloat(results[0]?.ride_revenue || 0);
+      const storeRevenue = parseFloat(results[0]?.store_revenue || 0);
+      const totalRevenue = rideRevenue + storeRevenue;
+
+      res.json({
+        data: {
+          total: totalRevenue.toFixed(2),
+          ride_revenue: rideRevenue.toFixed(2),
+          store_revenue: storeRevenue.toFixed(2)
+        }
+      });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch total revenue' });
+  }
+});
+
+// Get store sales total
+app.get('/admin/store-sales', async (req, res) => {
+  try {
+    const sql = `
+      SELECT COALESCE(SUM(total_amount), 0) as total_sales
+      FROM store_order
+      WHERE status = 'completed'
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching store sales:', err);
+        return res.status(500).json({
+          message: 'Error fetching store sales',
+          error: err.message
+        });
+      }
+      const totalSales = parseFloat(results[0]?.total_sales || 0);
+      res.json({ data: totalSales.toFixed(2) });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch store sales' });
+  }
+});
+
+// Get ride ticket sales total
+app.get('/admin/ride-ticket-sales', async (req, res) => {
+  try {
+    const sql = `
+      SELECT COALESCE(SUM(total_amount), 0) as total_sales
+      FROM ride_order
+      WHERE status = 'completed'
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching ride ticket sales:', err);
+        return res.status(500).json({
+          message: 'Error fetching ride ticket sales',
+          error: err.message
+        });
+      }
+      const totalSales = parseFloat(results[0]?.total_sales || 0);
+      res.json({ data: totalSales.toFixed(2) });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch ride ticket sales' });
+  }
+});
+
+// Get average rides in broken/maintenance status per month
+app.get('/admin/avg-rides-broken-maintenance', async (req, res) => {
+  try {
+    const sql = `
+    SELECT AVG(monthly_count) as avg_broken_per_month
+    FROM (
+    SELECT
+    DATE_FORMAT(m.scheduled_date, '%Y-%m') as month,
+    COUNT(DISTINCT m.ride_id) as monthly_count
+    FROM maintenance m
+    GROUP BY DATE_FORMAT(m.scheduled_date, '%Y-%m')
+    ) as monthly_data
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching average broken/maintenance rides:', err);
+        return res.status(500).json({
+          message: 'Error fetching average broken/maintenance rides',
+          error: err.message
+        });
+      }
+      const avgBroken = results[0]?.avg_broken_per_month || 0;
+      res.json({ data: Math.round(avgBroken) });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch average broken/maintenance rides' });
+  }
+});
+
+// Get recent ride orders with pagination
+app.get('/admin/recent-ride-orders', async (req, res) => {
+  try {
+    const offset = parseInt(req.query.offset) || 0;
+    const limit = parseInt(req.query.limit) || 5;
+
+    const sql = `
+      SELECT order_id, order_date, total_amount, status
+      FROM ride_order
+      ORDER BY order_date DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    db.query(sql, [limit, offset], (err, results) => {
+      if (err) {
+        console.error('Error fetching recent ride orders:', err);
+        return res.status(500).json({
+          message: 'Error fetching recent ride orders',
+          error: err.message
+        });
+      }
+      res.json({ data: results });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch recent ride orders' });
+  }
+});
+
+// Get ride order details
+app.get('/admin/ride-order-details/:orderId', async (req, res) => {
+  try {
+    const orderId = req.params.orderId;
+    const sql = `
+      SELECT rod.order_id, rod.ride_id, rod.price_per_ticket, rod.number_of_tickets, r.name as ride_name
+      FROM ride_order_detail rod
+      LEFT JOIN ride r ON rod.ride_id = r.ride_id
+      WHERE rod.order_id = ?
+    `;
+    db.query(sql, [orderId], (err, results) => {
+      if (err) {
+        console.error('Error fetching ride order details:', err);
+        return res.status(500).json({
+          message: 'Error fetching ride order details',
+          error: err.message
+        });
+      }
+      res.json({ data: results });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch ride order details' });
+  }
+});
+
+// Get top 5 products by quantity sold
+app.get('/admin/top-products', async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        m.name as product_name,
+        m.type as category,
+        SUM(sod.quantity) as total_quantity,
+        SUM(sod.subtotal) as total_revenue
+      FROM store_order_detail sod
+      JOIN merchandise m ON sod.item_id = m.item_id
+      JOIN store_order so ON sod.store_order_id = so.store_order_id
+      WHERE so.status = 'completed'
+      GROUP BY sod.item_id, m.name, m.type
+      ORDER BY total_quantity DESC
+      LIMIT 5
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching top products:', err);
+        return res.status(500).json({
+          message: 'Error fetching top products',
+          error: err.message
+        });
+      }
+      res.json({ data: results });
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch top products' });
+  }
+});
+
+// Average monthly customers report
+app.get('/api/reports/avg-monthly-customers', async (req, res) => {
+  try {
+    const year = parseInt(req.query.year);
+
+    // Validate year input
+    if (!year) {
+      return res.status(400).json({
+        error: 'Year is required'
+      });
+    }
+
+    const sql = `
+      SELECT year, month, total_customer,
+        ROUND(
+          AVG(total_customer) OVER (
+            ORDER BY month
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+          ), 2
+        ) AS running_avg_customer
+      FROM (
+        SELECT YEAR(order_date) AS year, MONTH(order_date) AS month,
+               COUNT(DISTINCT customer_id) AS total_customer
+        FROM (
+          SELECT customer_id, order_date FROM store_order
+          UNION ALL
+          SELECT customer_id, order_date FROM ride_order
+        ) AS combined_orders
+        WHERE YEAR(order_date) = ?
+        GROUP BY year, month
+      ) AS monthly_totals
+      ORDER BY month
+    `;
+
+    db.query(sql, [year], (err, results) => {
+      if (err) {
+        console.error('Error fetching average monthly customers:', err);
+        return res.status(500).json({
+          message: 'Error fetching average monthly customers',
+          error: err.message
+        });
+      }
+
+      res.json(results);
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch average monthly customers' });
+  }
+});
+
+// Most ridden rides per month
+app.get('/api/reports/most-ridden', async (req, res) => {
+  try {
+    const year = parseInt(req.query.year);
+
+    // Validate year input
+    if (!year) {
+      return res.status(400).json({
+        error: 'Year is required'
+      });
+    }
+
+    const sql = `
+      SELECT month, name, total_tickets
+      FROM (
+        SELECT
+          MONTH(ro.order_date) as month,
+          ride.name as name,
+          SUM(rod.number_of_tickets) as total_tickets,
+          ROW_NUMBER() OVER(
+            PARTITION BY MONTH(ro.order_date)
+            ORDER BY SUM(rod.number_of_tickets) DESC
+          ) as rank_in_month
+        FROM ride_order as ro
+        LEFT JOIN ride_order_detail as rod ON rod.order_id = ro.order_id
+        LEFT JOIN ride ON ride.ride_id = rod.ride_id
+        WHERE YEAR(ro.order_date) = ?
+        GROUP BY MONTH(ro.order_date), ride.name
+      ) ranked
+      WHERE rank_in_month = 1
+      ORDER BY month
+    `;
+
+    db.query(sql, [year], (err, results) => {
+      if (err) {
+        console.error('Error fetching most ridden rides:', err);
+        return res.status(500).json({
+          message: 'Error fetching most ridden rides',
+          error: err.message
+        });
+      }
+
+      res.json(results);
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch most ridden rides' });
+  }
+});
+
+// Ride maintenance report
+app.get('/api/reports/ride-maintenance', async (req, res) => {
+  try {
+    const sql = `
+      SELECT
+        r.name AS ride_name,
+        rod.ride_id,
+        SUM(rod.number_of_tickets) AS total_rides,
+        IFNULL(m_count.total_maintenance_count, 0) AS total_maintenance_count,
+        ROUND(
+          CASE
+            WHEN IFNULL(m_count.total_maintenance_count, 0) = 0 THEN 0
+            ELSE
+              (NULLIF(IFNULL(m_count.total_maintenance_count, 0), 0) / SUM(rod.number_of_tickets)) * 100
+          END,
+          2) as percent_needing_maintenance
+      FROM ride_order_detail AS rod
+      LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
+      LEFT JOIN (
+        SELECT ride_id, COUNT(*) AS total_maintenance_count
+        FROM maintenance
+        GROUP BY ride_id
+      ) AS m_count ON m_count.ride_id = rod.ride_id
+      GROUP BY r.name, rod.ride_id
+      ORDER BY r.name ASC
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error('Error fetching ride maintenance report:', err);
+        return res.status(500).json({
+          message: 'Error fetching ride maintenance report',
+          error: err.message
+        });
+      }
+
+      res.json(results);
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch ride maintenance report' });
   }
 });
 
