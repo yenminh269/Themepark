@@ -116,16 +116,17 @@ const Sidebar = ({ isOpen = true, onToggle, onClose }) => {
 
       {/* Sidebar */}
       {isOpen && (
-        <Box
+        <Flex
           position="fixed"
           h="100vh"
           w="280px"
           bg="#424c3dff"
-          display={{ base: 'none', lg: 'block' }}
+          display={{ base: 'none', lg: 'flex' }}
+          direction="column"
           zIndex="999"
         >
           {/* Close Button */}
-          <Flex justify="flex-end" p="12px">
+          <Flex justify="flex-end" p="12px" flexShrink="0">
             <IconButton
               icon={<CloseIcon />}
               onClick={onToggle}
@@ -138,8 +139,10 @@ const Sidebar = ({ isOpen = true, onToggle, onClose }) => {
           </Flex>
 
           {/* Sidebar Content */}
-          <SidebarContent />
-        </Box>
+          <Box flex="1" overflowY="hidden">
+            <SidebarContent />
+          </Box>
+        </Flex>
       )}
     </>
   );

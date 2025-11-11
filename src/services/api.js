@@ -247,8 +247,13 @@ export const api = {
     getMostRiddenRides: async (year) => {
         return await fetchAPI(`/api/reports/most-ridden?year=${year}`);
     },
-    getAvgMonthlyCustomers: async (year) => {
-        return await fetchAPI(`/api/reports/avg-monthly-customers?year=${year}`);
+    getCustomerReport: async (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.type) queryParams.append('type', params.type);
+        if (params.period) queryParams.append('period', params.period);
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        return await fetchAPI(`/api/reports/customer-report?${queryParams.toString()}`);
     },
     getRideReport: async (params) => {
         const queryParams = new URLSearchParams();

@@ -3,54 +3,158 @@ import db from '../config/db.js';
 
 const router = express.Router();
 
-// GET /avg-monthly-customers - Average monthly customers report
-router.get('/avg-monthly-customers', async (req, res) => {
+// GET /customer-report - Customer report
+router.get('/customer-report', async (req, res) => {
   try {
-    const year = parseInt(req.query.year);
-
-    // Validate year input
-    if (!year) {
+    const { type, startDate, endDate, period } = req.query;
+    // Validate required parameters
+    if ( !type || !startDate || !endDate) {
       return res.status(400).json({
-        error: 'Year is required'
+        error: 'Group, type, start date, and end date are required'
       });
     }
 
-    const sql = `
-      SELECT year, month, total_customer,
-        ROUND(
-          AVG(total_customer) OVER (
-            ORDER BY month
-            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-          ), 2
-        ) AS running_avg_customer
-      FROM (
-        SELECT YEAR(order_date) AS year, MONTH(order_date) AS month,
-               COUNT(DISTINCT customer_id) AS total_customer
+    let sql = '';
+    let params = [];
+    switch(type) {
+      //number of new customers registered
+      case 'new_customers':
+        sql = `SELECT sign_up_date, new_customer,
+          SUM(new_customer) OVER (ORDER BY sign_up_date) AS cumulative_customers
         FROM (
-          SELECT customer_id, order_date FROM store_order
-          UNION ALL
-          SELECT customer_id, order_date FROM ride_order
-        ) AS combined_orders
-        WHERE YEAR(order_date) = ?
-        GROUP BY year, month
-      ) AS monthly_totals
-      ORDER BY month
-    `;
+          SELECT 
+            DATE(created_at) AS sign_up_date,
+            COUNT(*) AS new_customer
+          FROM customer
+          WHERE created_at >= ? 
+            AND created_at < ?
+          GROUP BY sign_up_date
+        ) AS count_customer
+        ORDER BY sign_up_date;`;
+        params = [startDate,endDate];
+        break;
+      case 'avg_purchases':
+     //average number of customer visit
+        sql = `
+          WITH all_customers AS (
+          SELECT customer_id FROM store_order
+          WHERE order_date >= ? AND order_date <= ?
+          UNION
+          SELECT customer_id FROM ride_order
+          WHERE order_date >= ? AND order_date <= ?
+        )
+        SELECT
+          (SELECT COUNT(DISTINCT customer_id)
+          FROM store_order
+          WHERE order_date >= ? AND order_date <= ?) AS store_customers,
 
-    db.query(sql, [year], (err, results) => {
+          (SELECT COUNT(DISTINCT customer_id)
+          FROM ride_order
+          WHERE order_date >= ? AND order_date <= ?) AS ride_customers,
+
+          (SELECT COUNT(*) FROM all_customers) AS total_unique_customers,
+          (SELECT COUNT(*) FROM all_customers) / DATEDIFF(?,?) AS avg_customer;
+        `;
+        params = [startDate, endDate, startDate, endDate, startDate, endDate, startDate, endDate, endDate, startDate];
+        break;
+      case 'customer_spikes':
+        if (!period) {
+          return res.status(400).json({
+            error: 'Period is required'
+          });
+        }
+        if (period === 'monthly') {
+          sql = `WITH daily AS (
+            SELECT 
+              DATE(order_date) AS visit_date,
+              COUNT(DISTINCT customer_id) AS num_customers
+            FROM (
+              SELECT customer_id, order_date FROM ride_order
+              UNION
+              SELECT customer_id, order_date FROM store_order
+            ) AS all_orders
+            WHERE order_date >= ? AND order_date <= ?
+            GROUP BY DATE(order_date)
+          ),
+          monthly AS (
+            SELECT
+              YEAR(visit_date) AS year,
+              MONTH(visit_date) AS month_num,
+              AVG(num_customers) AS avg_customers
+            FROM daily
+            GROUP BY YEAR(visit_date), MONTH(visit_date)
+          )
+          SELECT 
+            d.visit_date,
+            d.num_customers,
+            m.month_num,
+            m.avg_customers,
+            CASE
+              WHEN d.num_customers > m.avg_customers * 1.2 THEN 'Spike'
+              ELSE 'Normal'
+            END AS status
+          FROM daily d
+          JOIN monthly m
+            ON YEAR(d.visit_date) = m.year
+            AND MONTH(d.visit_date) = m.month_num
+          ORDER BY d.visit_date;
+          `
+        } else{
+          sql = `WITH daily AS (
+            SELECT 
+              DATE(order_date) AS visit_date,
+              COUNT(DISTINCT customer_id) AS num_customers
+            FROM (
+              SELECT customer_id, order_date FROM ride_order
+              UNION
+              SELECT customer_id, order_date FROM store_order
+            ) AS all_orders
+            WHERE order_date >= ? AND order_date <= ?
+            GROUP BY DATE(order_date)
+          ),
+          weekly AS (
+            SELECT
+              YEAR(visit_date) AS year,
+              WEEK(visit_date, 1) AS week_num, 
+              AVG(num_customers) AS avg_customers
+            FROM daily
+            GROUP BY YEAR(visit_date), WEEK(visit_date, 1)
+          )
+          SELECT 
+            d.visit_date,
+            d.num_customers,
+            w.week_num,
+            w.avg_customers,
+            CASE
+              WHEN d.num_customers > w.avg_customers * 1.2 THEN 'Spike'
+              ELSE 'Normal'
+            END AS status
+          FROM daily d
+          JOIN weekly w
+            ON YEAR(d.visit_date) = w.year
+            AND WEEK(d.visit_date, 1) = w.week_num
+          ORDER BY d.visit_date; `
+        }
+        params = [startDate, endDate];
+        break;
+      default:
+        return res.status(400).json({
+          error: 'Invalid customer report type.'
+        });
+    }
+    db.query(sql, params, (err, results) => {
       if (err) {
-        console.error('Error fetching average monthly customers:', err);
+        console.error('Error fetching customers report:', err);
         return res.status(500).json({
-          message: 'Error fetching average monthly customers',
+          message: 'Error fetching customers report',
           error: err.message
         });
       }
-
       res.json(results);
     });
   } catch (err) {
     console.error('Error:', err);
-    res.status(500).json({ error: 'Failed to fetch average monthly customers' });
+    res.status(500).json({ error: 'Failed to fetch customers report' });
   }
 });
 
