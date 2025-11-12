@@ -1,102 +1,150 @@
-import DataTable from '../../../data-table/DataTable';
-import { Box, useToast, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, Button } from '@chakra-ui/react';
-import { api } from '../../../../services/api';
+import { Box, SimpleGrid, Card, CardBody, CardFooter, Image, Text, Button, HStack, useDisclosure, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, useToast } from '@chakra-ui/react';
+import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
+import { api, getImageUrl } from '../../../../services/api';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useDisclosure } from '@chakra-ui/react';
-  import Loading from '../loading/Loading';
-import { WarningIcon } from '@chakra-ui/icons';
+import Loading from '../loading/Loading';
 
 function StoreLists() {
   const [loading, setLoading] = useState(true);
   const [stores, setStores] = useState([]);
   const [searchText, setSearchText] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editedData, setEditedData] = useState({});
-
+  const [photoFile, setPhotoFile] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const cancelRef = useRef();
   const toast = useToast();
-
-  const StoreAttr = [
-    'Store Id', 'Store Name', 'Category', 'Operational Status', 'Description', 'Open Time', 'Close Time', 'Date Added'
-  ];
-
-  const columnKeys = [
-    'store_id', 'name', 'type', 'status', 'description', 'open_time', 'close_time', 'created_at'
-  ];
-
-  const storeTypeOptions = ['merchandise','food/drink'];
-  const storeStatusOptions = ['closed','open', 'maintenance'];
-
-  // Fetch all stores
-  const fetchStores = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getAllStores();
-      setStores(data);
-    } catch (err) {
-      console.error('Failed to load stores:', err);
-      alert('Failed to load stores. Please check backend connection.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     fetchStores();
   }, []);
 
+  const fetchStores = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getAllStores();
+      setStores(response);
+    } catch (err) {
+      console.error('Failed to load stores:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to load stores. Please check backend connection.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredData = useMemo(() => {
     if (!searchText) return stores;
     const normalizedSearch = searchText.toLowerCase().trim();
-    return stores.filter(storeObj =>
-      columnKeys.some(key =>
-        storeObj[key]?.toString().toLowerCase().includes(normalizedSearch)
-      )
+    return stores.filter(store =>
+      store.name?.toLowerCase().includes(normalizedSearch) ||
+      store.description?.toLowerCase().includes(normalizedSearch) ||
+      store.type?.toLowerCase().includes(normalizedSearch) ||
+      store.status?.toLowerCase().includes(normalizedSearch)
     );
   }, [stores, searchText]);
 
-  const formattedData = filteredData.map(storeObj =>
-    columnKeys.map(key => {
-      if (key === 'created_at' && storeObj[key])
-        return new Date(storeObj[key]).toLocaleDateString();
-      if ((key === 'open_time' || key === 'close_time') && storeObj[key]) {
-        const [hour, minute] = storeObj[key].split(':');
-        const h = parseInt(hour, 10);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const displayHour = h % 12 || 12;
-        return `${displayHour}:${minute} ${ampm}`;
-      }
-      return storeObj[key] ?? '';
-    })
-  );
-
-  const handleEdit = (id) => {
-    setEditingId(id);
-    const store = stores.find(s => s.store_id === id);
-    if (store) setEditedData({ ...store });
+  const handleEdit = (store) => {
+    setEditingId(store.store_id);
+    setEditedData({
+      name: store.name,
+      type: store.type,
+      status: store.status,
+      description: store.description,
+      open_time: store.open_time,
+      close_time: store.close_time,
+      photo_path: store.photo_path,
+      available_online: store.available_online,
+    });
+    setPhotoFile(null);
   };
 
-  const handleSave = async (id) => {
+  const handleSave = async (storeId) => {
     try {
+      // Validate photo is required
+      if (!photoFile && !editedData.photo_path) {
+        toast({
+          title: 'Photo Required',
+          description: 'Please upload a file or provide a photo URL/Path',
+          status: 'warning',
+          duration: 4000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      // Validate description length
+      if (editedData.description.length > 150) {
+        toast({
+          title: 'Description Too Long',
+          description: 'Description must not exceed 150 characters',
+          status: 'warning',
+          duration: 4000,
+          isClosable: true,
+        });
+        return;
+      }
+
+      // Validate photo_path length
+      if (editedData.photo_path && editedData.photo_path.length > 255) {
+        toast({
+          title: 'Photo Path Too Long',
+          description: 'Photo path must not exceed 255 characters',
+          status: 'warning',
+          duration: 4000,
+          isClosable: true,
+        });
+        return;
+      }
+
       setLoading(true);
-      const updateData = { store_id: id, ...editedData };
-      await api.updateStore(updateData, id);
+
+      let updateData;
+
+      // If photoFile is selected, use FormData; otherwise send JSON
+      if (photoFile) {
+        const formData = new FormData();
+        formData.append('file', photoFile);
+        formData.append('name', editedData.name);
+        formData.append('type', editedData.type);
+        formData.append('status', editedData.status);
+        formData.append('description', editedData.description);
+        formData.append('open_time', editedData.open_time);
+        formData.append('close_time', editedData.close_time);
+        formData.append('available_online', editedData.available_online ? 1 : 0);
+        formData.append('store_id', storeId);
+        updateData = formData;
+      } else {
+        updateData = { store_id: storeId, ...editedData, available_online: editedData.available_online ? 1 : 0 };
+      }
+
+      await api.updateStore(updateData, storeId);
       await fetchStores();
       setEditingId(null);
       setEditedData({});
+      setPhotoFile(null);
       toast({
-        title: 'Store updated',
-        description: `Store "${editedData.name}" has been updated.`,
+        title: 'Success',
+        description: 'Store updated successfully.',
         status: 'success',
         duration: 3000,
         isClosable: true,
-        position: 'top',
       });
     } catch (err) {
       console.error('Failed to update store:', err);
-      alert('Failed to update store. Please try again.');
+      toast({
+        title: 'Error',
+        description: 'Failed to update store.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -105,14 +153,15 @@ function StoreLists() {
   const handleCancel = () => {
     setEditingId(null);
     setEditedData({});
+    setPhotoFile(null);
   };
 
   const handleInputChange = (key, value) => {
     setEditedData(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleDelete = (id, row) => {
-    setDeleteTarget({ id, name: row[1] });
+  const handleDeleteClick = (store) => {
+    setDeleteTarget(store);
     onOpen();
   };
 
@@ -121,24 +170,23 @@ function StoreLists() {
     onClose();
     try {
       setLoading(true);
-      await api.deleteStore(deleteTarget.id);
+      await api.deleteStore(deleteTarget.store_id);
       await fetchStores();
       toast({
-        title: 'Store deleted',
-        description: `${deleteTarget.name} has been removed successfully.`,
+        title: 'Success',
+        description: `${deleteTarget.name} has been deleted successfully.`,
         status: 'success',
         duration: 3000,
         isClosable: true,
-        position: 'top',
       });
     } catch (err) {
+      console.error('Failed to delete store:', err);
       toast({
         title: 'Error',
-        description: 'Failed to delete store. Please try again.',
+        description: 'Failed to delete store.',
         status: 'error',
         duration: 5000,
         isClosable: true,
-        position: 'top',
       });
     } finally {
       setLoading(false);
@@ -146,84 +194,268 @@ function StoreLists() {
     }
   };
 
-  const renderEditableRow = (storeObj) => {
-    return columnKeys.map((key, idx) => {
-      if (key === 'store_id' || key === 'created_at') return storeObj[key];
-
-      if (key === 'type') {
-        return (
-          <select
-            value={editedData[key] ?? ''}
-            onChange={e => handleInputChange(key, e.target.value)}
-            className="border rounded px-3 py-2 text-sm md:text-base"
-            style={{ minWidth: '120px' }}
-          >
-            {storeTypeOptions.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        );
-      }
-
-      if (key === 'status') {
-        return (
-          <select
-            value={editedData[key] ?? ''}
-            onChange={e => handleInputChange(key, e.target.value)}
-            className="border rounded px-3 py-2 text-sm md:text-base"
-            style={{ minWidth: '120px' }}
-          >
-            {storeStatusOptions.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        );
-      }
-
-      let inputType = 'text';
-      if (key === 'open_time' || key === 'close_time') inputType = 'time';
-
-      return (
-        <input
-          type={inputType}
-          value={editedData[key] ?? ''}
-          onChange={e => handleInputChange(key, e.target.value)}
-          className="border rounded px-3 py-2 text-sm md:text-base"
-          placeholder={StoreAttr[idx]}
-          style={{ minWidth: '120px' }}
-        />
-      );
-    });
-  };
-
-  const displayData = formattedData.map((storeObj, idx) => {
-    const storeId = filteredData[idx].store_id;
-    if (editingId === storeId) return renderEditableRow(filteredData[idx]);
-    return storeObj;
-  });
-
   if (loading) return <Loading isLoading={loading} />;
 
   return (
-    <Box position="relative" p={4}>
+    <Box position="relative">
+      <h2 className="text-2xl font-bold mb-4 !text-[#4B5945]" >Manage Stores</h2>
+      {/* Search Bar */}
       <input
         type="text"
-        placeholder="Search stores..."
+        placeholder="Search stores by name, description, type, or status..."
         value={searchText}
         onChange={e => setSearchText(e.target.value)}
-        className="border rounded px-3 py-1 mb-4 w-full"
+        className="border rounded px-3 py-2 mb-4 mb-6 w-full"
+        style={{ borderColor: '#ccc', fontSize: '14px' }}
       />
 
-      <DataTable
-        title="Manage Stores"
-        columns={StoreAttr}
-        data={displayData}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onSave={editingId ? handleSave : null}
-        onCancel={editingId ? handleCancel : null}
-        editingId={editingId}
-      />
+      {/* Stores Grid */}
+      {filteredData.length > 0 ? (
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+          {filteredData.map((store) => (
+            <Card
+              key={store.store_id}
+              borderRadius="12px"
+              overflow="hidden"
+              boxShadow={editingId === store.store_id ? 'xl' : 'md'}
+              transition="all 0.3s"
+              _hover={{ boxShadow: editingId === store.store_id ? 'xl' : 'lg', transform: 'translateY(-4px)' }}
+              bg={editingId === store.store_id ? '#EEF5FF' : 'white'}
+            >
+              {/* Image */}
+              <Image
+                src={getImageUrl(store.photo_path)}
+                alt={store.name}
+                h="250px"
+                w="100%"
+                objectFit="cover"
+              />
+
+              {/* Card Body */}
+              <CardBody pb={2}>
+                {editingId === store.store_id ? (
+                  // Edit Mode
+                  <Box>
+                    <label className='font-bold text-[#176B87]'>Store Name:</label>
+                    <input
+                      type="text"
+                      value={editedData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      placeholder="Store Name"
+                      className="border border-black rounded px-2 py-1 mb-3 w-full"
+                      style={{ fontSize: '18px', fontWeight: 'bold' }}
+                    />
+
+                    <label className='font-bold text-[#176B87]'>Description:</label>
+                    <textarea
+                      value={editedData.description}
+                      onChange={(e) => handleInputChange('description', e.target.value.slice(0, 150))}
+                      placeholder="Description"
+                      className="border border-black rounded px-2 py-1  w-full"
+                      rows={2}
+                      style={{ fontSize: '14px', resize: 'none' }}
+                    />
+                    <Text fontSize="xs" color="gray.600" mb={0}>{editedData.description.length}/150 characters</Text>
+
+                    <label className='font-bold text-[#176B87]'>Photo: <span style={{color: 'red'}}>*</span></label>
+                    <div style={{marginBottom: '8px'}}>
+                      <label style={{fontSize: '14px', color: 'gray.600'}}>Choose a file from your device:</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          setPhotoFile(e.target.files[0]);
+                          handleInputChange('photo_path', '');
+                        }}
+                        className="border border-black rounded px-2 py-1 w-full"
+                        style={{ fontSize: '13px' }}
+                      />
+                      {photoFile && <Text fontSize="xs" color="green.500">File selected: {photoFile.name}</Text>}
+                    </div>
+                    <div>
+                      <label style={{fontSize: '14px', color: 'gray.600'}}>Or paste URL/Path:</label>
+                      <input
+                        type="text"
+                        value={editedData.photo_path}
+                        onChange={(e) => {
+                          handleInputChange('photo_path', e.target.value);
+                          setPhotoFile(null);
+                        }}
+                        placeholder="Photo URL or Path"
+                        className="border border-black rounded px-2 py-1 w-full"
+                        style={{ fontSize: '13px' }}
+                        maxLength="255"
+                      />
+                      <Text fontSize="xs" color={editedData.photo_path.length > 255 ? 'red.500' : 'gray.600'}>{editedData.photo_path.length}/255 characters</Text>
+                    </div>
+
+                    <Box fontSize="sm" color="gray.700" space={2}>
+                      <HStack justify="space-between" mb={2}>
+                        <label className='font-bold text-[#176B87]'>Type:</label>
+                        <select
+                          value={editedData.type || ''}
+                          onChange={(e) => handleInputChange('type', e.target.value)}
+                          className="border border-black rounded px-2 py-1"
+                          style={{ width: '120px', fontSize: '14px' }}
+                        >
+                          <option value="merchandise">Merchandise</option>
+                          <option value="food/drink">Food/Drink</option>
+                        </select>
+                      </HStack>
+
+                      <HStack justify="space-between" mb={2}>
+                        <label className='font-bold text-[#176B87]'>Status:</label>
+                        <select
+                          value={editedData.status || ''}
+                          onChange={(e) => handleInputChange('status', e.target.value)}
+                          className="border border-black rounded px-2 py-1"
+                          style={{ width: '100px', fontSize: '14px' }}
+                        >
+                          <option value="open">Open</option>
+                          <option value="maintenance">Maintenance</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                      </HStack>
+
+                      <HStack justify="space-between" mb={2}>
+                        <label className='w-full font-bold text-[#176B87]'>Open Time:</label>
+                        <input
+                          type="time"
+                          value={editedData.open_time}
+                          onChange={(e) => handleInputChange('open_time', e.target.value)}
+                          className="border border-black rounded px-2 py-1"
+                        />
+                      </HStack>
+
+                      <HStack justify="space-between">
+                        <label className='w-full font-bold text-[#176B87]'>Close Time:</label>
+                        <input
+                          type="time"
+                          value={editedData.close_time}
+                          onChange={(e) => handleInputChange('close_time', e.target.value)}
+                          className="border border-black rounded px-2 py-1"
+                        />
+                      </HStack>
+
+                      <HStack justify="space-between" mb={2}>
+                        <label className='font-bold text-[#176B87]'>Available Online:</label>
+                        <input
+                          type="checkbox"
+                          checked={editedData.available_online || false}
+                          onChange={(e) => handleInputChange('available_online', e.target.checked)}
+                          style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                        />
+                      </HStack>
+                    </Box>
+                  </Box>
+                ) : (
+                  // View Mode
+                  <>
+                    <Text fontSize="xl" fontWeight="bold" mb={2} color="#3A6F43">
+                      {store.name}
+                    </Text>
+                    <Text fontSize="sm" color="gray.600" mb={3} noOfLines={3}>
+                      {store.description}
+                    </Text>
+
+                    {/* Store Details */}
+                    <Box fontSize="sm" color="gray.700" space={2}>
+                      <HStack justify="space-between" mb={1}>
+                        <Text fontWeight="bold">Type:</Text>
+                        <Text>{store.type}</Text>
+                      </HStack>
+                      <HStack justify="space-between" mb={1}>
+                        <Text fontWeight="bold">Status:</Text>
+                        <Box
+                          px={2}
+                          py={1}
+                          borderRadius="4px"
+                          bg={store.status === 'open' ? '#C6F6D5' : store.status === 'maintenance' ? '#FAF089' : '#FED7D7'}
+                          color={store.status === 'open' ? '#22543D' : store.status === 'maintenance' ? '#744210' : '#742A2A'}
+                          fontSize="xs"
+                          fontWeight="bold"
+                        >
+                          {store.status}
+                        </Box>
+                      </HStack>
+                      <HStack justify="space-between" mb={1}>
+                        <Text fontWeight="bold">Hours:</Text>
+                        <Text>
+                          {new Date(`2000-01-01T${store.open_time}`).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true})} - {new Date(`2000-01-01T${store.close_time}`).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true})}
+                        </Text>
+                      </HStack>
+                      <HStack justify="space-between">
+                        <Text fontWeight="bold">Date Added:</Text>
+                        <Text>{new Date(store.created_at).toLocaleDateString()}</Text>
+                      </HStack>
+                      <HStack justify="space-between">
+                        <Text fontWeight="bold">Available Online:</Text>
+                        <Text>{store.available_online ? 'Yes' : 'No'}</Text>
+                      </HStack>
+                    </Box>
+                  </>
+                )}
+              </CardBody>
+
+              {/* Card Footer - Actions */}
+              <CardFooter gap={2} pt={0}>
+                {editingId === store.store_id ? (
+                  // Save/Cancel buttons
+                  <>
+                    <Button
+                      flex={1}
+                      size="sm"
+                      colorScheme="green"
+                      onClick={() => handleSave(store.store_id)}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      flex={1}
+                      size="sm"
+                      colorScheme="blue"
+                      borderBaseColor="#176B87"
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                ) : (
+                  // Edit/Delete buttons
+                  <>
+                    <Button
+                      flex={1}
+                      size="sm"
+                      leftIcon={<EditIcon className='mt-2' />}
+                      colorScheme="blue"
+                      variant="outline"
+                      onClick={() => handleEdit(store)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      flex={1}
+                      size="sm"
+                      leftIcon={<DeleteIcon className='mt-2' color="red.500" />}
+                      colorScheme="red"
+                      variant="outline"
+                      onClick={() => handleDeleteClick(store)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+        </SimpleGrid>
+      ) : (
+        <Box textAlign="center" py={10}>
+          <Text fontSize="lg" color="gray.500">
+            No stores found matching your search.
+          </Text>
+        </Box>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog
@@ -231,21 +463,27 @@ function StoreLists() {
         leastDestructiveRef={cancelRef}
         onClose={onClose}
         isCentered
+        motionPreset="slideInBottom"
       >
         <AlertDialogOverlay bg="blackAlpha.300" backdropFilter="blur(10px)">
           <AlertDialogContent mx={4}>
-            <AlertDialogHeader fontSize="lg" fontWeight="bold" display="flex" alignItems="center" gap={2}>
-              <WarningIcon color="red.500" boxSize={5} />
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
               Delete Store
             </AlertDialogHeader>
-
             <AlertDialogBody>
-              Are you sure you want to delete <b>{deleteTarget?.name}</b>? This action cannot be undone.
+              Are you sure you want to delete{' '}
+              <Text as="span" fontWeight="bold" color="red.600">
+                {deleteTarget?.name}
+              </Text>
+              ? This action cannot be undone.
             </AlertDialogBody>
-
             <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onClose} variant="ghost">Cancel</Button>
-              <Button colorScheme="red" onClick={confirmDelete} ml={3}>Delete</Button>
+              <Button ref={cancelRef} onClick={onClose} variant="ghost">
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={confirmDelete} ml={3}>
+                Delete
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialogOverlay>

@@ -1,96 +1,505 @@
-import DataTable from '../../../data-table/DataTable';
-import { Box } from '@chakra-ui/react';
-import { api } from '../../../../services/api';
-import { useState, useEffect, useMemo } from 'react';
+import { Box, SimpleGrid, Card, CardBody, CardFooter, Image, Text, Button, HStack, useDisclosure, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, useToast } from '@chakra-ui/react';
+import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
+import { api, getImageUrl } from '../../../../services/api';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Loading from '../loading/Loading';
 
 function RideLists() {
   const [loading, setLoading] = useState(true);
   const [rides, setRides] = useState([]);
   const [searchText, setSearchText] = useState('');
-
-  const RideAttr = [
-    'Ride Id', 'Ride Name', 'Price', 'Capacity', 'Description',
-    'Status', 'Open Time', 'Close Time', 'Date Added'
-  ];
-
-  const columnKeys = [
-    'ride_id', 'name', 'price', 'capacity', 'description', 'status',
-    'open_time', 'close_time', 'created_at'
-  ];
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editedData, setEditedData] = useState({});
+  const [photoFile, setPhotoFile] = useState(null);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const cancelRef = useRef();
+  const toast = useToast();
 
   useEffect(() => {
-    const fetchRide = async () => {
-      try {
-        setLoading(true);
-        const response = await api.getAllRides();
-        setRides(response);
-      } catch (err) {
-        console.error('Failed to load rides:', err);
-        alert('Failed to load rides. Please check backend connection.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRide();
+    fetchRides();
   }, []);
 
+  const fetchRides = async () => {
+    try {
+      setLoading(true);
+      const response = await api.getAllRides();
+      setRides(response);
+    } catch (err) {
+      console.error('Failed to load rides:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to load rides. Please check backend connection.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredData = useMemo(() => {
     if (!searchText) return rides;
     const normalizedSearch = searchText.toLowerCase().trim();
-    return rides.filter(rideObj =>
-      columnKeys.some(key =>
-        rideObj[key]?.toString().toLowerCase().includes(normalizedSearch)
-      )
+    return rides.filter(ride =>
+      ride.name?.toLowerCase().includes(normalizedSearch) ||
+      ride.description?.toLowerCase().includes(normalizedSearch) ||
+      ride.status?.toLowerCase().includes(normalizedSearch)
     );
   }, [rides, searchText]);
 
-  const formattedData = filteredData.map(rideObj =>
-    columnKeys.map(key => {
-      if (key === 'created_at' && rideObj[key])
-        return new Date(rideObj[key]).toLocaleDateString();
-      if ((key === 'open_time' || key === 'close_time') && rideObj[key]) {
-        const [hour, minute] = rideObj[key].split(':');
-        const h = parseInt(hour, 10);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const displayHour = h % 12 || 12;
-        return `${displayHour}:${minute} ${ampm}`;  // e.g., "8:00 PM"
-        }
-
-      return rideObj[key] ?? '';
-    })
-  );
-
-  const handleEdit = (id, row) => {
-    console.log('Edit clicked for ID:', id);
-    console.log('Full row data:', row);
+  const handleEdit = (ride) => {
+    setEditingId(ride.ride_id);
+    setEditedData({
+      name: ride.name,
+      price: ride.price,
+      capacity: ride.capacity,
+      description: ride.description,
+      open_time: ride.open_time,
+      close_time: ride.close_time,
+      photo_path: ride.photo_path,
+      status: ride.status,
+    });
+    setPhotoFile(null);
   };
 
-  const handleDelete = (id, row) => {
-    if (window.confirm(`Are you sure you want to delete ${row[1]}?`)) {
-      console.log('Delete clicked for ID:', id);
+  const handleSave = async (rideId) => {
+  try {
+  // Validate photo is required
+  if (!photoFile && !editedData.photo_path) {
+  toast({
+  title: 'Photo Required',
+  description: 'Please upload a file or provide a photo URL/Path',
+  status: 'warning',
+  duration: 4000,
+  isClosable: true,
+  });
+  return;
+  }
+
+  // Validate description length
+  if (editedData.description.length > 150) {
+  toast({
+  title: 'Description Too Long',
+  description: 'Description must not exceed 150 characters',
+  status: 'warning',
+  duration: 4000,
+  isClosable: true,
+  });
+  return;
+  }
+
+  // Validate price (decimal 6,2 constraint: max 9999.99)
+  if (editedData.price) {
+  const priceNum = parseFloat(editedData.price);
+  if (isNaN(priceNum) || priceNum < 0 || priceNum > 9999.99) {
+  toast({
+  title: 'Invalid Price',
+  description: 'Price must be between 0 and 9999.99',
+  status: 'warning',
+  duration: 4000,
+  isClosable: true,
+  });
+  return;
+  }
+  }
+
+  // Validate photo_path length
+  if (editedData.photo_path && editedData.photo_path.length > 255) {
+  toast({
+  title: 'Photo Path Too Long',
+  description: 'Photo path must not exceed 255 characters',
+  status: 'warning',
+  duration: 4000,
+  isClosable: true,
+  });
+  return;
+  }
+
+  setLoading(true);
+  
+  let updateData;
+  
+  // If photoFile is selected, use FormData; otherwise send JSON
+  if (photoFile) {
+  const formData = new FormData();
+  formData.append('file', photoFile);
+  formData.append('name', editedData.name);
+  formData.append('description', editedData.description);
+  formData.append('price', editedData.price);
+    formData.append('capacity', editedData.capacity);
+         formData.append('status', editedData.status);
+    formData.append('open_time', editedData.open_time);
+    formData.append('close_time', editedData.close_time);
+         formData.append('ride_id', rideId);
+         updateData = formData;
+       } else {
+         updateData = { ride_id: rideId, ...editedData };
+       }
+       
+       await api.updateRide(updateData, rideId);
+  await fetchRides();
+  setEditingId(null);
+  setEditedData({});
+  setPhotoFile(null);
+  toast({
+  title: 'Success',
+    description: 'Ride updated successfully.',
+      status: 'success',
+    duration: 3000,
+      isClosable: true,
+      });
+     } catch (err) {
+       console.error('Failed to update ride:', err);
+       toast({
+         title: 'Error',
+         description: 'Failed to update ride.',
+         status: 'error',
+         duration: 5000,
+         isClosable: true,
+       });
+     } finally {
+       setLoading(false);
+     }
+   };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setEditedData({});
+    setPhotoFile(null);
+  };
+
+  const handleInputChange = (key, value) => {
+    setEditedData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleDeleteClick = (ride) => {
+    setDeleteTarget(ride);
+    onOpen();
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    onClose();
+    try {
+      setLoading(true);
+      await api.deleteRide(deleteTarget.ride_id);
+      await fetchRides();
+      toast({
+        title: 'Success',
+        description: `${deleteTarget.name} has been deleted successfully.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (err) {
+      console.error('Failed to delete ride:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete ride.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+      setDeleteTarget(null);
     }
   };
-    //Conditional rendering AFTER hooks
+
   if (loading) return <Loading isLoading={loading} />;
 
   return (
-    <Box position="relative" p={4}>
+    <Box position="relative">
+      <h2 className="text-2xl font-bold mb-4 !text-[#4B5945]" >Manage Rides</h2>
+      {/* Search Bar */}
       <input
         type="text"
-        placeholder="Search rides..."
+        placeholder="Search rides by name, description, or status..."
         value={searchText}
         onChange={e => setSearchText(e.target.value)}
-        className="border rounded px-3 py-1 mb-4 w-full"
+        className="border rounded px-3 py-2 mb-4 mb-6 w-full"
+        style={{ borderColor: '#ccc', fontSize: '14px' }}
       />
-      <DataTable
-        title="Rides"
-        columns={RideAttr}
-        data={formattedData}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+
+      {/* Rides Grid */}
+      {filteredData.length > 0 ? (
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+          {filteredData.map((ride) => (
+            <Card
+              key={ride.ride_id}
+              borderRadius="12px"
+              overflow="hidden"
+              boxShadow={editingId === ride.ride_id ? 'xl' : 'md'}
+              transition="all 0.3s"
+              _hover={{ boxShadow: editingId === ride.ride_id ? 'xl' : 'lg', transform: 'translateY(-4px)' }}
+              bg={editingId === ride.ride_id ? '#EEF5FF' : 'white'}
+            >
+              {/* Image */}
+              <Image
+                src={getImageUrl(ride.photo_path)}
+                alt={ride.name}
+                h="250px"
+                w="100%"
+                objectFit="cover"
+              />
+
+              {/* Card Body */}
+              <CardBody pb={2}>
+                {editingId === ride.ride_id ? (
+                  // Edit Mode
+                  <Box>
+                    <label className='font-bold text-[#176B87]'>Ride Name:</label>
+                    <input
+                      type="text"
+                      value={editedData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      placeholder="Ride Name"
+                      className="border border-black rounded px-2 py-1 mb-3 w-full"
+                      style={{ fontSize: '18px', fontWeight: 'bold' }}
+                    />
+
+                    <label className='font-bold text-[#176B87]'>Description:</label>
+                    <textarea
+                    value={editedData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value.slice(0, 150))}
+                    placeholder="Description"
+                    className="border border-black rounded px-2 py-1  w-full"
+                    rows={2}
+                    style={{ fontSize: '14px', resize: 'none' }}
+                    />
+                    <Text fontSize="xs" color="gray.600" mb={0}>{editedData.description.length}/150 characters</Text>
+                    
+                    <label className='font-bold text-[#176B87]'>Photo: <span style={{color: 'red'}}>*</span></label>
+                    <div style={{marginBottom: '8px'}}>
+                    <label style={{fontSize: '14px', color: 'gray.600'}}>Choose a file from your device:</label>
+                    <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      setPhotoFile(e.target.files[0]);
+                      handleInputChange('photo_path', '');
+                      }}
+                      className="border border-black rounded px-2 py-1 w-full"
+                        style={{ fontSize: '13px' }}
+                      />
+                    {photoFile && <Text fontSize="xs" color="green.500">File selected: {photoFile.name}</Text>}
+                    </div>
+                    <div>
+                    <label style={{fontSize: '14px', color: 'gray.600'}}>Or paste URL/Path:</label>
+                    <input
+                    type="text"
+                    value={editedData.photo_path}
+                    onChange={(e) => {
+                      handleInputChange('photo_path', e.target.value);
+                        setPhotoFile(null);
+                      }}
+                        placeholder="Photo URL or Path"
+                           className="border border-black rounded px-2 py-1 w-full"
+                           style={{ fontSize: '13px' }}
+                           maxLength="255"
+                         />
+                         <Text fontSize="xs" color={editedData.photo_path.length > 255 ? 'red.500' : 'gray.600'}>{editedData.photo_path.length}/255 characters</Text>
+                       </div>
+                    
+
+                    <Box fontSize="sm" color="gray.700" space={2}>
+                      <HStack justify="space-between" mb={2} >
+                        <label className='font-bold text-[#176B87]'>Price:</label>
+                        <input type="number"
+                              step="0.01"
+                              value={editedData.price}
+                              onChange={(e) => handleInputChange('price', e.target.value)}
+                              className="border border-black rounded px-2 py-1"
+                              style={{ width: '100px', paddingLeft: '22px'}}
+                            />
+                      </HStack>
+
+                      <HStack justify="space-between">
+                      <label className='font-bold text-[#176B87]'>Capacity:</label>
+                      <input
+                      type="number"
+                      value={editedData.capacity}
+                      onChange={(e) => handleInputChange('capacity', e.target.value)}
+                      className="border border-black rounded px-2 py-1"
+                      style={{ width: '100px' }}
+                      />
+                      </HStack>
+                      <Text margin={0} padding={0} fontSize="xs" color="gray.600">Range(2-70)</Text>
+
+                       <HStack justify="space-between" mb={2}>
+                       <label className='font-bold text-[#176B87]'>Status:</label>
+                        <select
+                        value={editedData.status || ''}
+                        onChange={(e) => handleInputChange('status', e.target.value)}
+                        className="border border-black rounded px-2 py-1"
+                        style={{ width: '100px', fontSize: '14px' }}
+                        >
+                        <option value="open">Open</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="closed">Closed</option>
+                        </select>
+                       </HStack>
+                      
+                      <HStack justify="space-between" mb={2}>
+                        <label className='font-bold w-full text-[#176B87]'>Open Time:</label>
+                        <input
+                        type="time"
+                        value={editedData.open_time}
+                        onChange={(e) => handleInputChange('open_time', e.target.value)}
+                        className="border  border-black  rounded px-2 py-1"
+                        />
+                      </HStack>
+                      <HStack justify="space-between">
+                        <label className='font-bold w-full text-[#176B87]'>Close Time:</label>
+                        <input
+                        type="time"
+                        value={editedData.close_time}
+                        onChange={(e) => handleInputChange('close_time', e.target.value)}
+                          className="border border-black rounded px-2 py-1"
+                          />
+                      </HStack>
+                    </Box>
+                  </Box>
+                ) : (
+                  // View Mode
+                  <>
+                    <Text fontSize="xl" fontWeight="bold" mb={2} color="#3A6F43">
+                      {ride.name}
+                    </Text>
+                    <Text fontSize="sm" color="gray.600" mb={3} noOfLines={3}>
+                      {ride.description}
+                    </Text>
+
+                    {/* Ride Details */}
+                    <Box fontSize="sm" color="gray.700" space={2}>
+                      <HStack justify="space-between" mb={1}>
+                        <Text fontWeight="bold">Price:</Text>
+                        <Text>${parseFloat(ride.price).toFixed(2)}</Text>
+                      </HStack>
+                      <HStack justify="space-between" mb={1}>
+                        <Text fontWeight="bold">Capacity:</Text>
+                        <Text>{ride.capacity}</Text>
+                      </HStack>
+                      <HStack justify="space-between" mb={1}>
+                        <Text fontWeight="bold">Status:</Text>
+                        <Box
+                          px={2}
+                          py={1}
+                          borderRadius="4px"
+                          bg={ride.status === 'open' ? '#C6F6D5' : ride.status === 'maintenance' ? '#FAF089' :'#FED7D7'}
+                          color={ride.status === 'open' ? '#22543D' : ride.status === 'maintenance' ?  '#744210' : '#742A2A'}
+                          fontSize="xs"
+                          fontWeight="bold"
+                        >
+                          {ride.status}
+                        </Box>
+                      </HStack>
+                      <HStack justify="space-between" mb={1}>
+                      <Text fontWeight="bold">Hours:</Text>
+                      <Text>
+                          {new Date(`2000-01-01T${ride.open_time}`).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true})} - {new Date(`2000-01-01T${ride.close_time}`).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true})}
+                         </Text>
+                       </HStack>
+                      <HStack justify="space-between">
+                        <Text fontWeight="bold">Date Added:</Text>
+                        <Text>{new Date(ride.created_at).toLocaleDateString()}</Text>
+                      </HStack>
+                    </Box>
+                  </>
+                )}
+              </CardBody>
+
+              {/* Card Footer - Actions */}
+              <CardFooter gap={2} pt={0}>
+                {editingId === ride.ride_id ? (
+                  // Save/Cancel buttons
+                  <>
+                    <Button
+                      flex={1}
+                      size="sm"
+                      colorScheme="green"
+                      onClick={() => handleSave(ride.ride_id)}
+                    >Save
+                    </Button>
+                    <Button
+                      flex={1}
+                      size="sm"
+                      colorScheme="blue"
+                      borderBaseColor="#176B87"
+                      onClick={handleCancel}
+                    > Cancel
+                    </Button>
+                  </>
+                ) : (
+                  // Edit/Delete buttons
+                  <>
+                    <Button
+                      flex={1}
+                      size="sm"
+                      leftIcon={<EditIcon className='mt-2' />}
+                      colorScheme="blue"
+                      variant="outline"
+                      onClick={() => handleEdit(ride)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      flex={1}
+                      size="sm"
+                      leftIcon={<DeleteIcon className='mt-2' color="red.500"  />}
+                      colorScheme="red"
+                      variant="outline"
+                      onClick={() => handleDeleteClick(ride)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+        </SimpleGrid>
+      ) : (
+        <Box textAlign="center" py={10}>
+          <Text fontSize="lg" color="gray.500">
+            No rides found matching your search.
+          </Text>
+        </Box>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onClose}
+        isCentered
+        motionPreset="slideInBottom"
+      >
+        <AlertDialogOverlay bg="blackAlpha.300" backdropFilter="blur(10px)">
+          <AlertDialogContent mx={4}>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Ride
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              Are you sure you want to delete{' '}
+              <Text as="span" fontWeight="bold" color="red.600">
+                {deleteTarget?.name}
+              </Text>
+              ? This action cannot be undone.
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onClose} variant="ghost">
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={confirmDelete} ml={3}>
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 }

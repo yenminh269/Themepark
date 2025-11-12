@@ -40,6 +40,11 @@ async function fetchAPI(endpoint, data = null, fetchMethod = "GET", isFormData =
 }
 
 
+// Get placeholder image for rides
+const getRidePlaceholderImage = (rideName = '') => {
+    return 'https://via.placeholder.com/400x250?text=' + encodeURIComponent(rideName || 'Ride Image');
+};
+
 // Get full img url with fallback
 export const getImageUrl = (path, rideName = '') => {
     if (!path) return getRidePlaceholderImage(rideName);
@@ -55,6 +60,14 @@ export const api = {
     },
     addRide: async (formData) => {
         return await fetchAPI('/ride/add', formData, "POST", true);
+    },
+    updateRide: async (data, id) => {
+        // Check if data is FormData (file upload) or JSON object
+        const isFormData = data instanceof FormData;
+        return await fetchAPI(`/ride/${id}`, data, "PUT", isFormData);
+    },
+    deleteRide: async (id) => {
+        return await fetchAPI(`/ride/${id}`, null, "DELETE", false);
     },
     scheduleRideMaint: async (formData) => {
         return await fetchAPI('/ride-maintenance', formData, "POST", false);
@@ -126,8 +139,10 @@ export const api = {
     addStore: async (formData) => {
         return await fetchAPI('/store/add', formData, "POST", true);
     },
-    updateStore: async (formData, id) => {
-        return await fetchAPI(`/store/${id}`, formData, "PUT", false);
+    updateStore: async (data, id) => {
+        // Check if data is FormData (file upload) or JSON object
+        const isFormData = data instanceof FormData;
+        return await fetchAPI(`/store/${id}`, data, "PUT", isFormData);
     },
     deleteStore: async (id) => {
         return await fetchAPI(`/store/${id}`, null, "DELETE", false);

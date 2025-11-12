@@ -30,7 +30,7 @@ const entities = [
       icon: MdAdd
     },
     {
-      name: 'Ride Lists',
+      name: 'Manage Rides',
       path: '/admin/list/rides',
       icon: MdList
     },

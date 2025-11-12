@@ -1,10 +1,26 @@
 import multer from 'multer';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure upload directories exist
+const ridePhotosDir = path.join(__dirname, '..', 'uploads', 'ride_photos');
+const storePhotosDir = path.join(__dirname, '..', 'uploads', 'store_photos');
+
+if (!fs.existsSync(ridePhotosDir)) {
+  fs.mkdirSync(ridePhotosDir, { recursive: true });
+}
+if (!fs.existsSync(storePhotosDir)) {
+  fs.mkdirSync(storePhotosDir, { recursive: true });
+}
 
 // Storage for ride photos
 const rideStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/ride_photos');
+    cb(null, ridePhotosDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now();
@@ -15,7 +31,7 @@ const rideStorage = multer.diskStorage({
 // Storage for store photos
 const storeStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/store_photos');
+    cb(null, storePhotosDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now();

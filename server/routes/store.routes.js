@@ -94,11 +94,22 @@ router.get('/:employeeId/stores', async (req, res) => {
 });
 
 // PUT /:id - Update a store
-router.put('/:id', async (req, res) => {
-  const {name, type, status, description, open_time, close_time} = req.body;
+router.put('/:id', uploadStore.single('file'), async (req, res) => {
+  const {name, type, status, description, open_time, close_time, photo_path, available_online} = req.body;
   const openTime = open_time.length === 5 ? open_time + ':00' : open_time;
   const closeTime = close_time.length === 5 ? close_time + ':00' : close_time;
   const id = req.params.id;
+
+  if (!name || !type || !status || !description || !open_time || !close_time) {
+    return res.status(400).json({ message: 'All required fields must be provided' });
+  }
+
+  // Determine photo_path: use uploaded file if provided, otherwise use provided photo_path
+  let finalPhotoPath = photo_path;
+  if (req.file) {
+    finalPhotoPath = `/uploads/store_photos/${req.file.filename}`;
+  }
+
   const sql = `
     UPDATE store
     SET
@@ -107,10 +118,12 @@ router.put('/:id', async (req, res) => {
       status = ?,
       description = ?,
       open_time = ?,
-      close_time = ?
+      close_time = ?,
+      photo_path = ?,
+      available_online = ?
     WHERE store_id = ?;
   `;
-  db.query(sql, [name, type, status, description, openTime, closeTime, id],
+  db.query(sql, [name, type, status, description, openTime, closeTime, finalPhotoPath, available_online, id],
      (err, result) => {
     if (err) {
       return res.status(500).json({
@@ -118,7 +131,7 @@ router.put('/:id', async (req, res) => {
         error: err.message
       });
     }
-    res.json({ message: "Store updated successfully", data: result });
+    res.json({ message: "Store updated successfully", data: result, photo_path: finalPhotoPath });
   });
 });
 

@@ -180,11 +180,12 @@ const AdminProfile = () => {
             <CardHeader bg="#4B5945" color="white" borderTopRadius="lg">
               <HStack>
                 <MdPerson size={24} />
-                <Heading size="md">My Profile</Heading>
+                <Heading mt={2} size="md">My Profile</Heading>
               </HStack>
             </CardHeader>
+            
             <CardBody>
-              <VStack align="stretch" spacing={4}>
+              <VStack align="stretch">
                 <Box>
                   <Text fontSize="sm" color="gray.600">
                     <strong>Employee ID: </strong> {employee.employee_id}
@@ -193,43 +194,42 @@ const AdminProfile = () => {
                <Box>
                   <HStack>
                     <MdPerson color="#4B5945" />
-                    <Text className="mt-4" fontSize="sm" color="gray.600" >
+                    <Text mt={6} fontSize="sm" color="gray.600" >
                       <strong>Full Name:</strong> {employee.first_name} {employee.last_name}
                     </Text>
                   </HStack>
                 </Box>
                 <Box>
-                  <HStack mb={1}>
+                  <HStack>
                     <MdWork color="#4B5945" />
-                    <Text  className="mt-4" fontSize="sm" color="gray.600" >
+                    <Text mt={6} fontSize="sm" color="gray.600" >
                       <strong>Job Title:</strong> {employee.job_title}
                     </Text>
                   </HStack>
                 </Box>
                 <Box>
-                  <HStack mb={1}>
+                  <HStack>
                     <MdEmail color="#4B5945" />
-                    <Text  className="mt-4"fontSize="sm" color="gray.600" >
+                    <Text mt={6} fontSize="sm" color="gray.600" >
                       <strong>Email:</strong> {employee.email || 'Not provided'}
                     </Text>
                   </HStack>
                 </Box>
                 <Box>
-                  <HStack mb={1}>
+                  <HStack>
                     <MdPhone color="#4B5945" />
-                    <Text className="mt-4" fontSize="sm" color="gray.600" >
+                    <Text mt={6} fontSize="sm" color="gray.600" >
                       <strong>Phone:</strong> {employee.phone || 'Not provided'}
                     </Text>
                   </HStack>
                 </Box>
                 <Box>
-                  <Text className="mt-4" fontSize="sm" color="gray.600" >
+                  <Text fontSize="sm" color="gray.600" >
                     <strong>Gender:</strong> {employee.gender || 'Not provided'}
                   </Text>
                 </Box>
-      
                 <Box>
-                  <Text className="mt-4" fontSize="sm" color="gray.600" >
+                  <Text fontSize="sm" color="gray.600" >
                     <strong>Hire Date:</strong> {employee.hire_date
                       ? new Date(employee.hire_date).toLocaleDateString('en-US', {
                           year: 'numeric',
@@ -250,7 +250,7 @@ const AdminProfile = () => {
             <CardHeader bg="#4B5945" color="white" borderTopRadius="lg">
               <HStack>
                 <MdLock size={24} />
-                <Heading size="md">Change Password</Heading>
+                <Heading mt={2} size="md">Change Password</Heading>
               </HStack>
             </CardHeader>
             <CardBody>
