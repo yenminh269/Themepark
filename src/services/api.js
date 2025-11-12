@@ -175,11 +175,11 @@ export const api = {
     },
 
     // ===== RIDE ORDERS =====
-    getRideOrders: async () => {
+    getRideOrders: async (range = 'all') => {
         const token = getCustomerToken();
         if (!token) throw new Error('No authentication token');
 
-        const res = await fetch(`${SERVER_URL}/api/ride-orders`, {
+        const res = await fetch(`${SERVER_URL}/api/ride-orders?range=${encodeURIComponent(range)}`, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -193,6 +193,7 @@ export const api = {
         const body = await res.json();
         return body.data || [];
     },
+
 
     createRideOrder: async (payload) => {
     // payload = { cart, subtotal, tax, total, payment_method }
@@ -219,11 +220,11 @@ export const api = {
 
 
     // ===== STORE ORDERS =====
-    getStoreOrders: async () => {
+    getStoreOrders: async (range = 'all') => {
         const token = getCustomerToken();
         if (!token) throw new Error('No authentication token');
 
-        const res = await fetch(`${SERVER_URL}/api/store-orders`, {
+        const res = await fetch(`${SERVER_URL}/api/store-orders?range=${encodeURIComponent(range)}`, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${token}`,
