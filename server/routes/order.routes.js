@@ -298,6 +298,19 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
     if (storeCart.length > 0) {
       // Group store items by store_id
       console.log('storeCart received:', JSON.stringify(storeCart, null, 2));
+
+      // Validate all store items have storeId
+      for (const item of storeCart) {
+        if (!item.storeId) {
+          console.error('Store item missing storeId:', item);
+          return res.status(400).json({ error: `Store item ${item.name || 'unknown'} is missing storeId` });
+        }
+        if (!item.id) {
+          console.error('Store item missing id:', item);
+          return res.status(400).json({ error: `Store item ${item.name || 'unknown'} is missing item id` });
+        }
+      }
+
       const storeGroups = storeCart.reduce((groups, item) => {
         const storeId = item.storeId;
         if (!groups[storeId]) {
@@ -354,6 +367,8 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
         const store_order_id = orderResult.insertId;
 
         // Insert order details
+        // Note: Inventory is automatically decreased by the after_store_order_detail_insert trigger
+        console.log(`Inserting ${items.length} details for store_order_id ${store_order_id}`);
         const detailPromises = items.map((item) => {
           const detailSql = `
             INSERT INTO store_order_detail (store_order_id, item_id, quantity, price_per_item, subtotal)
@@ -361,35 +376,33 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
           `;
           const subtotal = item.price * item.quantity;
 
+          console.log(`Inserting detail: store_order_id=${store_order_id}, item_id=${item.id}, quantity=${item.quantity}, price=${item.price}, subtotal=${subtotal}`);
+
           return new Promise((resolve, reject) => {
             db.query(
               detailSql,
               [store_order_id, item.id, item.quantity, item.price, subtotal],
               (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
+                if (err) {
+                  console.error(`Error inserting detail for item ${item.id}:`, err);
+                  reject(err);
+                } else {
+                  console.log(`Detail inserted successfully for item ${item.id}`);
+                  resolve(result);
+                }
               }
             );
           });
         });
 
-        // Update inventory
-        const inventoryPromises = items.map((item) => {
-          const updateSql = `
-            UPDATE store_inventory
-            SET stock_quantity = stock_quantity - ?
-            WHERE store_id = ? AND item_id = ?
-          `;
-
-          return new Promise((resolve, reject) => {
-            db.query(updateSql, [item.quantity, storeId, item.id], (err, result) => {
-              if (err) reject(err);
-              else resolve(result);
-            });
-          });
-        });
-
-        await Promise.all([...detailPromises, ...inventoryPromises]);
+        // No manual inventory update needed - the database trigger handles it automatically
+        try {
+          await Promise.all(detailPromises);
+          console.log(`All details inserted for store ${storeId}, inventory automatically updated by trigger`);
+        } catch (detailError) {
+          console.error(`Error inserting details for store ${storeId}:`, detailError);
+          throw detailError;
+        }
 
         createdOrders.push({
           type: 'store',
