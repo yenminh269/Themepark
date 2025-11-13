@@ -17,18 +17,18 @@ router.get('/merchandise', (req, res) => {
 
 // POST /api/merchandise - Add new merchandise
 router.post('/merchandise', (req, res) => {
-  const { name, price, quantity, description, type } = req.body;
+  const { name, price, quantity, description, type, image_url } = req.body;
 
   if (!name || !price || !quantity || !description || !type) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
   const sql = `
-    INSERT INTO merchandise (name, price, quantity, description, type)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO merchandise (name, price, quantity, description, type, image_url)
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(sql, [name, price, quantity, description, type], (err, result) => {
+  db.query(sql, [name, price, quantity, description, type, image_url], (err, result) => {
     if (err) {
       console.error('Error adding merchandise:', err);
       return res.status(500).json({ error: 'Failed to add merchandise', message: err.message });
@@ -42,16 +42,16 @@ router.post('/merchandise', (req, res) => {
 
 // PUT /api/merchandise/:id - Update merchandise
 router.put('/merchandise/:id', (req, res) => {
-  const { name, price, quantity, description, type } = req.body;
+  const { name, price, quantity, description, type, image_url } = req.body;
   const itemId = req.params.id;
 
   const sql = `
     UPDATE merchandise
-    SET name = ?, price = ?, quantity = ?, description = ?, type = ?
+    SET name = ?, price = ?, quantity = ?, description = ?, type = ?, image_url = ?
     WHERE item_id = ?
   `;
 
-  db.query(sql, [name, price, quantity, description, type, itemId], (err, result) => {
+  db.query(sql, [name, price, quantity, description, type, image_url, itemId], (err, result) => {
     if (err) {
       console.error('Error updating merchandise:', err);
       return res.status(500).json({ error: 'Failed to update merchandise' });

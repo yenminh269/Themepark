@@ -30,6 +30,9 @@ export default function UserInfoPage() {
   // New: date range for order history filter
   const [dateRange, setDateRange] = useState("all"); // "all" | "today" | "7d" | "month"
 
+  // Order type filter: "all" | "rides" | "stores"
+  const [orderTypeFilter, setOrderTypeFilter] = useState("all");
+
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -303,6 +306,10 @@ export default function UserInfoPage() {
     setDateRange(e.target.value);
   };
 
+  const handleOrderTypeFilterChange = (e) => {
+    setOrderTypeFilter(e.target.value);
+  };
+
   return (
     <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
       {/* Navbar is now global in App.jsx */}
@@ -458,26 +465,43 @@ export default function UserInfoPage() {
             </>
           ) : activeTab === "orders" ? (
             <div>
-              <div className="!flex !justify-between !items-center !mb-6">
-                <h2 className="!text-2xl !font-bold !text-[#176B87]">
+              <div className="!mb-6">
+                <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-4">
                   📦 Order History
                 </h2>
 
-                {/* Date Range Filter */}
-                <div className="!flex !items-center !gap-2">
-                  <label className="!text-sm !font-semibold !text-slate-700">
-                    Show:
-                  </label>
-                  <select
-                    value={dateRange}
-                    onChange={handleDateRangeChange}
-                    className="!px-3 !py-2 !rounded-lg !border !border-[#B4D4FF] !bg-white !text-slate-800"
-                  >
-                    <option value="all">All time</option>
-                    <option value="today">Today</option>
-                    <option value="7d">Last 7 days</option>
-                    <option value="month">Last month</option>
-                  </select>
+                {/* Filters */}
+                <div className="!flex !flex-wrap !items-center !gap-4">
+                  <div className="!flex !items-center !gap-2">
+                    <label className="!text-sm !font-semibold !text-slate-700">
+                      Order Type:
+                    </label>
+                    <select
+                      value={orderTypeFilter}
+                      onChange={handleOrderTypeFilterChange}
+                      className="!px-3 !py-2 !rounded-lg !border !border-[#B4D4FF] !bg-white !text-slate-800"
+                    >
+                      <option value="all">Both</option>
+                      <option value="rides">Ride Orders</option>
+                      <option value="stores">Store Orders</option>
+                    </select>
+                  </div>
+
+                  <div className="!flex !items-center !gap-2">
+                    <label className="!text-sm !font-semibold !text-slate-700">
+                      Time Period:
+                    </label>
+                    <select
+                      value={dateRange}
+                      onChange={handleDateRangeChange}
+                      className="!px-3 !py-2 !rounded-lg !border !border-[#B4D4FF] !bg-white !text-slate-800"
+                    >
+                      <option value="all">All time</option>
+                      <option value="today">Today</option>
+                      <option value="7d">Last 7 days</option>
+                      <option value="month">Last month</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -491,30 +515,43 @@ export default function UserInfoPage() {
                 <div className="!text-center !py-10">
                   <p className="!text-lg !text-[#176B87]">Loading orders...</p>
                 </div>
-              ) : rideOrders.length === 0 && storeOrders.length === 0 ? (
+              ) : (
+                // Check if there are any orders to display based on the filter
+                (orderTypeFilter === "all" && rideOrders.length === 0 && storeOrders.length === 0) ||
+                (orderTypeFilter === "rides" && rideOrders.length === 0) ||
+                (orderTypeFilter === "stores" && storeOrders.length === 0)
+              ) ? (
                 <div className="!text-center !py-10 !bg-white/50 !rounded-xl">
                   <p className="!text-lg !text-gray-500 !mb-4">
-                    No orders in this period!
+                    {orderTypeFilter === "rides"
+                      ? "No ride orders in this period!"
+                      : orderTypeFilter === "stores"
+                      ? "No store orders in this period!"
+                      : "No orders in this period!"}
                   </p>
                   <div className="!flex !gap-4 !justify-center">
-                    <button
-                      onClick={() => navigate("/tickets")}
-                      className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
-                    >
-                      🎢 Browse Rides
-                    </button>
-                    <button
-                      onClick={() => navigate("/stores")}
-                      className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
-                    >
-                      🛍️ Shop Stores
-                    </button>
+                    {(orderTypeFilter === "all" || orderTypeFilter === "rides") && (
+                      <button
+                        onClick={() => navigate("/tickets")}
+                        className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
+                      >
+                        🎢 Browse Rides
+                      </button>
+                    )}
+                    {(orderTypeFilter === "all" || orderTypeFilter === "stores") && (
+                      <button
+                        onClick={() => navigate("/stores")}
+                        className="!px-6 !py-3 !bg-[#176B87] !text-white !rounded-lg !font-bold hover:!opacity-90 !transition !border-none"
+                      >
+                        🛍️ Shop Stores
+                      </button>
+                    )}
                   </div>
                 </div>
               ) : (
                 <div className="!space-y-6">
                   {/* Ride Orders */}
-                  {rideOrders.length > 0 && (
+                  {rideOrders.length > 0 && (orderTypeFilter === "all" || orderTypeFilter === "rides") && (
                     <div>
                       <h3 className="!text-xl !font-bold !text-[#176B87] !mb-4">
                         🎢 Ride Tickets
@@ -568,7 +605,7 @@ export default function UserInfoPage() {
                                 Ride Tickets:
                               </h5>
                               <ul className="!space-y-2">
-                                {order.items.map((item, idx) => (
+                                {(order.items || []).map((item, idx) => (
                                   <li
                                     key={idx}
                                     className="!flex !justify-between !items-start !text-sm"
@@ -602,7 +639,7 @@ export default function UserInfoPage() {
                   )}
 
                   {/* Store Orders */}
-                  {storeOrders.length > 0 && (
+                  {storeOrders.length > 0 && (orderTypeFilter === "all" || orderTypeFilter === "stores") && (
                     <div>
                       <h3 className="!text-xl !font-bold !text-[#176B87] !mb-4">
                         🛍️ Store Purchases
@@ -613,12 +650,12 @@ export default function UserInfoPage() {
                             key={order.store_order_id}
                             className="!bg-white !rounded-xl !shadow-md !p-6 !border !border-[#B4D4FF] hover:!shadow-lg !transition"
                           >
-                            <div className="!flex !justify-between !items-start !mb-4">
+                            <div className="!flex !justify-between !items-start">
                               <div>
                                 <h4 className="!text-lg !font-bold !text-[#176B87]">
                                   Order #{order.store_order_id}
                                 </h4>
-                                <p className="!text-sm !text-gray-600">
+                                <p className="!text-sm !text-gray-700">
                                   {order.store_name} •{" "}
                                   {new Date(
                                     order.order_date
@@ -628,7 +665,7 @@ export default function UserInfoPage() {
                                     day: "numeric",
                                   })}
                                 </p>
-                                <p className="!text-xs !text-gray-500">
+                                <p className="!text-sm !text-gray-500">
                                   Paid by{" "}
                                   {order.payment_method.replace("_", " ")}
                                 </p>
@@ -661,7 +698,7 @@ export default function UserInfoPage() {
                                 Items Purchased:
                               </h5>
                               <ul className="!space-y-2">
-                                {order.items.map((item, idx) => (
+                                {(order.items || []).map((item, idx) => (
                                   <li
                                     key={idx}
                                     className="!flex !justify-between !items-start !text-sm"

@@ -114,68 +114,113 @@ async function sendConsolidatedEmail(email, first_name, orderDetails) {
 }
 
 // GET /api/ride-orders - Get customer's ride orders
-router.get("/ride-orders", requireCustomerAuth, (req, res) => {
+router.get("/ride-orders", requireCustomerAuth, async (req, res) => {
   const customerId = req.customer_id;
   const range = req.query.range || "all"; // "today", "7d", "month", "all"
 
-  let whereClause = "WHERE customer_id = ?";
+  let whereClause = "WHERE ro.customer_id = ?";
   const params = [customerId];
 
   if (range === "today") {
-    whereClause += " AND DATE(order_date) = CURDATE()";
+    whereClause += " AND DATE(ro.order_date) = CURDATE()";
   } else if (range === "7d") {
-    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+    whereClause += " AND ro.order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
   } else if (range === "month") {
-    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
+    whereClause += " AND ro.order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
   }
   // "all" means no extra date filter
 
   const sql = `
-    SELECT *
-    FROM ride_orders
+    SELECT ro.*
+    FROM ride_order ro
     ${whereClause}
-    ORDER BY order_date DESC
+    ORDER BY ro.order_id DESC
   `;
 
-  db.query(sql, params, (err, rows) => {
+  db.query(sql, params, async (err, orders) => {
     if (err) {
       console.error("Error fetching ride orders:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    return res.json({ data: rows });
+
+    // Fetch order details for each order
+    const ordersWithDetails = await Promise.all(
+      orders.map(async (order) => {
+        const detailsSql = `
+          SELECT rod.*, r.name as ride_name
+          FROM ride_order_detail rod
+          JOIN ride r ON rod.ride_id = r.ride_id
+          WHERE rod.order_id = ?
+        `;
+
+        const items = await new Promise((resolve, reject) => {
+          db.query(detailsSql, [order.order_id], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+          });
+        });
+
+        return { ...order, items };
+      })
+    );
+
+    return res.json({ data: ordersWithDetails });
   });
 });
 
 
 // GET /api/store-orders - Get customer's store orders
-router.get("/store-orders", requireCustomerAuth, (req, res) => {
+router.get("/store-orders", requireCustomerAuth, async (req, res) => {
   const customerId = req.customer_id;
   const range = req.query.range || "all";
 
-  let whereClause = "WHERE customer_id = ?";
+  let whereClause = "WHERE so.customer_id = ?";
   const params = [customerId];
 
   if (range === "today") {
-    whereClause += " AND DATE(order_date) = CURDATE()";
+    whereClause += " AND DATE(so.order_date) = CURDATE()";
   } else if (range === "7d") {
-    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+    whereClause += " AND so.order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
   } else if (range === "month") {
-    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
+    whereClause += " AND so.order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
   }
 
   const sql = `
-    SELECT *
-    FROM store_orders
+    SELECT so.*, s.name as store_name
+    FROM store_order so
+    JOIN store s ON so.store_id = s.store_id
     ${whereClause}
-    ORDER BY order_date DESC
+    ORDER BY so.store_order_id DESC
   `;
 
-  db.query(sql, params, (err, rows) => {
+  db.query(sql, params, async (err, orders) => {
     if (err) {
       console.error("Error fetching store orders:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    return res.json({ data: rows });
+
+    // Fetch order details for each order
+    const ordersWithDetails = await Promise.all(
+      orders.map(async (order) => {
+        const detailsSql = `
+          SELECT sod.*, m.name as item_name
+          FROM store_order_detail sod
+          JOIN merchandise m ON sod.item_id = m.item_id
+          WHERE sod.store_order_id = ?
+        `;
+
+        const items = await new Promise((resolve, reject) => {
+          db.query(detailsSql, [order.store_order_id], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+          });
+        });
+
+        return { ...order, items };
+      })
+    );
+
+    return res.json({ data: ordersWithDetails });
   });
 });
 

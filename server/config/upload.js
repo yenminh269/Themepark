@@ -9,12 +9,16 @@ const __dirname = path.dirname(__filename);
 // Ensure upload directories exist
 const ridePhotosDir = path.join(__dirname, '..', 'uploads', 'ride_photos');
 const storePhotosDir = path.join(__dirname, '..', 'uploads', 'store_photos');
+const merchandisePhotosDir = path.join(__dirname, '..', 'uploads', 'merchandise_photos');
 
 if (!fs.existsSync(ridePhotosDir)) {
   fs.mkdirSync(ridePhotosDir, { recursive: true });
 }
 if (!fs.existsSync(storePhotosDir)) {
   fs.mkdirSync(storePhotosDir, { recursive: true });
+}
+if (!fs.existsSync(merchandisePhotosDir)) {
+  fs.mkdirSync(merchandisePhotosDir, { recursive: true });
 }
 
 // Storage for ride photos
@@ -39,5 +43,17 @@ const storeStorage = multer.diskStorage({
   }
 });
 
+// Storage for merchandise photos
+const merchandiseStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, merchandisePhotosDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now();
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
 export const upload = multer({ storage: rideStorage });
 export const uploadStore = multer({ storage: storeStorage });
+export const uploadMerchandise = multer({ storage: merchandiseStorage });
