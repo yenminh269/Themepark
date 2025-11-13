@@ -3,166 +3,110 @@ import db from '../config/db.js';
 
 const router = express.Router();
 
-// GET /info - Get manager information
-router.get('/info', (req, res) => {
-  const { email } = req.query;
+// ==================== DASHBOARD ====================
 
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
-  }
-
+// Get all employees
+router.get('/employees/all', (req, res) => {
   const sql = `
-    SELECT employee_id, first_name, last_name, email, job_title, phone
-    FROM employee
-    WHERE email = ?
-      AND job_title = 'Store Manager'
-      AND deleted_at IS NULL
+    SELECT 
+      e.*,
+      COUNT(DISTINCT CONCAT(esj.store_id, '-', esj.work_date)) as total_shifts,
+      SUM(TIMESTAMPDIFF(HOUR, esj.shift_start, esj.shift_end)) as total_hours
+    FROM employee e
+    LEFT JOIN employee_store_job esj ON e.employee_id = esj.employee_id 
+      AND esj.work_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    WHERE e.job_title = 'Sales Employee'
+      AND e.deleted_at IS NULL
+      AND e.terminate_date IS NULL
+    GROUP BY e.employee_id
+    ORDER BY e.last_name, e.first_name
   `;
-
-  db.query(sql, [email], (err, results) => {
+  
+  db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching manager info:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ error: 'Manager not found' });
-    }
-
-    res.json(results[0]);
-  });
-});
-
-// GET /dashboard-stats/:department - Get dashboard stats
-router.get('/dashboard-stats/:department', (req, res) => {
-  const { department } = req.params;
-
-  //determine store type based on department
-  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
-
-  //get multiple stats in parallel
-  const queries = {
-    //Total revenue from orders
-    revenue: `
-      SELECT COALESCE(SUM(so.total_amount), 0) as total_revenue
-      FROM store_order so
-      JOIN store s ON so.store_id = s.store_id
-      WHERE s.type = '${storeType}'
-        AND MONTH(so.order_date) = MONTH(CURRENT_DATE())
-        AND YEAR(so.order_date) = YEAR(CURRENT_DATE())
-    `,
-
-    // total orders this month
-    orders: `
-      SELECT COUNT(*) as total_orders
-      FROM store_order so
-      JOIN store s ON so.store_id = s.store_id
-      WHERE s.type = '${storeType}'
-        AND MONTH(so.order_date) = MONTH(CURRENT_DATE())
-        AND YEAR(so.order_date) = YEAR(CURRENT_DATE())
-    `,
-
-    employees: `
-      SELECT COUNT(DISTINCT e.employee_id) as active_employees
-      FROM employee e
-      WHERE e.job_title = '${department === 'giftshop' ? 'Sales Employee' : 'Concession Employee'}'
-        AND e.deleted_at IS NULL
-        AND e.terminate_date IS NULL
-    `,
-
-    // Low stock items count
-    lowStock: `
-      SELECT COUNT(*) as low_stock_count
-      FROM store_inventory si
-      JOIN store s ON si.store_id = s.store_id
-      WHERE s.type = '${storeType}'
-        AND si.stock_quantity < 15
-    `,
-
-    // Active stores
-    activeStores: `
-      SELECT COUNT(*) as active_stores
-      FROM store
-      WHERE type = '${storeType}'
-        AND status = 'open'
-        AND deleted_at IS NULL
-    `
-  };
-
-  const stats = {};
-  let completed = 0;
-  const total = Object.keys(queries).length;
-
-  Object.entries(queries).forEach(([key, sql]) => {
-    db.query(sql, (err, results) => {
-      if (err) {
-        console.error(`Error fetching ${key}:`, err);
-        stats[key] = 0;
-      } else {
-        stats[key] = results[0] ? Object.values(results[0])[0] : 0;
-      }
-
-      completed++;
-      if (completed === total) {
-        res.json(stats);
-      }
-    });
-  });
-});
-
-// GET /revenue-trend/:department - Get revenue trend for the past 6 months
-router.get('/revenue-trend/:department', (req, res) => {
-  const { department } = req.params;
-  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
-
-  const sql = `
-    SELECT
-      DATE_FORMAT(so.order_date, '%Y-%m') as month,
-      SUM(so.total_amount) as revenue,
-      COUNT(*) as order_count
-    FROM store_order so
-    JOIN store s ON so.store_id = s.store_id
-    WHERE s.type = ?
-      AND so.order_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
-    GROUP BY DATE_FORMAT(so.order_date, '%Y-%m')
-    ORDER BY month ASC
-  `;
-
-  db.query(sql, [storeType], (err, results) => {
-    if (err) {
-      console.error('Error fetching revenue trend:', err);
+      console.error('Error fetching employees:', err);
       return res.status(500).json({ error: 'Database error' });
     }
     res.json(results);
   });
 });
 
-// GET /top-items/:department - Get top selling items
+// Get all stores
+router.get('/stores/all', (req, res) => {
+  const sql = `
+    SELECT * FROM store 
+    WHERE deleted_at IS NULL
+    ORDER BY name
+  `;
+  
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching stores:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// Dashboard stats by department
+router.get('/dashboard-stats/:department', (req, res) => {
+  const { department } = req.params;
+  
+  // Map department to actual store type
+  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+  
+  const sql = `
+    SELECT 
+      (SELECT COUNT(*) FROM store WHERE type = ? AND deleted_at IS NULL AND status = 'open') as active_stores,
+      (SELECT COUNT(DISTINCT e.employee_id)
+       FROM employee e
+       JOIN employee_store_job esj ON e.employee_id = esj.employee_id
+       JOIN store s ON esj.store_id = s.store_id
+       WHERE s.type = ? AND e.job_title = 'Sales Employee'
+       AND e.deleted_at IS NULL AND e.terminate_date IS NULL) as active_employees,
+      (SELECT COUNT(*)
+       FROM store_inventory si
+       JOIN store s ON si.store_id = s.store_id
+       WHERE s.type = ? AND si.stock_quantity < 20) as low_stock_count
+  `;
+  
+  db.query(sql, [storeType, storeType, storeType], (err, results) => {
+    if (err) {
+      console.error('Error fetching dashboard stats:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results[0]);
+  });
+});
+
+// Top items by department
 router.get('/top-items/:department', (req, res) => {
   const { department } = req.params;
-  const limit = req.query.limit || 5;
+  const { limit = 5 } = req.query;
+  
+  // Map department to actual store type
   const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
-
+  
   const sql = `
-    SELECT
+    SELECT 
       m.item_id,
       m.name,
+      m.type,
       m.price,
       m.image_url,
       SUM(sod.quantity) as total_sold,
       SUM(sod.quantity * sod.price_per_item) as total_revenue
-    FROM store_order_detail sod
-    JOIN merchandise m ON sod.item_id = m.item_id
+    FROM merchandise m
+    JOIN store_order_detail sod ON m.item_id = sod.item_id
     JOIN store_order so ON sod.store_order_id = so.store_order_id
     JOIN store s ON so.store_id = s.store_id
     WHERE s.type = ?
-      AND MONTH(so.order_date) = MONTH(CURRENT_DATE())
-      AND YEAR(so.order_date) = YEAR(CURRENT_DATE())
-    GROUP BY m.item_id, m.name, m.price, m.image_url
-    ORDER BY total_sold DESC
+      AND so.order_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    GROUP BY m.item_id, m.name, m.type, m.price, m.image_url
+    ORDER BY total_revenue DESC
     LIMIT ?
   `;
-
+  
   db.query(sql, [storeType, parseInt(limit)], (err, results) => {
     if (err) {
       console.error('Error fetching top items:', err);
@@ -172,82 +116,47 @@ router.get('/top-items/:department', (req, res) => {
   });
 });
 
-// GET /employees/:department - Get employees by department
-router.get('/employees/:department', (req, res) => {
-  const { department } = req.params;
-  const jobTitle = 'Sales Employee';
-
+// Sales by store
+router.get('/sales-by-store', (req, res) => {
   const sql = `
-    SELECT
-      e.employee_id,
-      e.first_name,
-      e.last_name,
-      e.email,
-      e.phone,
-      e.job_title,
-      e.hire_date,
-      COUNT(DISTINCT esj.work_date) as total_shifts
-    FROM employee e
-    LEFT JOIN employee_store_job esj ON e.employee_id = esj.employee_id
-      AND MONTH(esj.work_date) = MONTH(CURRENT_DATE())
-      AND YEAR(esj.work_date) = YEAR(CURRENT_DATE())
-    WHERE e.job_title = ?
-      AND e.deleted_at IS NULL
-      AND e.terminate_date IS NULL
-    GROUP BY e.employee_id, e.first_name, e.last_name, e.email,
-             e.phone, e.job_title, e.hire_date
-    ORDER BY e.first_name, e.last_name
+    SELECT 
+      s.store_id,
+      s.name as store_name,
+      s.type as store_type,
+      COUNT(DISTINCT so.store_order_id) as total_orders,
+      COALESCE(SUM(so.total_amount), 0) as total_revenue
+    FROM store s
+    LEFT JOIN store_order so ON s.store_id = so.store_id
+      AND so.order_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    WHERE s.deleted_at IS NULL
+    GROUP BY s.store_id, s.name, s.type
+    ORDER BY total_revenue DESC
   `;
-
-  db.query(sql, [jobTitle], (err, results) => {
+  
+  db.query(sql, (err, results) => {
     if (err) {
-      console.error('Error fetching employees:', err);
+      console.error('Error fetching store sales:', err);
       return res.status(500).json({ error: 'Database error' });
     }
     res.json(results);
   });
 });
 
-// GET /stores/:department - Get stores by department
-router.get('/stores/:department', (req, res) => {
-  const { department } = req.params;
-  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+// ==================== EMPLOYEES ====================
 
-  const sql = `
-    SELECT
-      store_id,
-      name,
-      type,
-      status,
-      description,
-      open_time,
-      close_time,
-      photo_path
-    FROM store
-    WHERE type = ?
-      AND deleted_at IS NULL
-    ORDER BY name
-  `;
-
-  db.query(sql, [storeType], (err, results) => {
-    if (err) {
-      console.error('Error fetching stores:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    res.json(results);
-  });
-});
-
-// POST /assign-employee - Assign employee to store
+// Assign employee to store
 router.post('/assign-employee', (req, res) => {
   const { employee_id, store_id, work_date, shift_start, shift_end } = req.body;
-
+  
   if (!employee_id || !store_id || !work_date || !shift_start || !shift_end) {
-    return res.status(400).json({ error: 'Missing required fields' });
+    return res.status(400).json({ 
+      error: 'All fields are required',
+      received: { employee_id, store_id, work_date, shift_start, shift_end }
+    });
   }
 
   const sql = `
-    INSERT INTO employee_store_job
+    INSERT INTO employee_store_job 
       (employee_id, store_id, work_date, shift_start, shift_end)
     VALUES (?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
@@ -255,74 +164,75 @@ router.post('/assign-employee', (req, res) => {
       shift_end = VALUES(shift_end)
   `;
 
-  db.query(sql, [employee_id, store_id, work_date, shift_start, shift_end],
+  db.query(sql, [employee_id, store_id, work_date, shift_start, shift_end], 
     (err, result) => {
       if (err) {
-        console.error('Error assigning employee:', err);
-        return res.status(500).json({ error: 'Database error' });
+        console.error('Database error:', err);
+        return res.status(500).json({ error: 'Database error: ' + err.message });
       }
-      res.json({ message: 'Employee assigned successfully' });
+      
+      res.json({ 
+        message: 'Employee assigned successfully',
+        affectedRows: result.affectedRows 
+      });
     }
   );
 });
 
-// DELETE /remove-assignment/:employeeId/:storeId/:workDate - Remove employee assignment
-router.delete('/remove-assignment/:employeeId/:storeId/:workDate', (req, res) => {
-  const { employeeId, storeId, workDate } = req.params;
+// Request employee removal
+router.post('/request-employee-removal', (req, res) => {
+  const { employee_id, reason } = req.body;
+  
+  if (!employee_id || !reason) {
+    return res.status(400).json({ error: 'Employee ID and reason are required' });
+  }
+  
+  res.json({ message: 'Removal request submitted successfully' });
+});
 
+// Update employee
+router.put('/employees/:employee_id', (req, res) => {
+  const { employee_id } = req.params;
+  const { first_name, last_name, email, phone } = req.body;
+  
   const sql = `
-    DELETE FROM employee_store_job
-    WHERE employee_id = ? AND store_id = ? AND work_date = ?
+    UPDATE employee 
+    SET first_name = ?, last_name = ?, email = ?, phone = ?
+    WHERE employee_id = ?
   `;
-
-  db.query(sql, [employeeId, storeId, workDate], (err, result) => {
+  
+  db.query(sql, [first_name, last_name, email, phone, employee_id], (err, result) => {
     if (err) {
-      console.error('Error removing assignment:', err);
+      console.error('Error updating employee:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Assignment not found' });
-    }
-
-    res.json({ message: 'Assignment removed successfully' });
+    res.json({ message: 'Employee updated successfully' });
   });
 });
 
-// GET /inventory/:department - Get inventory for manager's department
-router.get('/inventory/:department', (req, res) => {
-  const { department } = req.params;
-  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+// ==================== INVENTORY ====================
 
+// Get all inventory
+router.get('/inventory/all', (req, res) => {
   const sql = `
-    SELECT
-      m.item_id,
-      m.name,
-      m.type,
-      m.price,
-      m.description,
-      m.image_url,
+    SELECT 
+      m.*,
+      si.stock_quantity,
       s.store_id,
       s.name as store_name,
-      COALESCE(si.stock_quantity, 0) as stock_quantity,
-      CASE
-        WHEN COALESCE(si.stock_quantity, 0) < 10 THEN 'critical'
-        WHEN COALESCE(si.stock_quantity, 0) < 20 THEN 'low'
+      CASE 
+        WHEN si.stock_quantity = 0 THEN 'critical'
+        WHEN si.stock_quantity < 10 THEN 'low'
         ELSE 'normal'
       END as stock_status
     FROM merchandise m
-    CROSS JOIN store s
-    LEFT JOIN store_inventory si ON m.item_id = si.item_id AND s.store_id = si.store_id
-    WHERE s.type = ?
-      AND s.deleted_at IS NULL
-      AND (
-        (s.type = 'merchandise' AND m.type IN ('drinkware', 'apparel', 'toys', 'accessories'))
-        OR (s.type = 'food/drink' AND m.type IN ('snacks', 'beverages'))
-      )
-    ORDER BY s.name, stock_status, m.name
+    JOIN store_inventory si ON m.item_id = si.item_id
+    JOIN store s ON si.store_id = s.store_id
+    WHERE s.deleted_at IS NULL
+    ORDER BY s.name, m.name
   `;
-
-  db.query(sql, [storeType], (err, results) => {
+  
+  db.query(sql, (err, results) => {
     if (err) {
       console.error('Error fetching inventory:', err);
       return res.status(500).json({ error: 'Database error' });
@@ -331,76 +241,90 @@ router.get('/inventory/:department', (req, res) => {
   });
 });
 
-// PUT /inventory/:storeId/:itemId - Update inventory stock
-router.put('/inventory/:storeId/:itemId', (req, res) => {
-  const { storeId, itemId } = req.params;
+// Update inventory stock
+router.put('/inventory/:store_id/:item_id', (req, res) => {
+  const { store_id, item_id } = req.params;
   const { stock_quantity } = req.body;
-
-  if (stock_quantity === undefined || stock_quantity < 0) {
-    return res.status(400).json({ error: 'Invalid stock quantity' });
-  }
-
-  // First check if record exists
-  const checkSql = `
-    SELECT * FROM store_inventory
-    WHERE store_id = ? AND item_id = ?
+  
+  const sql = `
+    INSERT INTO store_inventory (store_id, item_id, stock_quantity)
+    VALUES (?, ?, ?)
+    ON DUPLICATE KEY UPDATE stock_quantity = ?
   `;
-
-  db.query(checkSql, [storeId, itemId], (err, results) => {
+  
+  db.query(sql, [store_id, item_id, stock_quantity, stock_quantity], (err, result) => {
     if (err) {
-      console.error('Error checking inventory:', err);
+      console.error('Error updating inventory:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-
-    const sql = results.length > 0
-      ? `UPDATE store_inventory SET stock_quantity = ? WHERE store_id = ? AND item_id = ?`
-      : `INSERT INTO store_inventory (stock_quantity, store_id, item_id) VALUES (?, ?, ?)`;
-
-    db.query(sql, [stock_quantity, storeId, itemId], (err, result) => {
-      if (err) {
-        console.error('Error updating inventory:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      res.json({ message: 'Inventory updated successfully', stock_quantity });
-    });
+    res.json({ message: 'Inventory updated successfully' });
   });
 });
 
-// POST /merchandise - Add new merchandise item
+// Delete inventory item from store
+router.delete('/inventory/:store_id/:item_id', (req, res) => {
+  const { store_id, item_id } = req.params;
+  
+  const sql = `DELETE FROM store_inventory WHERE store_id = ? AND item_id = ?`;
+  
+  db.query(sql, [store_id, item_id], (err, result) => {
+    if (err) {
+      console.error('Error deleting inventory:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Inventory item removed' });
+  });
+});
+
+// Create merchandise
 router.post('/merchandise', (req, res) => {
   const { name, price, quantity, description, type, image_url } = req.body;
-
-  if (!name || !price || quantity === undefined || !description || !type) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-
+  
   const sql = `
     INSERT INTO merchandise (name, price, quantity, description, type, image_url)
     VALUES (?, ?, ?, ?, ?, ?)
   `;
-
+  
   db.query(sql, [name, price, quantity, description, type, image_url], (err, result) => {
     if (err) {
-      console.error('Error adding merchandise:', err);
+      console.error('Error creating merchandise:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json({
-      message: 'Merchandise added successfully',
-      item_id: result.insertId
+    res.json({ 
+      message: 'Merchandise created successfully',
+      item_id: result.insertId 
     });
   });
 });
 
-// GET /schedules/:department - Get schedules for department
-router.get('/schedules/:department', (req, res) => {
-  const { department } = req.params;
-  const { start_date, end_date } = req.query;
-
-  const jobTitle = 'Sales Employee'; // Only Sales Employee
-  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
-
+// Update merchandise
+router.put('/merchandise/:item_id', (req, res) => {
+  const { item_id } = req.params;
+  const { name, price, description, type, image_url } = req.body;
+  
   const sql = `
-    SELECT
+    UPDATE merchandise 
+    SET name = ?, price = ?, description = ?, type = ?, image_url = ?
+    WHERE item_id = ?
+  `;
+  
+  db.query(sql, [name, price, description, type, image_url, item_id], (err, result) => {
+    if (err) {
+      console.error('Error updating merchandise:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json({ message: 'Merchandise updated successfully' });
+  });
+});
+
+// ==================== SCHEDULES ====================
+
+// Get schedules - FIXED: no schedule_id
+router.get('/schedules/all', (req, res) => {
+  const { start_date, end_date } = req.query;
+  
+  let sql = `
+    SELECT 
       esj.employee_id,
       esj.store_id,
       esj.work_date,
@@ -408,22 +332,22 @@ router.get('/schedules/:department', (req, res) => {
       esj.shift_end,
       e.first_name,
       e.last_name,
-      e.email,
       s.name as store_name
     FROM employee_store_job esj
     JOIN employee e ON esj.employee_id = e.employee_id
     JOIN store s ON esj.store_id = s.store_id
-    WHERE e.job_title = ?
-      AND s.type = ?
-      ${start_date ? 'AND esj.work_date >= ?' : ''}
-      ${end_date ? 'AND esj.work_date <= ?' : ''}
-    ORDER BY esj.work_date DESC, esj.shift_start
+    WHERE 1=1
   `;
-
-  const params = [jobTitle, storeType];
-  if (start_date) params.push(start_date);
-  if (end_date) params.push(end_date);
-
+  
+  const params = [];
+  
+  if (start_date && end_date) {
+    sql += ` AND esj.work_date BETWEEN ? AND ?`;
+    params.push(start_date, end_date);
+  }
+  
+  sql += ` ORDER BY esj.work_date, esj.shift_start`;
+  
   db.query(sql, params, (err, results) => {
     if (err) {
       console.error('Error fetching schedules:', err);
@@ -433,302 +357,294 @@ router.get('/schedules/:department', (req, res) => {
   });
 });
 
-// GET /weekly-schedule/:department - Get weekly schedule summary
-router.get('/weekly-schedule/:department', (req, res) => {
-  const { department } = req.params;
-  const jobTitle = department === 'giftshop' ? 'Sales Employee' : 'Concession Employee';
-  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
-
-  const sql = `
-    SELECT
-      esj.work_date,
-      COUNT(DISTINCT esj.employee_id) as employees_scheduled,
-      COUNT(DISTINCT esj.store_id) as stores_covered
-    FROM employee_store_job esj
-    JOIN employee e ON esj.employee_id = e.employee_id
-    JOIN store s ON esj.store_id = s.store_id
-    WHERE e.job_title = ?
-      AND s.type = ?
-      AND esj.work_date >= CURDATE()
-      AND esj.work_date < DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-    GROUP BY esj.work_date
-    ORDER BY esj.work_date
-  `;
-
-  db.query(sql, [jobTitle, storeType], (err, results) => {
+// Delete schedule - FIXED: use composite key
+router.delete('/schedule/:employee_id/:store_id/:work_date', (req, res) => {
+  const { employee_id, store_id, work_date } = req.params;
+  
+  const sql = `DELETE FROM employee_store_job WHERE employee_id = ? AND store_id = ? AND work_date = ?`;
+  
+  db.query(sql, [employee_id, store_id, work_date], (err, result) => {
     if (err) {
-      console.error('Error fetching weekly schedule:', err);
+      console.error('Error deleting schedule:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(results);
+    res.json({ message: 'Schedule deleted successfully' });
   });
 });
 
-// GET /sales-report/:department - Get sales report
-router.get('/sales-report/:department', (req, res) => {
-  const { department } = req.params;
-  const { start_date, end_date } = req.query;
-  const storeType = department === 'giftshop' ? 'merchandise' : 'food/drink';
+// ==================== REPORTS ====================
 
-  const sql = `
-    SELECT
-      s.store_id,
+// Sales Revenue Report
+router.get('/reports/sales-revenue', (req, res) => {
+  const { start_date, end_date, store_id, group_by } = req.query;
+  
+  let sql = `
+    SELECT 
+      DATE_FORMAT(so.order_date, ?) as period,
       s.name as store_name,
+      s.type as store_type,
       COUNT(DISTINCT so.store_order_id) as total_orders,
-      SUM(so.total_amount) as total_revenue,
-      AVG(so.total_amount) as avg_order_value,
-      COUNT(DISTINCT so.customer_id) as unique_customers
+      SUM(sod.quantity) as total_items_sold,
+      SUM(sod.subtotal) as total_revenue,
+      AVG(so.total_amount) as avg_order_value
     FROM store_order so
     JOIN store s ON so.store_id = s.store_id
-    WHERE s.type = ?
-      ${start_date ? 'AND so.order_date >= ?' : ''}
-      ${end_date ? 'AND so.order_date <= ?' : ''}
-    GROUP BY s.store_id, s.name
-    ORDER BY total_revenue DESC
+    JOIN store_order_detail sod ON so.store_order_id = sod.store_order_id
+    WHERE so.order_date BETWEEN ? AND ?
   `;
-
-  const params = [storeType];
-  if (start_date) params.push(start_date);
-  if (end_date) params.push(end_date);
-
+  
+  const params = [];
+  
+  const dateFormat = group_by === 'day' ? '%Y-%m-%d' : 
+                     group_by === 'week' ? '%Y-W%u' :
+                     group_by === 'month' ? '%Y-%m' : '%Y-%m-%d';
+  params.push(dateFormat);
+  params.push(start_date, end_date);
+  
+  if (store_id && store_id !== 'all') {
+    sql += ' AND so.store_id = ?';
+    params.push(store_id);
+  }
+  
+  sql += ` GROUP BY period, s.store_id, s.name, s.type
+           ORDER BY period DESC, total_revenue DESC`;
+  
   db.query(sql, params, (err, results) => {
     if (err) {
-      console.error('Error fetching sales report:', err);
+      console.error('Error generating sales report:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(results);
+    
+    const totals = {
+      total_orders: results.reduce((sum, row) => sum + row.total_orders, 0),
+      total_items_sold: results.reduce((sum, row) => sum + row.total_items_sold, 0),
+      total_revenue: results.reduce((sum, row) => sum + parseFloat(row.total_revenue), 0),
+      avg_order_value: results.length > 0 ? 
+        results.reduce((sum, row) => sum + parseFloat(row.avg_order_value), 0) / results.length : 0
+    };
+    
+    res.json({ data: results, totals });
   });
 });
 
-// GET /employee-performance/:department - Get employee performance
-router.get('/employee-performance/:department', (req, res) => {
-  const { department } = req.params;
-  const jobTitle = department === 'giftshop' ? 'Sales Employee' : 'Concession Employee';
-
+// Employee Performance Report
+router.get('/reports/employee-performance', (req, res) => {
+  const { start_date, end_date } = req.query;
+  
   const sql = `
-    SELECT
+    SELECT 
       e.employee_id,
       e.first_name,
       e.last_name,
+      e.email,
       COUNT(DISTINCT esj.work_date) as days_worked,
-      COUNT(DISTINCT esj.store_id) as stores_worked
+      COUNT(DISTINCT CONCAT(esj.store_id, '-', esj.work_date)) as total_shifts,
+      SUM(TIMESTAMPDIFF(HOUR, esj.shift_start, esj.shift_end)) as total_hours,
+      AVG(TIMESTAMPDIFF(HOUR, esj.shift_start, esj.shift_end)) as avg_shift_hours,
+      GROUP_CONCAT(DISTINCT s.name SEPARATOR ', ') as stores_worked
     FROM employee e
     LEFT JOIN employee_store_job esj ON e.employee_id = esj.employee_id
-      AND MONTH(esj.work_date) = MONTH(CURRENT_DATE())
-      AND YEAR(esj.work_date) = YEAR(CURRENT_DATE())
-    WHERE e.job_title = ?
+    LEFT JOIN store s ON esj.store_id = s.store_id
+    WHERE e.job_title = 'Sales Employee'
       AND e.deleted_at IS NULL
       AND e.terminate_date IS NULL
-    GROUP BY e.employee_id, e.first_name, e.last_name
+      AND esj.work_date BETWEEN ? AND ?
+    GROUP BY e.employee_id, e.first_name, e.last_name, e.email
     ORDER BY total_hours DESC
   `;
-
-  db.query(sql, [jobTitle], (err, results) => {
+  
+  db.query(sql, [start_date, end_date], (err, results) => {
     if (err) {
-      console.error('Error fetching employee performance:', err);
+      console.error('Error generating employee report:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    const summary = {
+      total_employees: results.length,
+      total_shifts: results.reduce((sum, row) => sum + row.total_shifts, 0),
+      total_hours: results.reduce((sum, row) => sum + (row.total_hours || 0), 0),
+      avg_hours_per_employee: results.length > 0 ? 
+        results.reduce((sum, row) => sum + (row.total_hours || 0), 0) / results.length : 0
+    };
+    
+    res.json({ data: results, summary });
+  });
+});
+
+// Inventory Status Report
+router.get('/reports/inventory-status', (req, res) => {
+  const { store_id, status } = req.query;
+  
+  let sql = `
+    SELECT 
+      m.item_id,
+      m.name as item_name,
+      m.type as item_type,
+      m.price,
+      s.store_id,
+      s.name as store_name,
+      s.type as store_type,
+      si.stock_quantity,
+      CASE 
+        WHEN si.stock_quantity = 0 THEN 'out_of_stock'
+        WHEN si.stock_quantity < 5 THEN 'critical'
+        WHEN si.stock_quantity < 20 THEN 'low'
+        ELSE 'normal'
+      END as stock_status,
+      COALESCE(sales.total_sold, 0) as total_sold_30days,
+      COALESCE(sales.revenue, 0) as revenue_30days,
+      CASE 
+        WHEN COALESCE(sales.total_sold, 0) > 0 
+        THEN ROUND(si.stock_quantity / (COALESCE(sales.total_sold, 0) / 30), 1)
+        ELSE NULL
+      END as days_of_stock
+    FROM merchandise m
+    JOIN store_inventory si ON m.item_id = si.item_id
+    JOIN store s ON si.store_id = s.store_id
+    LEFT JOIN (
+      SELECT 
+        sod.item_id,
+        so.store_id,
+        SUM(sod.quantity) as total_sold,
+        SUM(sod.subtotal) as revenue
+      FROM store_order_detail sod
+      JOIN store_order so ON sod.store_order_id = so.store_order_id
+      WHERE so.order_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+      GROUP BY sod.item_id, so.store_id
+    ) sales ON m.item_id = sales.item_id AND s.store_id = sales.store_id
+    WHERE 1=1
+  `;
+  
+  const params = [];
+  
+  if (store_id && store_id !== 'all') {
+    sql += ' AND s.store_id = ?';
+    params.push(store_id);
+  }
+  
+  if (status && status !== 'all') {
+    sql += ` AND CASE 
+      WHEN si.stock_quantity = 0 THEN 'out_of_stock'
+      WHEN si.stock_quantity < 5 THEN 'critical'
+      WHEN si.stock_quantity < 20 THEN 'low'
+      ELSE 'normal'
+    END = ?`;
+    params.push(status);
+  }
+  
+  sql += ' ORDER BY stock_status DESC, si.stock_quantity ASC';
+  
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error generating inventory report:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    const summary = {
+      total_items: results.length,
+      out_of_stock: results.filter(r => r.stock_status === 'out_of_stock').length,
+      critical_stock: results.filter(r => r.stock_status === 'critical').length,
+      low_stock: results.filter(r => r.stock_status === 'low').length,
+      normal_stock: results.filter(r => r.stock_status === 'normal').length,
+      total_inventory_value: results.reduce((sum, r) => sum + (r.stock_quantity * r.price), 0),
+      total_revenue_30days: results.reduce((sum, r) => sum + parseFloat(r.revenue_30days), 0)
+    };
+    
+    res.json({ data: results, summary });
+  });
+});
+
+// Get all store orders
+router.get('/orders/all', (req, res) => {
+  const { start_date, end_date, store_id, customer_id, status, payment_method } = req.query;
+  
+  let sql = `
+    SELECT 
+      so.store_order_id,
+      so.order_date,
+      so.total_amount,
+      so.status,
+      so.payment_method,
+      s.store_id,
+      s.name as store_name,
+      s.type as store_type,
+      c.customer_id,
+      c.first_name,
+      c.last_name,
+      c.email,
+      COUNT(sod.item_id) as total_items,
+      SUM(sod.quantity) as total_quantity
+    FROM store_order so
+    JOIN store s ON so.store_id = s.store_id
+    JOIN customer c ON so.customer_id = c.customer_id
+    LEFT JOIN store_order_detail sod ON so.store_order_id = sod.store_order_id
+    WHERE 1=1
+  `;
+  
+  const params = [];
+  
+  if (start_date && end_date) {
+    sql += ' AND so.order_date BETWEEN ? AND ?';
+    params.push(start_date, end_date);
+  }
+  
+  if (store_id && store_id !== 'all') {
+    sql += ' AND so.store_id = ?';
+    params.push(store_id);
+  }
+  
+  if (customer_id) {
+    sql += ' AND so.customer_id = ?';
+    params.push(customer_id);
+  }
+  
+  if (status && status !== 'all') {
+    sql += ' AND so.status = ?';
+    params.push(status);
+  }
+  
+  if (payment_method && payment_method !== 'all') {
+    sql += ' AND so.payment_method = ?';
+    params.push(payment_method);
+  }
+  
+  sql += ` GROUP BY so.store_order_id, so.order_date, so.total_amount, so.status, 
+           so.payment_method, s.store_id, s.name, s.type, c.customer_id, 
+           c.first_name, c.last_name, c.email
+           ORDER BY so.order_date DESC, so.store_order_id DESC`;
+  
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching orders:', err);
       return res.status(500).json({ error: 'Database error' });
     }
     res.json(results);
   });
 });
 
-// GET /dashboard/:department - Get manager dashboard data by department
-router.get('/dashboard/:department', (req, res) => {
-  const department = req.params.department;
-
-  try {
-    // Get store IDs for this department (assuming department maps to store types)
-    const storeType = department === 'giftshop' ? 'merchandise' :
-                     department === 'foodanddrinks' ? 'food/drink' : null;
-
-    if (!storeType) {
-      return res.status(400).json({ error: 'Invalid department' });
+// Get order details by order ID
+router.get('/orders/:order_id/details', (req, res) => {
+  const { order_id } = req.params;
+  
+  const sql = `
+    SELECT 
+      sod.*,
+      m.name as item_name,
+      m.type as item_type,
+      m.image_url
+    FROM store_order_detail sod
+    JOIN merchandise m ON sod.item_id = m.item_id
+    WHERE sod.store_order_id = ?
+    ORDER BY sod.item_id
+  `;
+  
+  db.query(sql, [order_id], (err, results) => {
+    if (err) {
+      console.error('Error fetching order details:', err);
+      return res.status(500).json({ error: 'Database error' });
     }
-
-    // Get stores for this manager
-    const storesSql = 'SELECT store_id, name FROM store WHERE type = ? AND deleted_at IS NULL';
-    db.query(storesSql, [storeType], (storesErr, stores) => {
-      if (storesErr) {
-        console.error('Error fetching stores:', storesErr);
-        return res.status(500).json({ error: 'Failed to fetch dashboard data' });
-      }
-
-      if (stores.length === 0) {
-        return res.json({
-          staff: [],
-          inventory: [],
-          sales: { today: 0, week: 0, month: 0 },
-          transactions: [],
-          lowStock: [],
-          topItems: []
-        });
-      }
-
-      const storeIds = stores.map(s => s.store_id);
-
-      // Get staff for these stores
-      const staffSql = `
-        SELECT DISTINCT e.employee_id, e.first_name, e.last_name, e.job_title,
-               GROUP_CONCAT(DISTINCT s.name) as store_names,
-               COUNT(DISTINCT s.store_id) as stores_assigned
-        FROM employee e
-        LEFT JOIN employee_schedule es ON e.employee_id = es.employee_id
-        LEFT JOIN store s ON es.store_id = s.store_id
-        WHERE e.deleted_at IS NULL AND e.job_title IN ('Sales Associate', 'Cashier', 'Stock Clerk', 'Supervisor')
-        AND s.store_id IN (${storeIds.map(() => '?').join(',')})
-        GROUP BY e.employee_id, e.first_name, e.last_name, e.job_title
-      `;
-
-      // Get inventory for these stores
-      const inventorySql = `
-        SELECT m.item_id, m.name as item_name, m.price, m.type as item_type,
-               si.stock_quantity, s.name as store_name
-        FROM merchandise m
-        JOIN store_inventory si ON m.item_id = si.item_id
-        JOIN store s ON si.store_id = s.store_id
-        WHERE si.store_id IN (${storeIds.map(() => '?').join(',')})
-        ORDER BY m.name
-      `;
-
-      // Get sales data for today/week/month
-      const today = new Date().toISOString().split('T')[0];
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      const salesSql = `
-        SELECT
-          SUM(CASE WHEN so.order_date = ? THEN so.total_amount ELSE 0 END) as today_sales,
-          SUM(CASE WHEN so.order_date >= ? THEN so.total_amount ELSE 0 END) as week_sales,
-          SUM(CASE WHEN so.order_date >= ? THEN so.total_amount ELSE 0 END) as month_sales
-        FROM store_order so
-        WHERE so.store_id IN (${storeIds.map(() => '?').join(',')})
-      `;
-
-      // Get recent transactions
-      const transactionsSql = `
-        SELECT so.store_order_id, so.order_date, so.total_amount,
-               s.name as store_name, COUNT(sod.item_id) as item_count
-        FROM store_order so
-        JOIN store s ON so.store_id = s.store_id
-        LEFT JOIN store_order_detail sod ON so.store_order_id = sod.store_order_id
-        WHERE so.store_id IN (${storeIds.map(() => '?').join(',')})
-        GROUP BY so.store_order_id, so.order_date, so.total_amount, s.name
-        ORDER BY so.order_date DESC
-        LIMIT 10
-      `;
-
-      // Get low stock items (less than 10)
-      const lowStockSql = `
-        SELECT m.name, s.name as store_name, si.stock_quantity
-        FROM merchandise m
-        JOIN store_inventory si ON m.item_id = si.item_id
-        JOIN store s ON si.store_id = s.store_id
-        WHERE si.store_id IN (${storeIds.map(() => '?').join(',')})
-        AND si.stock_quantity < 10
-        ORDER BY si.stock_quantity ASC
-      `;
-
-      // Get top selling items
-      const topItemsSql = `
-        SELECT m.name, SUM(sod.quantity) as total_sold,
-               SUM(sod.subtotal) as revenue
-        FROM merchandise m
-        JOIN store_order_detail sod ON m.item_id = sod.item_id
-        JOIN store_order so ON sod.store_order_id = so.store_order_id
-        WHERE so.store_id IN (${storeIds.map(() => '?').join(',')})
-        GROUP BY m.item_id, m.name
-        ORDER BY total_sold DESC
-        LIMIT 5
-      `;
-
-      // Execute all queries
-      Promise.all([
-        new Promise((resolve, reject) => {
-          db.query(staffSql, storeIds, (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          });
-        }),
-        new Promise((resolve, reject) => {
-          db.query(inventorySql, storeIds, (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          });
-        }),
-        new Promise((resolve, reject) => {
-          db.query(salesSql, [today, weekAgo, monthAgo, ...storeIds], (err, results) => {
-            if (err) reject(err);
-            else resolve(results[0]);
-          });
-        }),
-        new Promise((resolve, reject) => {
-          db.query(transactionsSql, storeIds, (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          });
-        }),
-        new Promise((resolve, reject) => {
-          db.query(lowStockSql, storeIds, (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          });
-        }),
-        new Promise((resolve, reject) => {
-          db.query(topItemsSql, storeIds, (err, results) => {
-            if (err) reject(err);
-            else resolve(results);
-          });
-        })
-      ]).then(([staff, inventory, sales, transactions, lowStock, topItems]) => {
-        res.json({
-          staff: staff.map(s => ({
-            employee_id: s.employee_id,
-            first_name: s.first_name,
-            last_name: s.last_name,
-            job_title: s.job_title,
-            stores_assigned: s.stores_assigned,
-            store_names: s.store_names
-          })),
-          inventory: inventory.map(i => ({
-            item_id: i.item_id,
-            item_name: i.item_name,
-            store_name: i.store_name,
-            quantity: i.stock_quantity,
-            price: parseFloat(i.price),
-            type: i.item_type
-          })),
-          sales: {
-            today: parseFloat(sales.today_sales || 0),
-            week: parseFloat(sales.week_sales || 0),
-            month: parseFloat(sales.month_sales || 0)
-          },
-          transactions: transactions.map(t => ({
-            store_order_id: t.store_order_id,
-            order_date: t.order_date,
-            store_name: t.store_name,
-            total_amount: parseFloat(t.total_amount),
-            item_count: t.item_count
-          })),
-          lowStock: lowStock.map(l => ({
-            name: l.name,
-            store_name: l.store_name,
-            quantity: l.stock_quantity
-          })),
-          topItems: topItems.map(t => ({
-            name: t.name,
-            total_sold: t.total_sold,
-            revenue: parseFloat(t.revenue)
-          }))
-        });
-      }).catch(err => {
-        console.error('Error fetching dashboard data:', err);
-        res.status(500).json({ error: 'Failed to fetch dashboard data' });
-      });
-    });
-  } catch (error) {
-    console.error('Manager dashboard error:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard data' });
-  }
+    res.json(results);
+  });
 });
 
 export default router;

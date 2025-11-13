@@ -114,123 +114,69 @@ async function sendConsolidatedEmail(email, first_name, orderDetails) {
 }
 
 // GET /api/ride-orders - Get customer's ride orders
-router.get('/ride-orders', requireCustomerAuth, async (req, res) => {
-  try {
-    const customer_id = req.customer_id;
+router.get("/ride-orders", requireCustomerAuth, (req, res) => {
+  const customerId = req.customer_id;
+  const range = req.query.range || "all"; // "today", "7d", "month", "all"
 
-    const sql = `
-      SELECT
-        ro.order_id,
-        ro.order_date,
-        ro.total_amount,
-        ro.status,
-        rod.ride_id,
-        r.name as ride_name,
-        rod.number_of_tickets,
-        rod.price_per_ticket,
-        rod.subtotal
-      FROM ride_order ro
-      LEFT JOIN ride_order_detail rod ON ro.order_id = rod.order_id
-      LEFT JOIN ride r ON rod.ride_id = r.ride_id
-      WHERE ro.customer_id = ?
-      ORDER BY ro.order_date DESC, ro.order_id DESC
-    `;
+  let whereClause = "WHERE customer_id = ?";
+  const params = [customerId];
 
-    db.query(sql, [customer_id], (err, results) => {
-      if (err) {
-        console.error('Error fetching ride orders:', err);
-        return res.status(500).json({ error: 'Failed to fetch orders' });
-      }
-
-      // Group order details by order_id
-      const ordersMap = {};
-      results.forEach((row) => {
-        if (!ordersMap[row.order_id]) {
-          ordersMap[row.order_id] = {
-            order_id: row.order_id,
-            order_date: row.order_date,
-            total_amount: row.total_amount,
-            status: row.status,
-            items: [],
-          };
-        }
-        if (row.ride_id) {
-          ordersMap[row.order_id].items.push({
-            ride_id: row.ride_id,
-            ride_name: row.ride_name,
-            number_of_tickets: row.number_of_tickets,
-            price_per_ticket: row.price_per_ticket,
-            subtotal: row.subtotal,
-          });
-        }
-      });
-
-      const orders = Object.values(ordersMap);
-      res.json({ data: orders });
-    });
-  } catch (err) {
-    console.error('Error fetching ride orders:', err);
-    res.status(500).json({ error: 'Failed to fetch orders' });
+  if (range === "today") {
+    whereClause += " AND DATE(order_date) = CURDATE()";
+  } else if (range === "7d") {
+    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+  } else if (range === "month") {
+    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
   }
+  // "all" means no extra date filter
+
+  const sql = `
+    SELECT *
+    FROM ride_orders
+    ${whereClause}
+    ORDER BY order_date DESC
+  `;
+
+  db.query(sql, params, (err, rows) => {
+    if (err) {
+      console.error("Error fetching ride orders:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    return res.json({ data: rows });
+  });
 });
 
 
 // GET /api/store-orders - Get customer's store orders
-router.get('/store-orders', requireCustomerAuth, async (req, res) => {
-  try {
-    const customer_id = req.customer_id;
+router.get("/store-orders", requireCustomerAuth, (req, res) => {
+  const customerId = req.customer_id;
+  const range = req.query.range || "all";
 
-    const sql = `
-      SELECT so.store_order_id, so.store_id, s.name as store_name, so.order_date,
-             so.total_amount, so.status, so.payment_method,
-             sod.item_id, m.name as item_name, sod.quantity, sod.price_per_item, sod.subtotal
-      FROM store_order so
-      LEFT JOIN store_order_detail sod ON so.store_order_id = sod.store_order_id
-      LEFT JOIN merchandise m ON sod.item_id = m.item_id
-      LEFT JOIN store s ON so.store_id = s.store_id
-      WHERE so.customer_id = ?
-      ORDER BY so.order_date DESC, so.store_order_id DESC
-    `;
+  let whereClause = "WHERE customer_id = ?";
+  const params = [customerId];
 
-    db.query(sql, [customer_id], (err, results) => {
-      if (err) {
-        console.error('Error fetching store orders:', err);
-        return res.status(500).json({ error: 'Failed to fetch orders' });
-      }
-
-      // Group order details by order_id
-      const ordersMap = {};
-      results.forEach((row) => {
-        if (!ordersMap[row.store_order_id]) {
-          ordersMap[row.store_order_id] = {
-            store_order_id: row.store_order_id,
-            store_id: row.store_id,
-            store_name: row.store_name,
-            order_date: row.order_date,
-            total_amount: row.total_amount,
-            status: row.status,
-            payment_method: row.payment_method,
-            items: [],
-          };
-        }
-        if (row.item_id) {
-          ordersMap[row.store_order_id].items.push({
-            item_id: row.item_id,
-            item_name: row.item_name,
-            quantity: row.quantity,
-            price_per_item: row.price_per_item,
-            subtotal: row.subtotal,
-          });
-        }
-      });
-
-      const orders = Object.values(ordersMap);
-      res.json({ data: orders });
-    });
-  } catch (err) {
-    console.error('Error fetching store orders:', err);
-    res.status(500).json({ error: 'Failed to fetch orders' });
+  if (range === "today") {
+    whereClause += " AND DATE(order_date) = CURDATE()";
+  } else if (range === "7d") {
+    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+  } else if (range === "month") {
+    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
   }
+
+  const sql = `
+    SELECT *
+    FROM store_orders
+    ${whereClause}
+    ORDER BY order_date DESC
+  `;
+
+  db.query(sql, params, (err, rows) => {
+    if (err) {
+      console.error("Error fetching store orders:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    return res.json({ data: rows });
+  });
 });
 
 // POST /api/unified-order - Create unified order (rides + store items in one transaction)
