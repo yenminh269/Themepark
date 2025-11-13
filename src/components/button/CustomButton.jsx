@@ -3,8 +3,8 @@ import './CustomButton.css'
 
 function CustomButton(props){
     return (
-        <Button 
-            className={`btn-custom mb-4 ${props.className || ''}`} 
+        <Button
+            className={`btn-custom mb-4 ${props.className || ''}`}
             type="submit"
         >
             {props.text}

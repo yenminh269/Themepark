@@ -17,11 +17,14 @@ async function fetchAPI(endpoint, data = null, fetchMethod = "GET", isFormData =
             }
         }
         const response = await fetch(`${SERVER_URL}${endpoint}`, options);
-        
+
         if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+            // Try to parse error message from response body
+            const errorData = await response.json();
+            const errorMessage = errorData.message || errorData.error || `HTTP error! Status: ${response.status}`;
+            throw new Error(errorMessage);
         }
-        
+
         const result = await response.json();
 
         // Handle both response formats
@@ -36,20 +39,6 @@ async function fetchAPI(endpoint, data = null, fetchMethod = "GET", isFormData =
     }
 }
 
-// Get beautiful placeholder images for rides
-export const getRidePlaceholderImage = (rideName = '') => {
-    const images = [
-        'https://images.unsplash.com/photo-1594739584670-1e9be48f6ec3?w=800&h=600&fit=crop&q=80', // Roller coaster
-        'https://images.unsplash.com/photo-1570993492903-ba4c3088f100?w=800&h=600&fit=crop&q=80', // Ferris wheel
-        'https://images.unsplash.com/photo-1583416750470-965b2707b355?w=800&h=600&fit=crop&q=80', // Amusement park
-        'https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=800&h=600&fit=crop&q=80', // Theme park rides
-        'https://images.unsplash.com/photo-1575550959106-5a7defe28b56?w=800&h=600&fit=crop&q=80', // Carousel
-        'https://images.unsplash.com/photo-1486299267070-83823f5448dd?w=800&h=600&fit=crop&q=80', // Park view
-    ];
-    // Use ride name to consistently pick an image
-    const index = rideName ? rideName.length % images.length : Math.floor(Math.random() * images.length);
-    return images[index];
-};
 
 // Get full img url with fallback
 export const getImageUrl = (path, rideName = '') => {
@@ -70,6 +59,39 @@ export const api = {
     scheduleRideMaint: async (formData) => {
         return await fetchAPI('/ride-maintenance', formData, "POST", false);
     },
+    getAvgRidesPerMonth: async () => {
+        return await fetchAPI('/rides/avg-month');
+    },
+    getRidesNames: async () => {
+        return await fetchAPI('/rides/names');
+    },
+
+
+    // ===== ADMIN DASHBOARD =====
+    getTotalRevenue: async () => {
+        return await fetchAPI('/admin/total-revenue');
+    },
+    getStoreSales: async () => {
+        return await fetchAPI('/admin/store-sales');
+    },
+    getRideTicketSales: async () => {
+        return await fetchAPI('/admin/ride-ticket-sales');
+    },
+    getAvgRidesBrokenMaintenance: async () => {
+        return await fetchAPI('/admin/avg-rides-broken-maintenance');
+    },
+    getRecentRideOrders: async (offset = 0, limit = 5) => {
+        return await fetchAPI(`/admin/recent-ride-orders?offset=${offset}&limit=${limit}`);
+    },
+    getRideOrderDetails: async (orderId) => {
+        return await fetchAPI(`/admin/ride-order-details/${orderId}`);
+    },
+    getTopProducts: async () => {
+        return await fetchAPI('/admin/top-products');
+    },
+    getWeeklyRevenue: async () => {
+        return await fetchAPI('/admin/weekly-revenue');
+    },
 
     // ===== EMPLOYEES =====
     getAllEmployees: async () => {
@@ -88,13 +110,18 @@ export const api = {
         return await fetchAPI(`/employees/${id}`, null, "DELETE", false);
     },
     employeeLogin: async (formData) => {
-       const result = await fetchAPI('/employee/login', formData, "POST", false);
-    return result.data || result;
+        return await fetchAPI('/employee/login', formData, "POST", false);
+    },
+    changeEmployeePassword: async (formData) => {
+        return await fetchAPI('/employees/change-password', formData, "POST", false);
     },
 
     // ===== STORES =====
     getAllStores: async () => {
         return await fetchAPI('/stores');
+    },
+    getEmployeeStores: async (employeeId) => {
+        return await fetchAPI(`/employee/${employeeId}/stores`);
     },
     addStore: async (formData) => {
         return await fetchAPI('/store/add', formData, "POST", true);
@@ -112,6 +139,9 @@ export const api = {
     },
     getEmployeeMaintenances: async () => {
         return await fetchAPI('/maintenances-employee/id');
+    },
+    updateRideMaintenanceStatus: async () => {
+        return await fetchAPI('/api/update-ride-maintenance-status', null, "POST", false);
     },
 
     // ===== MERCHANDISE =====
@@ -145,11 +175,11 @@ export const api = {
     },
 
     // ===== RIDE ORDERS =====
-    getRideOrders: async () => {
+    getRideOrders: async (range = 'all') => {
         const token = getCustomerToken();
         if (!token) throw new Error('No authentication token');
 
-        const res = await fetch(`${SERVER_URL}/api/ride-orders`, {
+        const res = await fetch(`${SERVER_URL}/api/ride-orders?range=${encodeURIComponent(range)}`, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -164,17 +194,19 @@ export const api = {
         return body.data || [];
     },
 
-    createRideOrder: async (cart, total) => {
+
+    createRideOrder: async (payload) => {
+    // payload = { cart, subtotal, tax, total, payment_method }
         const token = getCustomerToken();
         if (!token) throw new Error('No authentication token');
 
         const res = await fetch(`${SERVER_URL}/api/ride-orders`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({ cart, total }),
+            body: JSON.stringify(payload),
         });
 
         if (!res.ok) {
@@ -183,15 +215,16 @@ export const api = {
         }
 
         const body = await res.json();
-        return body.order;
+        return body.order || body; // keep compatibility with your current handler
     },
 
+
     // ===== STORE ORDERS =====
-    getStoreOrders: async () => {
+    getStoreOrders: async (range = 'all') => {
         const token = getCustomerToken();
         if (!token) throw new Error('No authentication token');
 
-        const res = await fetch(`${SERVER_URL}/api/store-orders`, {
+        const res = await fetch(`${SERVER_URL}/api/store-orders?range=${encodeURIComponent(range)}`, {
             method: 'GET',
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -228,9 +261,51 @@ export const api = {
         return body;
     },
 
+    // ===== UNIFIED ORDER (Rides + Store in single transaction with consolidated email) =====
+    createUnifiedOrder: async (orderData) => {
+        // orderData = { rideCart, storeCart, grandTotal, payment_method }
+        const token = getCustomerToken();
+        if (!token) throw new Error('No authentication token');
+
+        const res = await fetch(`${SERVER_URL}/api/unified-order`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(orderData),
+        });
+
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.error || 'Failed to create unified order');
+        }
+
+        const body = await res.json();
+        return body;
+    },
+
     // ===== MANAGER DASHBOARD =====
     getManagerDashboard: async (department) => {
         return await fetchAPI(`/api/manager/dashboard/${department}`);
+    },
+
+    // ===== REPORTS =====
+    getMostRiddenRides: async (year) => {
+        return await fetchAPI(`/api/reports/most-ridden?year=${year}`);
+    },
+    getAvgMonthlyCustomers: async (year) => {
+        return await fetchAPI(`/api/reports/avg-monthly-customers?year=${year}`);
+    },
+    getRideReport: async (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.group) queryParams.append('group', params.group);
+        if (params.type) queryParams.append('type', params.type);
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.rideName) queryParams.append('rideName', params.rideName);
+
+        return await fetchAPI(`/api/reports/ride-report?${queryParams.toString()}`);
     },
 };
 
@@ -373,6 +448,32 @@ export function logoutCustomer() {
     } catch {
         // ignore if running in environments without CustomEvent
     }
+}
+
+// CHANGE CUSTOMER PASSWORD
+export async function changeCustomerPassword(currentPassword, newPassword) {
+    const token = getCustomerToken();
+    if (!token) throw new Error('No authentication token');
+
+    const res = await fetch(`${SERVER_URL}/api/customer/change-password`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword
+        }),
+    });
+
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to change password');
+    }
+
+    const body = await res.json();
+    return body;
 }
 
 // Backwards-compatible wrapper methods for components that call `api.customerSignup` / `api.customerLogin`

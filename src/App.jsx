@@ -9,6 +9,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import SignUp from './components/layouts/public/Signup.jsx';
 import Login from './components/layouts/public/Login.jsx';
 import Logout from './components/layouts/public/Logout.jsx';
+import ChangePassword from './components/layouts/public/ChangePassword.jsx';
 import AdminMain from './components/layouts/admin/AdminMain.jsx';
 import EMaintenance from './components/layouts/employee-maintenance/EMaintenance.jsx';
 import HomePage from './components/layouts/customer/HomePage.jsx';
@@ -18,16 +19,15 @@ import ConfirmationPage from './components/layouts/customer/ConfirmationPage.jsx
 import UserInfoPage from './components/layouts/customer/UserInfoPage.jsx';
 import StoresPage from './components/layouts/customer/StoresPage.jsx';
 import StorePage from './components/layouts/customer/StorePage.jsx';
-import StoreCheckoutPage from './components/layouts/customer/StoreCheckoutPage.jsx';
 import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
-import EmployeeRouter from './components/layouts/public/EmployeeRouter.jsx';
 import EmployeeDashboard from './components/layouts/employee/EmployeeDashboard.jsx';
 import ProtectedRoute from './components/layouts/public/ProtectedRoute.jsx';
 
 // Component to conditionally render Navbar based on route
 function AppContent() {
   const location = useLocation();
-  const hideNavbar = location.pathname.startsWith('/admin') || location.pathname === '/manager';
+  const hideNavbar = location.pathname.startsWith('/admin') || location.pathname === '/manager' ||
+  location.pathname === '/sales' || location.pathname === '/maintenance' || location.pathname === '/change-password';
 
  return (
     <>
@@ -38,6 +38,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/logout" element={<Logout />} />
+        <Route path="/change-password" element={<ChangePassword />} />
 
         {/* ===== CUSTOMER ROUTES (Require Customer Authentication) ===== */}
         {/* Store browsing (public) */}
@@ -49,11 +50,11 @@ function AppContent() {
         <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
         <Route path="/confirmation" element={<ProtectedRoute><ConfirmationPage /></ProtectedRoute>} />
         <Route path="/userinfo" element={<ProtectedRoute><UserInfoPage /></ProtectedRoute>} />
-        <Route path="/store-checkout" element={<ProtectedRoute><StoreCheckoutPage /></ProtectedRoute>} />
+        {/* Redirect old store-checkout route to unified checkout */}
+        <Route path="/store-checkout" element={<Navigate to="/checkout" replace />} />
 
         {/* ===== EMPLOYEE ROUTES (Require Employee Authentication) ===== */}
-        <Route path="/employee" element={<ProtectedRoute type="employee"><EmployeeRouter /></ProtectedRoute>} />
-        <Route path="/employee-dashboard" element={<ProtectedRoute type="employee" allowedRoles={['Sales Employee']}><EmployeeDashboard /></ProtectedRoute>} />
+        <Route path="/sales" element={<ProtectedRoute type="employee" allowedRoles={['Sales Employee']}><EmployeeDashboard /></ProtectedRoute>} />
         <Route path="/maintenance" element={<ProtectedRoute type="employee" allowedRoles={['Mechanical Employee']}><EMaintenance /></ProtectedRoute>} />
         <Route path="/manager" element={<ProtectedRoute type="employee" allowedRoles={['Store Manager', 'General Manager']}><ManagerPage /></ProtectedRoute>} />
 

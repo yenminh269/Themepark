@@ -38,6 +38,14 @@ function Login({setAdmin}){
                 // api.employeeLogin returns the employee data directly (fetchAPI extracts .data)
                 const employeeData = await api.employeeLogin(formData);
 
+                // Update ride statuses based on today's maintenance
+                try {
+                    await api.updateRideMaintenanceStatus();
+                } catch (error) {
+                    console.error('Failed to update ride maintenance status:', error);
+                    // Don't block login if this fails
+                }
+
                 // Store employee info in localStorage
                 localStorage.setItem('employee', JSON.stringify(employeeData));
                 localStorage.setItem('employee_info', JSON.stringify(employeeData));
@@ -61,9 +69,13 @@ function Login({setAdmin}){
                 } else if (jobTitle === 'Mechanical Employee') {
                     toast.success(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/maintenance');
-                } else {
+                } else if (jobTitle === 'Sales Employee') {
                     toast.success(`Welcome back, ${employeeData.first_name}!`);
-                    navigate('/employee-dashboard');
+                    navigate('/sales');
+                } else {
+                    // Unknown job title
+                    toast.error('Unknown employee role');
+                    navigate('/');
                 }
             } else {
                 // Customer login
@@ -71,6 +83,14 @@ function Login({setAdmin}){
 
                 // api.customerLogin returns { data: customer }
                 const customer = response.data;
+
+                // Update ride statuses based on today's maintenance
+                try {
+                    await api.updateRideMaintenanceStatus();
+                } catch (error) {
+                    console.error('Failed to update ride maintenance status:', error);
+                    // Don't block login if this fails
+                }
 
                 // Store customer info in localStorage using the key AuthContext expects
                 localStorage.setItem('themepark_user', JSON.stringify(customer));

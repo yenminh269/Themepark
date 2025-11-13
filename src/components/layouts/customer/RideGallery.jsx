@@ -1,13 +1,12 @@
-import { getImageUrl } from "../../../../services/api";
+import { getImageUrl } from "../../../services/api";
 import ImageList from '@mui/material/ImageList';
 import ImageListItem from '@mui/material/ImageListItem';
 import ImageListItemBar from '@mui/material/ImageListItemBar';
-import ListSubheader from '@mui/material/ListSubheader';
 import IconButton from '@mui/material/IconButton';
 import InfoIcon from '@mui/icons-material/Info';
 import { useState, useEffect } from "react";
-import Loading from "../loading/Loading";
-import { api } from "../../../../services/api";
+import Loading from "../admin/loading/Loading";
+import { api } from "../../../services/api";
 
 export default function RideGallery() {
   const [loading, setLoading] = useState(false);
@@ -37,15 +36,9 @@ export default function RideGallery() {
         height: 'auto',
         margin: 0,
       }}
-      variant="masonry" // dynamic height tiles
-      cols={{ xs: 1, sm: 2, md: 3 }} // responsive columns
+      cols={2} // Fixed 2 columns per row on all screen sizes
       gap={16}
     >
-      <ImageListItem key="Subheader" cols={3}>
-        <ListSubheader component="div" sx={{ color: 'text.primary' }}>
-            Rides
-        </ListSubheader>
-      </ImageListItem>
       {rides.map((ride) => (
         <ImageListItem
           key={ride.photo_path}
@@ -62,7 +55,7 @@ export default function RideGallery() {
             srcSet={`${getImageUrl(ride.photo_path)}?dpr=2 2x`}
             alt={ride.name}
             loading="lazy"
-            style={{ width: '100%', display: 'block', borderRadius: '8px' }}
+            style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '8px' }}
           />
           <ImageListItemBar
             title={ride.name}

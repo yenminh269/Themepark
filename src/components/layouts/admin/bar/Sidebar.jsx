@@ -1,6 +1,6 @@
 import { Box, Flex, Text, VStack, HStack, Icon } from '@chakra-ui/react';
 import { NavLink, useLocation } from 'react-router-dom';
-import entities from '../../../../docs/entities'
+import entities from './entities'
 
 const Sidebar = () => {
   const location = useLocation();

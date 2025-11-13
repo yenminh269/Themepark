@@ -9,6 +9,7 @@ import {
   MdStore,
   MdWarning,
   MdAttachMoney,
+  MdAssessment,
   MdShoppingCart,
   MdEdit,
   MdAdd,
@@ -20,7 +21,14 @@ import {
   MdAddCircle,
   MdCheck,
   MdUpload,
-  MdFilterList
+  MdFilterList,
+  MdReceipt, 
+  MdExpandMore, 
+  MdExpandLess,
+  MdFileDownload,
+  MdTrendingUp,
+  MdDelete,
+  MdRefresh 
 } from "react-icons/md";
 import "./ManagerPage.css";
 
@@ -72,6 +80,8 @@ const Sidebar = ({ activeTab, setActiveTab, managerInfo, onLogout }) => {
     { id: "employees", label: "Employees", icon: MdPeople },
     { id: "inventory", label: "Inventory", icon: MdInventory },
     { id: "schedules", label: "Schedules", icon: MdSchedule },
+    { id: "orders", label: "Orders", icon: MdReceipt },
+    { id: "reports", label: "Reports", icon: MdAssessment },
   ];
 
   const handleLogoutClick = () => {
@@ -180,30 +190,39 @@ const OverviewTab = ({ managerInfo }) => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      console.log('Starting dashboard fetch...');
+      console.log('=== FETCHING DASHBOARD DATA ===');
       
       // Fetch all employees
+      console.log('Fetching employees...');
       const employeesRes = await fetch(`${API_URL}/api/manager/employees/all`);
       const employeesData = await employeesRes.json();
-      console.log('All employees:', employeesData);
+      console.log('Employees response:', employeesData);
       
       // Filter employees who have at least one shift
-      const scheduled = employeesData.filter(emp => emp.total_shifts > 0);
+      const scheduled = Array.isArray(employeesData) 
+        ? employeesData.filter(emp => emp.total_shifts > 0)
+        : [];
       console.log('Scheduled employees:', scheduled);
       setScheduledEmployees(scheduled);
 
       // Get active stores count
+      console.log('Fetching stores...');
       const storesRes = await fetch(`${API_URL}/api/manager/stores/all`);
       const allStores = await storesRes.json();
-      console.log('All stores:', allStores);
-      const activeStoresCount = allStores.filter(s => s.status === 'open').length;
+      console.log('Stores response:', allStores);
+      const activeStoresCount = Array.isArray(allStores) 
+        ? allStores.filter(s => s.status === 'open').length
+        : 0;
       console.log('Active stores count:', activeStoresCount);
 
       // Fetch low stock
+      console.log('Fetching dashboard stats...');
       const [giftStats, foodStats] = await Promise.all([
         fetch(`${API_URL}/api/manager/dashboard-stats/giftshop`).then(r => r.json()),
         fetch(`${API_URL}/api/manager/dashboard-stats/foodanddrinks`).then(r => r.json())
       ]);
+      console.log('Gift stats:', giftStats);
+      console.log('Food stats:', foodStats);
 
       const combinedStats = {
         active_employees: scheduled.length,
@@ -214,7 +233,8 @@ const OverviewTab = ({ managerInfo }) => {
       console.log('Combined stats:', combinedStats);
       setStats(combinedStats);
 
-      // Fetch top items 
+      // Fetch top items from OLD working endpoint
+      console.log('Fetching top items...');
       const [giftItems, foodItems] = await Promise.all([
         fetch(`${API_URL}/api/manager/top-items/giftshop?limit=3`).then(r => r.json()),
         fetch(`${API_URL}/api/manager/top-items/foodanddrinks?limit=3`).then(r => r.json())
@@ -223,17 +243,29 @@ const OverviewTab = ({ managerInfo }) => {
       console.log('Gift items:', giftItems);
       console.log('Food items:', foodItems);
       
-      setTopItems([...giftItems, ...foodItems].slice(0, 5));
+      const allTopItems = [
+        ...(Array.isArray(giftItems) ? giftItems : []),
+        ...(Array.isArray(foodItems) ? foodItems : [])
+      ].slice(0, 5);
+      
+      console.log('Combined top items:', allTopItems);
+      setTopItems(allTopItems);
 
-      // Fetch store sale
+      // Fetch store sales from OLD working endpoint
+      console.log('Fetching store sales...');
       const salesRes = await fetch(`${API_URL}/api/manager/sales-by-store`);
       const salesData = await salesRes.json();
       console.log('Store sales:', salesData);
-      setStoreSales(salesData);
+      setStoreSales(Array.isArray(salesData) ? salesData : []);
       
       setLoading(false);
+      console.log('=== DASHBOARD FETCH COMPLETE ===');
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
+      setStats({ active_employees: 0, active_stores: 0, low_stock_count: 0 });
+      setTopItems([]);
+      setStoreSales([]);
+      setScheduledEmployees([]);
       setLoading(false);
     }
   };
@@ -252,7 +284,7 @@ const OverviewTab = ({ managerInfo }) => {
       </div>
 
       <div className="stats-grid">
-        {/* Scheduled Employees - Expandable */}
+        {/* Scheduled Employees */}
         <div className="stat-card expandable" style={{ borderTopColor: '#B2C9AD' }}>
           <div 
             className="stat-header clickable"
@@ -435,27 +467,31 @@ const EmployeesTab = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
+      console.log('Fetching employees...');
       const res = await fetch(`${API_URL}/api/manager/employees/all`);
       const data = await res.json();
-      console.log('Fetched employees:', data);
-      setEmployees(data);
+      console.log('Employees data:', data);
+      setEmployees(Array.isArray(data) ? data : []);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching employees:", error);
       addToast('Failed to load employees', 'error');
+      setEmployees([]);
       setLoading(false);
     }
   };
 
   const fetchStores = async () => {
     try {
+      console.log('Fetching stores...');
       const res = await fetch(`${API_URL}/api/manager/stores/all`);
       const data = await res.json();
-      console.log('Fetched stores:', data);
-      setStores(data);
+      console.log('Stores data:', data);
+      setStores(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching stores:", error);
       addToast('Failed to load stores', 'error');
+      setStores([]);
     }
   };
 
@@ -877,33 +913,53 @@ const InventoryTab = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleUpdateStock = async (storeId, itemId, newQuantity, currentQuantity) => {
-    if (newQuantity < currentQuantity) {
-      addToast(`Cannot reduce stock below current quantity (${currentQuantity})`, 'warning');
+const handleStockUpdate = async (storeId, itemId, newStockNum, currentStock) => {
+  // Validate
+  if (isNaN(newStockNum)) {
+    addToast('Please enter a valid number', 'error');
+    setEditingItem(null);
+    return;
+  }
+  
+  if (newStockNum < 0) {
+    addToast('Stock cannot be negative', 'error');
+    setEditingItem(null);
+    return;
+  }
+  
+  if (newStockNum < currentStock) {
+    addToast('Cannot decrease inventory! Stock only decreases through customer purchases.', 'error');
+    setEditingItem(null);
+    return;
+  }
+
+  if (newStockNum === currentStock) {
+    setEditingItem(null);
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_URL}/api/manager/inventory/${storeId}/${itemId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stock_quantity: newStockNum })
+    });
+
+    if (res.ok) {
+      addToast(`Stock updated: ${currentStock} → ${newStockNum}`, 'success');
+      fetchInventory();
       setEditingItem(null);
-      return;
+    } else {
+      const error = await res.json();
+      addToast(`${error.error || 'Failed to update'}`, 'error');
+      setEditingItem(null);
     }
-
-    try {
-      const res = await fetch(`${API_URL}/api/manager/inventory/${storeId}/${itemId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stock_quantity: newQuantity })
-      });
-
-      if (res.ok) {
-        addToast('Stock updated successfully', 'success');
-        fetchInventory();
-        setEditingItem(null);
-      } else {
-        addToast('Failed to update stock', 'error');
-      }
-    } catch (error) {
-      console.error("Error updating stock:", error);
-      addToast('Error updating stock', 'error');
-    }
-  };
-
+  } catch (error) {
+    console.error("Error updating inventory:", error);
+    addToast('Error updating inventory', 'error');
+    setEditingItem(null);
+  }
+};
   const handleDeleteItem = async (storeId, itemId) => {
     try {
       const res = await fetch(`${API_URL}/api/manager/inventory/${storeId}/${itemId}`, {
@@ -1555,6 +1611,21 @@ const SchedulesTab = () => {
   );
 };
 
+//ORDERS
+const OrdersTab = () => {
+  return (
+    <div className="orders-container">
+      <div className="page-header">
+        <h1 className="page-title">Orders</h1>
+        <p className="page-subtitle">Store orders coming soon</p>
+      </div>
+      <div className="empty-state">
+        <MdReceipt size={64} />
+        <p>Orders feature is under development</p>
+      </div>
+    </div>
+  );
+};
 //MAIN
 const ManagerPage = () => {
   const navigate = useNavigate();
@@ -1615,6 +1686,12 @@ const ManagerPage = () => {
         )}
         {activeTab === "schedules" && (
           <SchedulesTab />
+        )}
+        {activeTab === "orders" && (
+          <OrdersTab />
+        )}
+        {activeTab === "reports" && (
+          <ReportsTab />
         )}
       </main>
     </div>

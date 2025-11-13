@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from '@chakra-ui/react';
 
-const StatCard = ({ icon, name, value, growth }) => {
+const StatCard = ({ icon, name, value }) => {
   return (
     <Box
       p="20px"
@@ -22,24 +22,13 @@ const StatCard = ({ icon, name, value, growth }) => {
         >
           {name}
         </Text>
-        <Flex align="center" gap="10px">
-          <Text
-            color="gray.900"
-            fontSize="2xl"
-            fontWeight="700"
-          >
-            {value}
-          </Text>
-          {growth && (
-            <Text
-              color="green.500"
-              fontSize="sm"
-              fontWeight="700"
-            >
-              {growth}
-            </Text>
-          )}
-        </Flex>
+        <Text
+          color="gray.900"
+          fontSize="2xl"
+          fontWeight="700"
+        >
+          {value}
+        </Text>
       </Flex>
     </Box>
   );

@@ -1,7 +1,7 @@
 import "dotenv/config";
-import mysql from 'mysql2';
+import mysql from 'mysql';
 
-//connect to local database
+
 console.log('🔍 Database Configuration:');
 console.log('  Host:', process.env.DB_HOST);
 console.log('  Port:', process.env.DB_PORT);
@@ -9,6 +9,8 @@ console.log('  User:', process.env.DB_USER);
 console.log('  Password:', process.env.DB_PASSWORD ? '***SET***' : ' NOT SET');
 console.log('  Database:', process.env.DB_NAME);
 
+
+//connect to local database
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,

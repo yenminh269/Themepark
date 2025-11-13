@@ -5,14 +5,16 @@ import Sidebar from "./bar/Sidebar.jsx";
 import MobileSidebar from "./bar/MobileSidebar.jsx";
 import Add from "./Add.jsx";
 import AdminDashboard from "./AdminDashboard.jsx";
-
+import RideMaintenance from "./rides/RideMaintenance.jsx";
 import Employees from "./employees/Employees.jsx";
 import RideLists from "./rides/RideList.jsx";
 import StoreLists from "./stores/StoreLists.jsx";
 import MerchandiseLists from "./merchandise/MerchandiseLists.jsx";
 import StoreInventoryLists from "./StoreInventoryLists.jsx";
-import RideGalleryWrapper from "./rides/RideGalleryWrapper.jsx";
-import RainOutManagement from "./RainOutManagement.jsx";
+import RainHistory from "./RainHistory.jsx";
+import CustomerSummary from "./reports/CustomerSum.jsx";
+import RideReport from "./reports/RideReport.jsx";
+import AdminProfile from "./profile/AdminProfile.jsx";
 import './AdminMain.css'
 
 function AdminMain() {
@@ -29,13 +31,9 @@ function AdminMain() {
     <Flex h="100vh"  w="100vw" overflow="hidden" bg="#D1D8BE">
       {/* Sidebar */}
       <Box
-        w={{ base: "0", lg: "280px" }}
-        bg="#4B5945"
-        color="white"
-        position="fixed"
-        top="0"
-        left="0"
-        h="100vh"
+        w={{ base: "0", lg: "280px" }} bg="#4B5945"
+        color="white" position="fixed"top="0"
+        left="0" h="100vh"
         display={{ base: "none", lg: "block" }}
       >
         <Sidebar />
@@ -96,13 +94,15 @@ function AdminMain() {
           />
         )}
 
-        {/* ✅ Routed content scrolls inside this area */}
+        {/* Routed content scrolls inside this area */}
         <Box p="40px">
           <Routes>
             <Route path="/" element={<AdminDashboard />} />
-            {/* Rides Section */}
+            {/* Analysis Section */}
+            <Route path="customer-summary" element={<CustomerSummary />} />
+            <Route path="ride-report" element={<RideReport />} />
+             {/* Rides Section */}
             <Route path="add/ride" element={<Add />} />
-            <Route path="view/rides" element={<RideGalleryWrapper />}/>
             <Route path="list/rides" element={<RideLists />} />
             {/* Stores Section */}
             <Route path="add/store" element={<Add store={true} />} />
@@ -110,11 +110,13 @@ function AdminMain() {
             {/* Merchandise Section */}
             <Route path="list/merchandise" element={<MerchandiseLists />} />
             <Route path="list/store-inventory" element={<StoreInventoryLists />} />
-            
+            <Route path="ride-maintenance" element={<RideMaintenance />} />
             {/* Rain Out Management */}
-            <Route path="rain-out" element={<RainOutManagement />} />
+            <Route path="rain-out" element={<RainHistory />} />
             {/* Employee Section */}
             <Route path="/employees" element={<Employees />} />
+            {/* Profile Section */}
+            <Route path="/profile" element={<AdminProfile />} />
           </Routes>
         </Box>
       </Box>

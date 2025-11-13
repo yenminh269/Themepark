@@ -17,9 +17,7 @@ export default function AddE({onClose}){
     const jobTitleOption = [
         {value: 'Store Manager', label:'Store Manager'},
         {value: 'Mechanical Employee', label:'Mechanical Employee'},
-        {value: 'Sales Employee', label: 'Sales Employee'},
-        {value:'Concession Manager', label:'Concession Manager'},
-        {value: 'Concession Employee',label:'Concession Employee'}
+        {value: 'Sales Employee', label: 'Sales Employee'}
     ];
 
     const [firstName, setFirstName] = useState('');
@@ -30,6 +28,8 @@ export default function AddE({onClose}){
     const[essn, setSSN] = useState('');
     const[hireDate, setHireDate] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showCredentials, setShowCredentials] = useState(false);
+    const [newEmployeeCredentials, setNewEmployeeCredentials] = useState(null);
     
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -53,6 +53,19 @@ export default function AddE({onClose}){
             setLoading(true);
             const response = await api.addEmployee(newEmp);
             console.log("Employee Submitted:", response.message);
+
+            // Store credentials and show modal
+            if (response.email && response.temporaryPassword) {
+                setNewEmployeeCredentials({
+                    firstName: newEmp.first_name,
+                    lastName: newEmp.last_name,
+                    email: response.email,
+                    password: response.temporaryPassword
+                });
+                setShowCredentials(true);
+            }
+
+            // Clear form fields
             setFirstName("");
             setLastName("");
             setJobTitle("");
@@ -60,9 +73,6 @@ export default function AddE({onClose}){
             setGender("");
             setSSN("");
             setHireDate("");
-
-            // Close form after successful submission
-            onClose(true, `${newEmp.first_name} ${newEmp.last_name} has been added.`);
         } catch (err) {
             console.error("Failed to submit the new employee. Please make sure the backend server is running.");
         } finally {
@@ -75,7 +85,7 @@ export default function AddE({onClose}){
     return(
     <div className="mt-2 flex justify-center items-start w-full">
         <Form onSubmit={handleSubmit}  style={{ boxShadow: '-8px -8px 12px rgba(0,0,0,0.25)' }}
- className="flex flex-col p-4 rounded  w-full max-w-6xl">
+            className="flex flex-col p-4 rounded  w-full max-w-6xl">
             <div className="flex justify-end items-center mb-2">
             <button type="button" onClick={() => onClose(false)}>X</button>
             </div>
@@ -153,6 +163,9 @@ export default function AddE({onClose}){
                 labelClassName="custom-form-label"
                 value={essn}
                 onChange={(e) => setSSN(e.target.value)}
+                pattern="\d{9}"
+                maxLength={9}
+                feedback="SSN must be exactly 9 digits."
                 />
             </div>
 
@@ -174,6 +187,93 @@ export default function AddE({onClose}){
             </div>
             </div>
         </Form>
+
+        {/* Credentials Modal */}
+        {showCredentials && newEmployeeCredentials && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '500px',
+              width: '100%',
+              margin: '0 16px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }}>
+              <h2 style={{fontSize: '24px', fontWeight: 'bold', color: '#3e4b2b', marginBottom: '16px'}}>
+                Employee Added Successfully!
+              </h2>
+
+              <p style={{fontSize: '16px', color: '#666', marginBottom: '24px'}}>
+                Please provide these credentials to <strong>{newEmployeeCredentials.firstName} {newEmployeeCredentials.lastName}</strong>:
+              </p>
+
+              <div style={{backgroundColor: '#f8f9fa', borderRadius: '8px', padding: '20px', marginBottom: '24px'}}>
+                <div style={{marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #e0e0e0'}}>
+                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px', fontWeight: 'bold'}}>
+                    Email Address
+                  </label>
+                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500', fontFamily: 'monospace', backgroundColor: '#fff', padding: '8px', borderRadius: '4px'}}>
+                    {newEmployeeCredentials.email}
+                  </p>
+                </div>
+
+                <div>
+                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px', fontWeight: 'bold'}}>
+                    Temporary Password
+                  </label>
+                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500', fontFamily: 'monospace', backgroundColor: '#fff', padding: '8px', borderRadius: '4px'}}>
+                    {newEmployeeCredentials.password}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '8px',
+                padding: '12px',
+                marginBottom: '24px'
+              }}>
+                <p style={{fontSize: '14px', color: '#856404', margin: 0}}>
+                  <strong>Note:</strong> The employee will be required to change this password upon first login.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowCredentials(false);
+                  setNewEmployeeCredentials(null);
+                  onClose(true, `${newEmployeeCredentials.firstName} ${newEmployeeCredentials.lastName} has been added.`);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#3e4b2b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#2d3e20'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#3e4b2b'}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
     </div>
     )
 }

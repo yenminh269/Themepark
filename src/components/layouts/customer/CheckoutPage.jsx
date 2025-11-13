@@ -3,12 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { useCart } from "./CartContext";
 import PageFooter from "./PageFooter";
+import { round } from "../../../utils/money";
 import "./Homepage.css";
 import { api } from "../../../services/api";
 
 export default function CheckoutPage() {
   const { user } = useAuth();
   const { cart, total, clearCart } = useCart();
+  const TAX_RATE = 0.0825; // 8.25% — adjust if needed
+  const tax = round(total * TAX_RATE);
+  const grandTotal = round(total + tax);
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -16,6 +20,8 @@ export default function CheckoutPage() {
     expiry: "",
     cvv: "",
     email: user?.email || "",
+    paymentMethod: "credit_card",
+    firstName: user?.first_name || ""
   });
 
   const [loading, setLoading] = useState(false);
@@ -36,15 +42,25 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
-      // Create unified order with all items (rides and store items together)
-      // The backend will handle separating them if needed
-      const order = await api.createRideOrder(cart, total);
+      // Separate ride items from store items
+      const rideItems = cart.filter(item => item.type === 'ride');
+      const storeItems = cart.filter(item => item.type === 'store');
+
+      // Use unified order endpoint for single consolidated email
+      const result = await api.createUnifiedOrder({
+        rideCart: rideItems,
+        storeCart: storeItems,
+        grandTotal: grandTotal,
+        payment_method: form.paymentMethod,
+        email: form.email,
+        firstName: form.firstName
+      });
 
       // Clear cart after successful order
       clearCart();
 
       // Navigate to confirmation with order info
-      navigate("/confirmation", { state: { order } });
+      navigate("/confirmation", { state: { orders: result.orders || [] } });
     } catch (error) {
       console.error('Checkout error:', error);
       alert('Failed to complete your order. Please try again.');
@@ -110,10 +126,13 @@ export default function CheckoutPage() {
           )}
 
           <div className="!flex !justify-end !mt-4">
-            <p className="!text-lg !font-semibold !text-[#176B87]">
-              Total: ${total.toFixed(2)}
-            </p>
+            <div className="!text-lg !text-[#176B87]">
+              <p>Subtotal: ${total.toFixed(2)}</p>
+              <p>Tax (8.25%): ${tax.toFixed(2)}</p>
+              <h4 >Total: ${grandTotal.toFixed(2)}</h4>
+            </div>
           </div>
+
         </div>
 
         {/* Payment Form */}
@@ -146,7 +165,6 @@ export default function CheckoutPage() {
                 required
               />
             </div>
-
             <div className="!flex-1">
               <label className="!block !text-sm !font-semibold !text-slate-700">
                 CVV
@@ -162,7 +180,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <div>
+          <div className="!flex !flex-col !gap-4">
             <label className="!block !text-sm !font-semibold !text-slate-700">
               Email for Receipt
             </label>
@@ -173,10 +191,37 @@ export default function CheckoutPage() {
               className="!w-full !p-3 !border !border-[#B4D4FF] !rounded-lg"
               placeholder="example@email.com"
               required
-            />
+            /> 
           </div>
 
-          <div className="!flex !justify-between !items-center !mt-6">
+          <div className="!flex !gap-4"> 
+            <label className="!block !text-sm !font-semibold !text-slate-700">
+              Payment Method
+            </label>
+            <select
+              name="paymentMethod"
+              value={form.paymentMethod}
+              onChange={handleChange}
+              className="!w-full !p-3 !border !border-[#B4D4FF] !rounded-lg !bg-white"
+              required
+            >
+              <option value="credit_card">💳 Credit Card</option>
+              <option value="cash">💸 Cash (In-Park Only)</option>
+            </select>
+            <label className="!block !text-sm !font-semibold !text-slate-700">
+              First Name
+            </label>
+            <input
+                name="firstName"
+                value={form.firstName}
+                onChange={handleChange}
+                className="!border !border-[#B4D4FF] !rounded-lg"
+                placeholder="First Name"
+                required
+              />
+          </div>
+
+          <div className="!flex !justify-between !items-center !mt-8">
             <button
               type="button"
               onClick={() => navigate("/tickets")}

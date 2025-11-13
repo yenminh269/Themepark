@@ -1,10 +1,25 @@
-import { MdDashboard, MdAdd, MdList, MdBuild, MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud } from "react-icons/md"
+import {MdOutlineSupervisedUserCircle, MdDashboard, MdAdd, MdList, MdBuild, MdOutlineAnalytics,
+  MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud ,
+  MdOutlineStorefront, MdReport, MdAccountCircle  } from "react-icons/md"
 
 const entities = [
     {
       name: 'Main Dashboard',
       path: '/admin',
       icon: MdDashboard
+    },
+    {
+      category: 'REPORT SECTION'
+    },
+    {
+      name: 'Customer Summary',
+      path: '/admin/customer-summary',
+      icon: MdOutlineSupervisedUserCircle
+    },
+    {
+      name: 'Ride Report',
+      path: '/admin/ride-report',
+      icon: MdOutlineAnalytics
     },
     {
       category: 'RIDES SECTION'
@@ -15,19 +30,19 @@ const entities = [
       icon: MdAdd
     },
     {
-      name: 'Ride Gallery',
-      path: '/admin/view/rides',
-      icon: MdOutlineReviews
-    },
-    {
       name: 'Ride Lists',
       path: '/admin/list/rides',
       icon: MdList
     },
     {
-      name: 'Rain Out Management',
+      name: 'Rain History',
       path: '/admin/rain-out',
       icon: MdCloud
+    },
+    {
+      name: 'Ride Maintenance',
+      path: '/admin/ride-maintenance',
+      icon: MdBuild
     },
     {
       category: 'STORES'
@@ -40,7 +55,7 @@ const entities = [
     {
       name: 'Manage Stores',
       path: '/admin/list/stores',
-      icon: MdList
+      icon: MdOutlineStorefront
     },
     {
       category: 'EMPLOYEES'
@@ -49,6 +64,14 @@ const entities = [
       name: 'Manage Employees',
       path: '/admin/employees',
       icon: MdPeople
+    },
+    {
+      category: 'ACCOUNT'
+    },
+    {
+      name: 'My Profile',
+      path: '/admin/profile',
+      icon: MdAccountCircle
     },
     {
       name: 'Log Out',

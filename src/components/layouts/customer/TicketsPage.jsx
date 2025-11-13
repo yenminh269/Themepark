@@ -4,6 +4,7 @@ import PageFooter from "./PageFooter";
 import "./Homepage.css";
 import { useState, useEffect } from "react";
 import { api, getImageUrl } from "../../../services/api";
+import Loading from "../admin/loading/Loading";
 
 export default function TicketsPage() {
   const { cart, addToCart, removeFromCart, total } = useCart();
@@ -41,7 +42,7 @@ export default function TicketsPage() {
   }, []);
 
   const getQuantity = (rideId) => {
-    const item = cart.find((i) => i.id === rideId);
+    const item = cart.find((i) => i.id === rideId && i.type === 'ride');
     return item ? item.quantity : 0;
   };
 
@@ -57,6 +58,7 @@ export default function TicketsPage() {
 
         {loading && (
           <div className="!text-center !py-10">
+            <Loading />
             <p className="!text-lg !text-[#176B87]">Loading tickets...</p>
           </div>
         )}

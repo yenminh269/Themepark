@@ -15,6 +15,8 @@ function Employees() {
   const [editingId, setEditingId] = useState(null);
   const [editedData, setEditedData] = useState({});
   const [addE, showAddE] = useState(false);
+  const [showActive, setShowActive] = useState(true); // true = active, false = terminated
+  const [visibleSSNs, setVisibleSSNs] = useState(new Set()); // Track which employee SSNs are visible
   const addFormRef = useRef(null);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -22,8 +24,25 @@ function Employees() {
   const cancelRef = useRef();
   const toast = useToast();
 
-  const EAttr = ['Emp_Id', 'First Name', 'Last Name', 'Gender', 'Email', 'Job Title', 'Phone', 'SSN', 'Hire Date', 'Terminate Date'];
-  const columnKeys = ['employee_id', 'first_name', 'last_name', 'gender', 'email', 'job_title', 'phone', 'ssn', 'hire_date', 'terminate_date'];
+  const allEAttr = ['Emp_Id', 'First Name', 'Last Name', 'Gender', 'Email', 'Job Title', 'Phone', 'SSN', 'Hire Date', 'Terminate Date'];
+  const allColumnKeys = ['employee_id', 'first_name', 'last_name', 'gender', 'email', 'job_title', 'phone', 'ssn', 'hire_date', 'terminate_date'];
+
+  // Dynamic columns based on active/terminated filter
+  const EAttr = useMemo(() => {
+    if (showActive) {
+      // Exclude "Terminate Date" for active employees
+      return allEAttr.filter(attr => attr !== 'Terminate Date');
+    }
+    return allEAttr;
+  }, [showActive]);
+
+  const columnKeys = useMemo(() => {
+    if (showActive) {
+      // Exclude "terminate_date" for active employees
+      return allColumnKeys.filter(key => key !== 'terminate_date');
+    }
+    return allColumnKeys;
+  }, [showActive]);
 
   useEffect(() => {
     fetchEmployees();
@@ -69,15 +88,27 @@ function Employees() {
   };
 
   const filteredData = useMemo(() => {
-    if (!searchText) return emp;
+    // First filter by active/terminated status
+    let filtered = emp.filter(empObj => {
+      if (showActive) {
+        // Show only active employees (terminate_date is null)
+        return empObj.terminate_date === null || empObj.terminate_date === '';
+      } else {
+        // Show only terminated employees (terminate_date is not null)
+        return empObj.terminate_date !== null && empObj.terminate_date !== '';
+      }
+    });
+
+    // Then apply search filter
+    if (!searchText) return filtered;
     const normalizedSearch = searchText.toLowerCase().replace(/\s+/g, '');
-    return emp.filter(empObj =>
+    return filtered.filter(empObj =>
       columnKeys.some(key => {
         const value = empObj[key]?.toString().toLowerCase().replace(/\s+/g, '');
         return value && value.includes(normalizedSearch);
       })
     );
-  }, [emp, searchText]);
+  }, [emp, searchText, showActive]);
 
   const handleEdit = (id) => {
     setEditingId(id);
@@ -116,6 +147,18 @@ function Employees() {
 
   const handleInputChange = (key, value) => {
     setEditedData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const toggleSSNVisibility = (employeeId) => {
+    setVisibleSSNs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(employeeId)) {
+        newSet.delete(employeeId);
+      } else {
+        newSet.add(employeeId);
+      }
+      return newSet;
+    });
   };
 
   const handleDelete = (id, row) => {
@@ -203,6 +246,30 @@ function Employees() {
     if (editingId === empObj.employee_id) return renderEditableRow(empObj);
     return columnKeys.map(key => {
       if ((key === 'hire_date' || key === 'terminate_date') && empObj[key]) return empObj[key]?.slice(0, 10);
+
+      // Handle SSN display with click-to-reveal
+      if (key === 'ssn') {
+        const isVisible = visibleSSNs.has(empObj.employee_id);
+        return (
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSSNVisibility(empObj.employee_id);
+            }}
+            style={{
+              cursor: 'pointer',
+              userSelect: 'none',
+              padding: '3px 0px',
+              borderRadius: '4px',
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+            title={isVisible ? 'Click to hide' : 'Click to reveal SSN'}
+          >
+            {isVisible ? empObj[key] : '••••••'}
+          </span>
+        );
+      }
       return empObj[key] ?? '';
     });
   });
@@ -210,7 +277,7 @@ function Employees() {
   if (loading) return <Loading isLoading={loading} />;
 
   return (
-    <Box position="relative" p={4}>
+    <Box position="relative">
       <input
         type="text"
         placeholder="Search employees..."
@@ -219,9 +286,37 @@ function Employees() {
         className="border rounded px-3 py-1 w-full"
       />
 
-      {!addE && (
-        <HStack justify="flex-end" mt={4}>
-          <IconButton 
+      <HStack justify="space-between" mt={4}>
+        {/* Toggle button for active/terminated filter */}
+        <HStack spacing={2}>
+          <Button
+            size="sm"
+            bg={showActive ? "#4682A9":"transparent"}   // your custom green
+            color={showActive ? "white" : "black"}
+            border={showActive ? "none" : "1px solid black"}
+            _hover={{ bg: showActive ? "#145A6B" : "gray.300" }}
+            onClick={() => setShowActive(true)}
+            variant="solid"
+          >
+            Active ({emp.filter(e => e.terminate_date === null || e.terminate_date === '').length})
+          </Button>
+
+          <Button
+            size="sm"
+            bg={!showActive ? "#E74C3C" : "transparent"} 
+            color={!showActive ? "white" : "black"}
+            border={!showActive ? "none" : "1px solid black"}
+            _hover={{ bg: !showActive ? "#C0392B" : "gray.200" }}
+            onClick={() => setShowActive(false)}
+            variant="solid"
+          >
+            Terminated ({emp.filter(e => e.terminate_date !== null && e.terminate_date !== '').length})
+        </Button>
+
+        </HStack>
+
+        {!addE && (
+          <IconButton
             icon={<AddIcon />}
             size="lg"
             colorScheme="green"
@@ -235,15 +330,15 @@ function Employees() {
             _active={{ transform: "scale(0.95)" }}
             transition="all 0.2s"
           />
-        </HStack>
-      )}
+        )}
+      </HStack>
 
       <DataTable
         title="Employees"
         columns={EAttr}
         data={displayData}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        onEdit={showActive? handleEdit:null}
+        onDelete={showActive? handleDelete:null}
         onSave={editingId ? handleSave : null}
         onCancel={editingId ? handleCancel : null}
         editingId={editingId}

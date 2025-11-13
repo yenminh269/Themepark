@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../services/api';
 
-export default function RainOutManagement() {
+export default function RainHistory() {
   const [rainOuts, setRainOuts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAllRainOuts, setShowAllRainOuts] = useState(false);
   const [newRainOut, setNewRainOut] = useState({
     rain_out_date: '',
     note: ''
@@ -45,19 +46,6 @@ export default function RainOutManagement() {
     }
   };
 
-  // Clear rain out (will open all rides automatically via trigger)
-  const handleClearRainOut = async (id) => {
-    if (!confirm('Clear this rain out? All closed rides will be reopened.')) return;
-
-    try {
-      await api.updateRainOut(id, { status: 'cleared' });
-      alert('Rain out cleared! All rides have been reopened.');
-      fetchRainOuts();
-    } catch (err) {
-      console.error('Error clearing rain out:', err);
-      alert('Failed to clear rain out');
-    }
-  };
 
   if (loading) {
     return (
@@ -68,29 +56,7 @@ export default function RainOutManagement() {
   }
 
   return (
-    <div className="!min-h-screen !bg-gradient-to-br !from-blue-50 !via-blue-100 !to-indigo-100 !p-6">
-      {/* Header */}
-      <div className="!max-w-6xl !mx-auto !mb-8">
-        <div className="!bg-white !rounded-2xl !shadow-xl !p-8">
-          <div className="!flex !justify-between !items-center">
-            <div>
-              <h1 className="!text-4xl !font-black !text-blue-900 !mb-2">
-                ☔ Rain Out Management
-              </h1>
-              <p className="!text-gray-600">
-                Control park operations during bad weather. All rides will automatically close/open.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="!px-6 !py-3 !bg-red-600 !text-white !rounded-lg !font-bold hover:!bg-red-700 !transition !border-none !shadow-lg"
-            >
-              ☔ Activate Rain Out
-            </button>
-          </div>
-        </div>
-      </div>
-
+    <div className="!min-h-screen !p-6">
       {error && (
         <div className="!max-w-6xl !mx-auto !mb-4 !bg-red-100 !border !border-red-400 !text-red-700 !px-4 !py-3 !rounded">
           {error}
@@ -107,68 +73,82 @@ export default function RainOutManagement() {
               <p className="!text-lg">No rain outs recorded. Park is operating normally! ☀️</p>
             </div>
           ) : (
-            <div className="!space-y-4">
-              {rainOuts.map((rainOut) => (
-                <div
-                  key={rainOut.rain_out_id}
-                  className={`!p-6 !rounded-xl !border-2 !transition ${
-                    rainOut.status === 'active'
-                      ? '!bg-red-50 !border-red-300'
-                      : '!bg-green-50 !border-green-300'
-                  }`}
-                >
-                  <div className="!flex !justify-between !items-start">
-                    <div className="!flex-1">
-                      <div className="!flex !items-center !gap-3 !mb-2">
-                        <span className="!text-2xl">
-                          {rainOut.status === 'active' ? '☔' : '☀️'}
-                        </span>
-                        <div>
-                          <h3 className="!text-xl !font-bold !text-gray-800">
-                            {new Date(rainOut.rain_out_date).toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
-                          </h3>
-                          <span
-                            className={`!inline-block !px-3 !py-1 !rounded-full !text-sm !font-bold !mt-1 ${
-                              rainOut.status === 'active'
-                                ? '!bg-red-600 !text-white'
-                                : '!bg-green-600 !text-white'
-                            }`}
-                          >
-                            {rainOut.status === 'active' ? '🔴 ACTIVE - Rides Closed' : '✅ Cleared - Rides Open'}
+            <>
+              <div className="!space-y-4">
+                {(showAllRainOuts ? rainOuts : rainOuts.slice(0, 3)).map((rainOut) => (
+                  <div
+                    key={rainOut.rain_out_id}
+                    className={`!p-6 !rounded-xl !border-2 !transition ${
+                      rainOut.status === 'active'
+                        ? '!bg-red-50 !border-red-300'
+                        : '!bg-green-50 !border-green-300'
+                    }`}
+                  >
+                    <div className="!flex !justify-between !items-start">
+                      <div className="!flex-1">
+                        <div className="!flex !items-center !gap-3 !mb-2">
+                          <span className="!text-2xl">
+                            {rainOut.status === 'active' ? '☔' : '☀️'}
                           </span>
+                          <div>
+                            <h3 className="!text-xl !font-bold !text-gray-800">
+                              {new Date(rainOut.rain_out_date).toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </h3>
+                            <span
+                              className={`!inline-block !px-3 !py-1 !rounded-full !text-sm !font-bold !mt-1 ${
+                                rainOut.status === 'active'
+                                  ? '!bg-red-600 !text-white'
+                                  : '!bg-green-600 !text-white'
+                              }`}
+                            >
+                              {rainOut.status === 'active' ? '🔴 ACTIVE - Rides Closed' : '✅ Cleared - Rides Open'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {rainOut.note && (
+                          <p className="!text-gray-700 !ml-11 !mt-2">
+                            <strong>Note:</strong> {rainOut.note}
+                          </p>
+                        )}
+
+                        {/* Display employee information */}
+                        <div className="!ml-11 !mt-2">
+                          {rainOut.activate_emp_first_name && (
+                            <p className="!text-sm !text-gray-600 !my-1">
+                              <strong>Activated by:</strong> {rainOut.activate_emp_first_name} {rainOut.activate_emp_last_name}
+                            </p>
+                          )}
+                          {rainOut.status === 'cleared' && rainOut.clear_emp_first_name && (
+                            <p className="!text-sm !text-gray-600 !my-1">
+                              <strong>Cleared by:</strong> {rainOut.clear_emp_first_name} {rainOut.clear_emp_last_name}
+                              <strong> At:</strong> {new Date(rainOut.resolved_at).toLocaleString()}
+                            </p>
+                          )}
                         </div>
                       </div>
-
-                      {rainOut.note && (
-                        <p className="!text-gray-700 !ml-11 !mt-2">
-                          <strong>Note:</strong> {rainOut.note}
-                        </p>
-                      )}
-
-                      {rainOut.resolved_at && (
-                        <p className="!text-sm !text-gray-500 !ml-11 !mt-2">
-                          Cleared at: {new Date(rainOut.resolved_at).toLocaleString()}
-                        </p>
-                      )}
                     </div>
-
-                    {rainOut.status === 'active' && (
-                      <button
-                        onClick={() => handleClearRainOut(rainOut.rain_out_id)}
-                        className="!px-4 !py-2 !bg-green-600 !text-white !rounded-lg !font-bold hover:!bg-green-700 !transition !border-none"
-                      >
-                        ☀️ Clear Rain Out
-                      </button>
-                    )}
                   </div>
+                ))}
+              </div>
+
+              {/* Show More / Show Less Button */}
+              {rainOuts.length > 3 && (
+                <div className="!text-center !mt-5">
+                  <button
+                    onClick={() => setShowAllRainOuts(!showAllRainOuts)}
+                    className="!px-6 !py-3 !bg-[#A7C1A8] !text-white !rounded-lg !font-bold hover:!bg-[#819A91] !transition !border-none"
+                  >
+                    {showAllRainOuts ? 'Show Less' : `Show More (${rainOuts.length - 3} more)`}
+                  </button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>

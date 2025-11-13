@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   HStack,
   VStack,
@@ -7,14 +7,32 @@ import {
   Text,
   Image,
   Box,
+  Alert,
+  AlertIcon,
+  AlertDescription,
 } from "@chakra-ui/react";
 
-function ImageInputToggle({ useLink, setUseLink, photoFile, setPhotoFile, 
+const MAX_URL_LENGTH = 255;
+
+function ImageInputToggle({ useLink, setUseLink, photoFile, setPhotoFile,
   photoLink, setPhotoLink }) {
+  const [urlError, setUrlError] = useState("");
   const handleToggle = () => {
     setUseLink(!useLink);
     setPhotoLink("");
     setPhotoFile(null);
+    setUrlError("");
+  };
+
+  const handleUrlChange = (e) => {
+    const url = e.target.value;
+    setPhotoLink(url);
+
+    if (url.length > MAX_URL_LENGTH) {
+      setUrlError(`URL is too long (${url.length}/${MAX_URL_LENGTH} characters). The database only supports URLs up to ${MAX_URL_LENGTH} characters.`);
+    } else {
+      setUrlError("");
+    }
   };
 
   const previewUrl = useLink 
@@ -69,15 +87,24 @@ function ImageInputToggle({ useLink, setUseLink, photoFile, setPhotoFile,
       {/* Input Field */}
        <Box>
         {useLink ? (
-          <Input
-            type="url"
-            placeholder="https://example.com/image.jpg"
-            value={photoLink}
-            onChange={(e) => setPhotoLink(e.target.value)}
-            borderColor="#4B5945"
-            _hover={{ borderColor: "#3A6F43" }}
-            _focus={{ borderColor: "#3A6F43", boxShadow: "0 0 0 1px #3A6F43" }}
-          />
+          <>
+            <Input
+              type="url"
+              placeholder="https://example.com/image.jpg"
+              value={photoLink}
+              onChange={handleUrlChange}
+              borderColor={urlError ? "red.500" : "#4B5945"}
+              _hover={{ borderColor: urlError ? "red.600" : "#3A6F43" }}
+              _focus={{ borderColor: urlError ? "red.600" : "#3A6F43", boxShadow: urlError ? "0 0 0 1px red" : "0 0 0 1px #3A6F43" }}
+              isInvalid={!!urlError}
+            />
+            {urlError && (
+              <Alert status="error" mt={2} borderRadius="md">
+                <AlertIcon />
+                <AlertDescription fontSize="sm">{urlError}</AlertDescription>
+              </Alert>
+            )}
+          </>
         ) : (
           <HStack 
             spacing={0} 

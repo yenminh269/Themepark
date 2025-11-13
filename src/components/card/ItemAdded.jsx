@@ -1,5 +1,6 @@
 import { getImageUrl } from "../../services/api";
-import { Box, Image, Text, Badge, VStack, HStack } from '@chakra-ui/react';
+import { Box, Image, Text, Badge, VStack, HStack, IconButton } from '@chakra-ui/react';
+import { CloseIcon } from '@chakra-ui/icons';
 
 export default function ItemAdded(props) {
   // Define colors for each status
@@ -13,14 +14,30 @@ export default function ItemAdded(props) {
   const isStore = props.type !== undefined;
 
   return (
-    <Box 
-      maxW="400px" 
-      borderWidth="1px" 
-      borderRadius="lg" 
+    <Box
+      maxW="400px"
+      borderWidth="1px"
+      borderRadius="lg"
       overflow="hidden"
       boxShadow="xl"
       bg="white"
+      position="relative"
     >
+      {/* Close Button */}
+      {props.onClose && (
+        <IconButton
+          icon={<CloseIcon />}
+          size="sm"
+          position="absolute"
+          top={2}
+          right={2}
+          zIndex={1}
+          colorScheme="red"
+          variant="solid"
+          onClick={props.onClose}
+          aria-label="Add another item"
+        />
+      )}
       <Image 
         src={getImageUrl(props.photo_path)} 
         alt={props.name || (isStore ? 'Store photo' : 'Ride photo')}

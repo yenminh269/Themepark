@@ -1,58 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../../../services/api';
 import './EmployeeDashboard.css';
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
   const [employeeInfo, setEmployeeInfo] = useState(null);
+  const [showEmployeeInfo, setShowEmployeeInfo] = useState(false);
   const [assignedStores, setAssignedStores] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get employee info from localStorage
-    const employeeData = localStorage.getItem('employee_info');
-    if (employeeData) {
-      try {
-        const parsed = JSON.parse(employeeData);
-        setEmployeeInfo(parsed);
+    const loadEmployeeData = async () => {
+      // Get employee info from localStorage
+      const employeeData = localStorage.getItem('employee_info');
+      if (employeeData) {
+        try {
+          const parsed = JSON.parse(employeeData);
+          setEmployeeInfo(parsed);
 
-        // Get assigned stores based on employee job type
-        // For now, we'll simulate this - in a real app, this would come from the API
-        const mockStores = getMockStoresForEmployee(parsed.job_title);
-        setAssignedStores(mockStores);
+          // Fetch assigned stores from the database
+          let fetchedStores = [];
+          try {
+            console.log('=== DEBUG: Fetching stores for employee ===');
+            console.log('Employee ID:', parsed.employee_id);
+            console.log('API endpoint:', `/employee/${parsed.employee_id}/stores`);
 
-        // Get recent transactions for assigned stores
-        const mockTransactions = getMockTransactionsForStores(mockStores);
-        setRecentTransactions(mockTransactions);
+            const storesData = await api.getEmployeeStores(parsed.employee_id);
 
-      } catch (error) {
-        console.error('Error parsing employee data:', error);
+            console.log('=== DEBUG: API Response ===');
+            console.log('Raw response:', storesData);
+            console.log('Is array?', Array.isArray(storesData));
+            console.log('Length:', storesData?.length);
+            console.log('First item:', storesData?.[0]);
+
+            fetchedStores = storesData || [];
+            setAssignedStores(fetchedStores);
+
+            console.log('=== DEBUG: State updated ===');
+            console.log('fetchedStores:', fetchedStores);
+          } catch (error) {
+            console.error('=== ERROR: Failed to fetch employee stores ===');
+            console.error('Error:', error);
+            console.error('Error message:', error.message);
+            setAssignedStores([]);
+          }
+
+          // Get recent transactions for assigned stores (still mock for now)
+          // TODO: Replace with real API call when store orders endpoint is ready
+          const mockTransactions = getMockTransactionsForStores(fetchedStores);
+          setRecentTransactions(mockTransactions);
+
+        } catch (error) {
+          console.error('Error parsing employee data:', error);
+          navigate('/login');
+        }
+      } else {
         navigate('/login');
       }
-    } else {
-      navigate('/login');
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    loadEmployeeData();
   }, [navigate]);
 
-  // Mock data functions - replace with real API calls
-  const getMockStoresForEmployee = (jobTitle) => {
-    if (jobTitle === 'Sales Employee') {
-      return [
-        { store_id: 1, name: 'Main Gift Shop', type: 'merchandise' },
-        { store_id: 2, name: 'East Gift Shop', type: 'merchandise' }
-      ];
-    } else if (jobTitle === 'Concession Employee') {
-      return [
-        { store_id: 3, name: 'Main Concession Stand', type: 'food/drink' },
-        { store_id: 4, name: 'Poolside Snacks', type: 'food/drink' }
-      ];
-    }
-    return [];
-  };
-
+  // Mock data function for transactions - replace with real API call later
   const getMockTransactionsForStores = (stores) => {
+    if (stores.length === 0) return [];
     return stores.flatMap(store =>
       Array.from({ length: 3 }, (_, i) => ({
         id: `${store.store_id}-${i}`,
@@ -91,9 +106,29 @@ export default function EmployeeDashboard() {
             <p>Welcome back, {employeeInfo.first_name} {employeeInfo.last_name}</p>
             <span className="job-title">{employeeInfo.job_title}</span>
           </div>
-          <button onClick={handleLogout} className="logout-btn">
+          <div>
+            <button
+              onClick={() => setShowEmployeeInfo(true)}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#5a6b3d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#6d8047'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#5a6b3d'}
+            >My Information
+            </button>
+            <button onClick={handleLogout} className="logout-btn">
             Logout
-          </button>
+            </button>
+          </div>
+          
         </div>
       </header>
 
@@ -102,19 +137,45 @@ export default function EmployeeDashboard() {
         <div className="dashboard-grid">
           {/* Assigned Stores */}
           <div className="dashboard-card">
-            <h2>🏪 My Stores</h2>
+            <h2>🏪 My Shifts</h2>
             <div className="stores-list">
-              {assignedStores.map(store => (
-                <div key={store.store_id} className="store-item">
-                  <div className="store-info">
-                    <h3>{store.name}</h3>
-                    <span className="store-type">{store.type}</span>
+              {assignedStores.length === 0 ? (
+                <p className="no-stores-message">No shifts scheduled yet.</p>
+              ) : (
+                assignedStores.map((shift, index) => (
+                  <div key={`${shift.store_id}-${shift.work_date}-${index}`} className="store-item">
+                    <div className="store-info">
+                      <h3>{shift.name}</h3>
+                      <span className="store-type">{shift.type}</span>
+                      <span className={`store-status status-${shift.status}`}>
+                        {shift.status}
+                      </span>
+                    </div>
+                    <div className="shift-details">
+                      <div className="shift-info-row">
+                        <span className="shift-label">📅 Date:</span>
+                        <span className="shift-value">
+                          {shift.work_date
+                            ? new Date(shift.work_date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : 'Not set'}
+                        </span>
+                      </div>
+                      <div className="shift-info-row">
+                        <span className="shift-label">⏰ Shift:</span>
+                        <span className="shift-value">
+                          {shift.shift_start && shift.shift_end
+                            ? `${shift.shift_start.slice(0, 5)} - ${shift.shift_end.slice(0, 5)}`
+                            : 'Not set'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <button className="view-store-btn">
-                    View Details
-                  </button>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -182,13 +243,125 @@ export default function EmployeeDashboard() {
               <button className="action-btn">
                 🔔 Request Help
               </button>
-              <button className="action-btn">
-                📋 Daily Report
-              </button>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Employee Information Modal */}
+      {showEmployeeInfo && employeeInfo && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '18px',
+            maxWidth: '400px',
+            width: '100%',
+            margin: '0 16px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <h2 style={{fontSize: '24px', fontWeight: 'bold', color: '#3e4b2b', marginBottom: '24px'}}>
+              Employee Information
+            </h2>
+
+            <div>
+              <div>
+                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                  Employee ID
+                </label>
+                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                  {employeeInfo.employee_id}
+                </p>
+              </div>
+
+              <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
+                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                  Name
+                </label>
+                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                  {employeeInfo.first_name} {employeeInfo.last_name}
+                </p>
+              </div>
+
+              <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
+                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                  Job Title
+                </label>
+                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                  {employeeInfo.job_title}
+                </p>
+              </div>
+
+              <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
+                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                  Email
+                </label>
+                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                  {employeeInfo.email || 'Not provided'}
+                </p>
+              </div>
+
+              <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
+                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                  Phone
+                </label>
+                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                  {employeeInfo.phone || 'Not provided'}
+                </p>
+              </div>
+
+              <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
+                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                  Gender
+                </label>
+                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                  {employeeInfo.gender || 'Not provided'}
+                </p>
+              </div>
+
+              <div style={{marginBottom: '15px'}}>
+                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                  Hire Date
+                </label>
+                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                  {employeeInfo.hire_date
+                    ? new Date(employeeInfo.hire_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    : 'Not provided'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowEmployeeInfo(false)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#3e4b2b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
