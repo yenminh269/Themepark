@@ -225,7 +225,7 @@ router.get('/ride-report', async (req, res) => {
 
     switch (type) {
       case 'total_rides':
-        // Total Rides Taken and Revenue
+        // Total Rides Taken and Revenue - with detailed transactions
         sql = `
           SELECT
             YEAR(od) as year,
@@ -233,7 +233,8 @@ router.get('/ride-report', async (req, res) => {
             DAY(od) as day,
             SUM(noticket) as total_tickets,
             SUM(price * noticket) as total_revenue,
-            name
+            name,
+            ride_id
           FROM (
             SELECT
               ro.order_id,
@@ -248,7 +249,7 @@ router.get('/ride-report', async (req, res) => {
           ) as total_ride_taken
           WHERE od >= ? AND od <= ?
           ${group === 'ride' && rideName ? 'AND name = ?' : ''}
-          GROUP BY year, month, day, name
+          GROUP BY year, month, day, name, ride_id
           ORDER BY year, month, day, name
         `;
         params = [startDate, endDate];
@@ -305,14 +306,10 @@ router.get('/ride-report', async (req, res) => {
           LEFT JOIN ride AS r ON rod.ride_id = r.ride_id
           LEFT JOIN ride_order AS ro ON rod.order_id = ro.order_id
           WHERE ro.order_date >= ? AND ro.order_date <= ?
-          ${group === 'ride' && rideName ? 'AND r.name = ?' : ''}
           GROUP BY r.name
           ORDER BY total_rides DESC
         `;
         params = [startDate, endDate];
-        if (group === 'ride' && rideName) {
-          params.push(rideName);
-        }
         break;
 
       default:
@@ -321,7 +318,7 @@ router.get('/ride-report', async (req, res) => {
         });
     }
 
-    db.query(sql, params, (err, results) => {
+    db.query(sql, params, async (err, results) => {
       if (err) {
         console.error('Error fetching ride report:', err);
         return res.status(500).json({
@@ -330,7 +327,102 @@ router.get('/ride-report', async (req, res) => {
         });
       }
 
-      res.json(results);
+      // For total_rides report, fetch detailed transactions for each summary row
+      if (type === 'total_rides' && results.length > 0) {
+        try {
+          const detailedResults = await Promise.all(results.map(async (row) => {
+            const detailSql = `
+              SELECT
+                rod.order_id,
+                rod.ride_id,
+                rod.number_of_tickets,
+                rod.price_per_ticket,
+                rod.subtotal,
+                ro.order_date,
+                DATE_FORMAT(ro.order_date, '%Y-%m-%d') as formatted_order_date
+              FROM ride_order_detail as rod
+              LEFT JOIN ride_order as ro ON rod.order_id = ro.order_id
+              WHERE rod.ride_id = ?
+                AND DATE(ro.order_date) = DATE(?)
+              ORDER BY ro.order_date
+            `;
+
+            // Construct date string from year, month, day
+            const dateStr = `${row.year}-${String(row.month).padStart(2, '0')}-${String(row.day).padStart(2, '0')}`;
+
+            return new Promise((resolve, reject) => {
+              db.query(detailSql, [row.ride_id, dateStr], (detailErr, detailRows) => {
+                if (detailErr) {
+                  reject(detailErr);
+                } else {
+                  resolve({
+                    ...row,
+                    details: detailRows
+                  });
+                }
+              });
+            });
+          }));
+
+          res.json(detailedResults);
+        } catch (detailErr) {
+          console.error('Error fetching transaction details:', detailErr);
+          // If detail fetch fails, return summary data without details
+          res.json(results);
+        }
+      }
+      // For total_maintenance report, fetch detailed maintenance records for each ride
+      else if (type === 'total_maintenance' && results.length > 0) {
+        try {
+          const detailedResults = await Promise.all(results.map(async (row) => {
+            const detailSql = `
+              SELECT
+                m.maintenance_id,
+                m.description,
+                m.scheduled_date,
+                DATE_FORMAT(m.scheduled_date, '%Y-%m-%d') as formatted_scheduled_date,
+                m.status,
+                eoj.employee_id,
+                eoj.work_date,
+                DATE_FORMAT(eoj.work_date, '%Y-%m-%d') as formatted_work_date,
+                eoj.worked_hour,
+                e.first_name,
+                e.last_name
+              FROM maintenance as m
+              LEFT JOIN employee_maintenance_job as eoj
+                ON eoj.maintenance_id = m.maintenance_id
+              LEFT JOIN employee as e
+                ON e.employee_id = eoj.employee_id
+              WHERE m.ride_id = ?
+                AND m.scheduled_date >= ?
+                AND m.scheduled_date <= ?
+              ORDER BY m.scheduled_date, m.maintenance_id
+            `;
+
+            return new Promise((resolve, reject) => {
+              db.query(detailSql, [row.ride_id, startDate, endDate], (detailErr, detailRows) => {
+                if (detailErr) {
+                  reject(detailErr);
+                } else {
+                  resolve({
+                    ...row,
+                    maintenance_details: detailRows
+                  });
+                }
+              });
+            });
+          }));
+
+          res.json(detailedResults);
+        } catch (detailErr) {
+          console.error('Error fetching maintenance details:', detailErr);
+          // If detail fetch fails, return summary data without details
+          res.json(results);
+        }
+      }
+      else {
+        res.json(results);
+      }
     });
   } catch (err) {
     console.error('Error:', err);

@@ -14,6 +14,7 @@ import StoreInventoryLists from "./StoreInventoryLists.jsx";
 import RainHistory from "./RainHistory.jsx";
 import CustomerSummary from "./reports/CustomerSum.jsx";
 import RideReport from "./reports/RideReport.jsx";
+import MerchandiseReport from "./reports/Merchandise.jsx";
 import AdminProfile from "./profile/AdminProfile.jsx";
 import './AdminMain.css'
 
@@ -106,6 +107,7 @@ function AdminMain() {
           <Routes>
             <Route path="/" element={<AdminDashboard />} />
             {/* Analysis Section */}
+            <Route path="merchandise-report" element={<MerchandiseReport />} />
             <Route path="customer-summary" element={<CustomerSummary />} />
             <Route path="ride-report" element={<RideReport />} />
              {/* Rides Section */}
