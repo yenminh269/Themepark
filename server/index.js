@@ -27,7 +27,6 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://thethemepark.vercel.app',
   process.env.CORS_ORIGIN
 ].filter(Boolean);
 
