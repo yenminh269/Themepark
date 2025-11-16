@@ -267,7 +267,7 @@ router.get("/auth/google", passport.authenticate("google", {
 
 router.get("/auth/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "http://localhost:5173/login?error=google_auth_failed",
+    failureRedirect: `${process.env.CORS_ORIGIN}/login?error=google_auth_failed`,
     session: false
   }),
   (req, res) => {
@@ -278,17 +278,15 @@ router.get("/auth/google/callback",
         customer_id: customer.customer_id,
         email: customer.email
       });
-
       // Redirect to frontend with token and customer data
       // Frontend will handle storing these in localStorage
-      const redirectUrl = `http://localhost:5173/login?` +
+      const redirectUrl = `${process.env.CORS_ORIGIN}/login?` +
         `token=${encodeURIComponent(token)}` +
         `&customer=${encodeURIComponent(JSON.stringify(customer))}`;
-
       res.redirect(redirectUrl);
     } catch (error) {
       console.error("Google callback error:", error);
-      res.redirect("http://localhost:5173/login?error=auth_failed");
+      res.redirect(`${process.env.CORS_ORIGIN}/login?error=auth_failed`);
     }
   }
 );
