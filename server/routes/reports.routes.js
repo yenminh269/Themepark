@@ -142,7 +142,7 @@ router.get('/customer-report', async (req, res) => {
           error: 'Invalid customer report type.'
         });
     }
-    db.query(sql, params, (err, results) => {
+    db.query(sql, params, async (err, results) => {
       if (err) {
         console.error('Error fetching customers report:', err);
         return res.status(500).json({
@@ -150,7 +150,131 @@ router.get('/customer-report', async (req, res) => {
           error: err.message
         });
       }
-      res.json(results);
+
+      // For new_customers report, fetch detailed customer information
+      if (type === 'new_customers' && results.length > 0) {
+        try {
+          const detailedResults = await Promise.all(results.map(async (row) => {
+            const detailSql = `
+              SELECT
+                c.customer_id,
+                c.first_name,
+                c.last_name,
+                c.gender,
+                c.email,
+                c.dob,
+                DATE_FORMAT(c.dob, '%Y-%m-%d') as formatted_dob,
+                c.phone,
+                c.created_at,
+                DATE_FORMAT(c.created_at, '%Y-%m-%d %H:%i:%s') as formatted_created_at,
+                CASE
+                  WHEN EXISTS (SELECT 1 FROM ride_order WHERE customer_id = c.customer_id) THEN 'Yes'
+                  ELSE 'No'
+                END as has_ride_purchase,
+                CASE
+                  WHEN EXISTS (SELECT 1 FROM store_order WHERE customer_id = c.customer_id) THEN 'Yes'
+                  ELSE 'No'
+                END as has_store_purchase
+              FROM customer c
+              WHERE DATE(c.created_at) = ?
+              ORDER BY c.created_at
+            `;
+
+            return new Promise((resolve, reject) => {
+              db.query(detailSql, [row.sign_up_date], (detailErr, detailRows) => {
+                if (detailErr) {
+                  reject(detailErr);
+                } else {
+                  resolve({
+                    ...row,
+                    customer_details: detailRows
+                  });
+                }
+              });
+            });
+          }));
+
+          res.json(detailedResults);
+        } catch (detailErr) {
+          console.error('Error fetching new customer details:', detailErr);
+          // If detail fetch fails, return summary data without details
+          res.json(results);
+        }
+      }
+      // For avg_purchases report, fetch detailed customer information
+      else if (type === 'avg_purchases' && results.length > 0) {
+        try {
+          const summaryRow = results[0];
+
+          // Fetch detailed store customers
+          const storeCustomersSql = `
+            SELECT DISTINCT
+              c.customer_id,
+              c.first_name,
+              c.last_name,
+              c.email,
+              c.phone,
+              so.order_id,
+              so.order_date,
+              DATE_FORMAT(so.order_date, '%Y-%m-%d') as formatted_order_date,
+              so.total_amount,
+              so.status,
+              so.payment_method
+            FROM customer c
+            INNER JOIN store_order so ON c.customer_id = so.customer_id
+            WHERE so.order_date >= ? AND so.order_date <= ?
+            ORDER BY c.customer_id, so.order_date
+          `;
+
+          // Fetch detailed ride customers
+          const rideCustomersSql = `
+            SELECT DISTINCT
+              c.customer_id,
+              c.first_name,
+              c.last_name,
+              c.email,
+              c.phone,
+              ro.order_id,
+              ro.order_date,
+              DATE_FORMAT(ro.order_date, '%Y-%m-%d') as formatted_order_date,
+              ro.total_amount,
+              ro.status
+            FROM customer c
+            INNER JOIN ride_order ro ON c.customer_id = ro.customer_id
+            WHERE ro.order_date >= ? AND ro.order_date <= ?
+            ORDER BY c.customer_id, ro.order_date
+          `;
+
+          const storeCustomers = await new Promise((resolve, reject) => {
+            db.query(storeCustomersSql, [startDate, endDate], (err, rows) => {
+              if (err) reject(err);
+              else resolve(rows);
+            });
+          });
+
+          const rideCustomers = await new Promise((resolve, reject) => {
+            db.query(rideCustomersSql, [startDate, endDate], (err, rows) => {
+              if (err) reject(err);
+              else resolve(rows);
+            });
+          });
+
+          // Add detailed data to the summary row
+          const detailedResult = {
+            ...summaryRow,
+            store_customer_details: storeCustomers,
+            ride_customer_details: rideCustomers
+          };
+
+          res.json([detailedResult]);
+        } catch (detailErr) {
+          console.error('Error fetching customer details:', detailErr);
+          // If detail fetch fails, return summary data without details
+          res.json(results);
+        }
+      } else {
+        res.json(results);
+      }
     });
   } catch (err) {
     console.error('Error:', err);

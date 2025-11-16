@@ -126,7 +126,7 @@ router.get('/store-inventory/:storeId', (req, res) => {
   const storeId = req.params.storeId;
   const sql = `
     SELECT si.store_id, si.item_id, si.stock_quantity, si.created_at, si.updated_at,
-           m.name as item_name, m.price, m.description, m.type as item_type, m.quantity as total_quantity, m.image_url
+           m.name as item_name, m.price, m.description, m.type as item_type, m.image_url
     FROM store_inventory si
     JOIN merchandise m ON si.item_id = m.item_id
     WHERE si.store_id = ?
