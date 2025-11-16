@@ -10,6 +10,7 @@ import SignUp from './components/layouts/public/Signup.jsx';
 import Login from './components/layouts/public/Login.jsx';
 import Logout from './components/layouts/public/Logout.jsx';
 import ChangePassword from './components/layouts/public/ChangePassword.jsx';
+import CompleteProfile from './components/layouts/public/CompleteProfile.jsx';
 import AdminMain from './components/layouts/admin/AdminMain.jsx';
 import EMaintenance from './components/layouts/employee-maintenance/EMaintenance.jsx';
 import HomePage from './components/layouts/customer/HomePage.jsx';
@@ -27,7 +28,8 @@ import ProtectedRoute from './components/layouts/public/ProtectedRoute.jsx';
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname.startsWith('/admin') || location.pathname === '/manager' ||
-  location.pathname === '/sales' || location.pathname === '/maintenance' || location.pathname === '/change-password';
+  location.pathname === '/sales' || location.pathname === '/maintenance' || location.pathname === '/change-password' ||
+  location.pathname === '/complete-profile';
 
  return (
     <>
@@ -39,6 +41,7 @@ function AppContent() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/complete-profile" element={<CompleteProfile />} />
 
         {/* ===== CUSTOMER ROUTES (Require Customer Authentication) ===== */}
         {/* Store browsing (public) */}

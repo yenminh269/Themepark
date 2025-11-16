@@ -6,7 +6,7 @@ const router = express.Router();
 // GET /customer-report - Customer report
 router.get('/customer-report', async (req, res) => {
   try {
-    const { type, startDate, endDate, period } = req.query;
+    const { type, startDate, endDate, period, viewMode } = req.query;
     // Validate required parameters
     if ( !type || !startDate || !endDate) {
       return res.status(400).json({
@@ -22,40 +22,139 @@ router.get('/customer-report', async (req, res) => {
         sql = `SELECT sign_up_date, new_customer,
           SUM(new_customer) OVER (ORDER BY sign_up_date) AS cumulative_customers
         FROM (
-          SELECT 
+          SELECT
             DATE(created_at) AS sign_up_date,
             COUNT(*) AS new_customer
           FROM customer
-          WHERE created_at >= ? 
+          WHERE created_at >= ?
             AND created_at < ?
           GROUP BY sign_up_date
         ) AS count_customer
         ORDER BY sign_up_date;`;
         params = [startDate,endDate];
         break;
-      case 'avg_purchases':
-     //average number of customer visit
-        sql = `
-          WITH all_customers AS (
-          SELECT customer_id FROM store_order
-          WHERE order_date >= ? AND order_date <= ?
-          UNION
-          SELECT customer_id FROM ride_order
-          WHERE order_date >= ? AND order_date <= ?
-        )
-        SELECT
-          (SELECT COUNT(DISTINCT customer_id)
-          FROM store_order
-          WHERE order_date >= ? AND order_date <= ?) AS store_customers,
+      case 'purchase_activity':
 
-          (SELECT COUNT(DISTINCT customer_id)
-          FROM ride_order
-          WHERE order_date >= ? AND order_date <= ?) AS ride_customers,
+        if (!viewMode) {
+          return res.status(400).json({
+            error: 'View mode is required for purchase activity report'
+          });
+        }
 
-          (SELECT COUNT(*) FROM all_customers) AS total_unique_customers,
-          (SELECT COUNT(*) FROM all_customers) / DATEDIFF(?,?) AS avg_customer;
-        `;
-        params = [startDate, endDate, startDate, endDate, startDate, endDate, startDate, endDate, endDate, startDate];
+        if (viewMode === 'summary') {
+          // Summary view - average number of customer purchases
+          sql = `
+            WITH all_customers AS (
+            SELECT customer_id FROM store_order
+            WHERE order_date >= ? AND order_date <= ?
+            UNION
+            SELECT customer_id FROM ride_order
+            WHERE order_date >= ? AND order_date <= ?
+          )
+          SELECT
+            (SELECT COUNT(DISTINCT customer_id)
+            FROM store_order
+            WHERE order_date >= ? AND order_date <= ?) AS store_customers,
+
+            (SELECT COUNT(DISTINCT customer_id)
+            FROM ride_order
+            WHERE order_date >= ? AND order_date <= ?) AS ride_customers,
+
+            (SELECT COUNT(*) FROM all_customers) AS total_unique_customers,
+            DATEDIFF(?,?) AS num_days,
+            (SELECT COUNT(*) FROM all_customers) / DATEDIFF(?,?) AS avg_customer;
+          `;
+          params = [startDate, endDate, startDate, endDate, startDate, endDate, startDate, endDate, endDate, startDate, endDate, startDate];
+        } else if (viewMode === 'daily') {
+          // Daily breakdown view with spike detection
+          if (!period) {
+            return res.status(400).json({
+              error: 'Period is required for daily breakdown view'
+            });
+          }
+
+          if (period === 'monthly') {
+            sql = `WITH daily AS (
+              SELECT
+                DATE(order_date) AS visit_date,
+                COUNT(DISTINCT customer_id) AS num_customers
+              FROM (
+                SELECT customer_id, order_date FROM ride_order
+                UNION
+                SELECT customer_id, order_date FROM store_order
+              ) AS all_orders
+              WHERE order_date >= ? AND order_date <= ?
+              GROUP BY DATE(order_date)
+            ),
+            monthly AS (
+              SELECT
+                YEAR(visit_date) AS year,
+                MONTH(visit_date) AS month_num,
+                AVG(num_customers) AS avg_customers,
+                COUNT(*) AS days_in_month
+              FROM daily
+              GROUP BY YEAR(visit_date), MONTH(visit_date)
+            )
+            SELECT
+              d.visit_date,
+              d.num_customers,
+              m.month_num,
+              m.avg_customers,
+              m.days_in_month,
+              CASE
+                WHEN d.num_customers > m.avg_customers * 1.2 THEN 'Spike'
+                ELSE 'Normal'
+              END AS status
+            FROM daily d
+            JOIN monthly m
+              ON YEAR(d.visit_date) = m.year
+              AND MONTH(d.visit_date) = m.month_num
+            ORDER BY d.visit_date;
+            `;
+          } else {
+            sql = `WITH daily AS (
+              SELECT
+                DATE(order_date) AS visit_date,
+                COUNT(DISTINCT customer_id) AS num_customers
+              FROM (
+                SELECT customer_id, order_date FROM ride_order
+                UNION
+                SELECT customer_id, order_date FROM store_order
+              ) AS all_orders
+              WHERE order_date >= ? AND order_date <= ?
+              GROUP BY DATE(order_date)
+            ),
+            weekly AS (
+              SELECT
+                YEAR(visit_date) AS year,
+                WEEK(visit_date, 1) AS week_num,
+                AVG(num_customers) AS avg_customers,
+                COUNT(*) AS days_in_week
+              FROM daily
+              GROUP BY YEAR(visit_date), WEEK(visit_date, 1)
+            )
+            SELECT
+              d.visit_date,
+              d.num_customers,
+              w.week_num,
+              w.avg_customers,
+              w.days_in_week,
+              CASE
+                WHEN d.num_customers > w.avg_customers * 1.2 THEN 'Spike'
+                ELSE 'Normal'
+              END AS status
+            FROM daily d
+            JOIN weekly w
+              ON YEAR(d.visit_date) = w.year
+              AND WEEK(d.visit_date, 1) = w.week_num
+            ORDER BY d.visit_date;`;
+          }
+          params = [startDate, endDate];
+        } else {
+          return res.status(400).json({
+            error: 'Invalid view mode. Must be "summary" or "daily"'
+          });
+        }
         break;
       case 'customer_spikes':
         if (!period) {
@@ -65,7 +164,7 @@ router.get('/customer-report', async (req, res) => {
         }
         if (period === 'monthly') {
           sql = `WITH daily AS (
-            SELECT 
+            SELECT
               DATE(order_date) AS visit_date,
               COUNT(DISTINCT customer_id) AS num_customers
             FROM (
@@ -80,15 +179,17 @@ router.get('/customer-report', async (req, res) => {
             SELECT
               YEAR(visit_date) AS year,
               MONTH(visit_date) AS month_num,
-              AVG(num_customers) AS avg_customers
+              AVG(num_customers) AS avg_customers,
+              COUNT(*) AS days_in_month
             FROM daily
             GROUP BY YEAR(visit_date), MONTH(visit_date)
           )
-          SELECT 
+          SELECT
             d.visit_date,
             d.num_customers,
             m.month_num,
             m.avg_customers,
+            m.days_in_month,
             CASE
               WHEN d.num_customers > m.avg_customers * 1.2 THEN 'Spike'
               ELSE 'Normal'
@@ -101,7 +202,7 @@ router.get('/customer-report', async (req, res) => {
           `
         } else{
           sql = `WITH daily AS (
-            SELECT 
+            SELECT
               DATE(order_date) AS visit_date,
               COUNT(DISTINCT customer_id) AS num_customers
             FROM (
@@ -115,16 +216,18 @@ router.get('/customer-report', async (req, res) => {
           weekly AS (
             SELECT
               YEAR(visit_date) AS year,
-              WEEK(visit_date, 1) AS week_num, 
-              AVG(num_customers) AS avg_customers
+              WEEK(visit_date, 1) AS week_num,
+              AVG(num_customers) AS avg_customers,
+              COUNT(*) AS days_in_week
             FROM daily
             GROUP BY YEAR(visit_date), WEEK(visit_date, 1)
           )
-          SELECT 
+          SELECT
             d.visit_date,
             d.num_customers,
             w.week_num,
             w.avg_customers,
+            w.days_in_week,
             CASE
               WHEN d.num_customers > w.avg_customers * 1.2 THEN 'Spike'
               ELSE 'Normal'
@@ -201,8 +304,8 @@ router.get('/customer-report', async (req, res) => {
           res.json(results);
         }
       }
-      // For avg_purchases report, fetch detailed customer information
-      else if (type === 'avg_purchases' && results.length > 0) {
+      // For purchase_activity summary report, fetch detailed customer information
+      else if (type === 'purchase_activity' && viewMode === 'summary' && results.length > 0) {
         try {
           const summaryRow = results[0];
 
@@ -214,7 +317,7 @@ router.get('/customer-report', async (req, res) => {
               c.last_name,
               c.email,
               c.phone,
-              so.order_id,
+              so.store_order_id,
               so.order_date,
               DATE_FORMAT(so.order_date, '%Y-%m-%d') as formatted_order_date,
               so.total_amount,
@@ -269,6 +372,83 @@ router.get('/customer-report', async (req, res) => {
           res.json([detailedResult]);
         } catch (detailErr) {
           console.error('Error fetching customer details:', detailErr);
+          // If detail fetch fails, return summary data without details
+          res.json(results);
+        }
+      }
+      // For purchase_activity daily report, fetch detailed order information for each day
+      else if (type === 'purchase_activity' && viewMode === 'daily' && results.length > 0) {
+        try {
+          const detailedResults = await Promise.all(results.map(async (row) => {
+            // Fetch store orders for this day
+            const storeOrdersSql = `
+              SELECT DISTINCT
+                c.customer_id,
+                c.first_name,
+                c.last_name,
+                c.email,
+                c.phone,
+                so.store_order_id,
+                so.order_date,
+                DATE_FORMAT(so.order_date, '%Y-%m-%d') as formatted_order_date,
+                so.total_amount,
+                so.status,
+                so.payment_method
+              FROM customer c
+              INNER JOIN store_order so ON c.customer_id = so.customer_id
+              WHERE DATE(so.order_date) = ?
+              ORDER BY c.customer_id, so.order_date
+            `;
+
+            // Fetch ride orders for this day
+            const rideOrdersSql = `
+              SELECT DISTINCT
+                c.customer_id,
+                c.first_name,
+                c.last_name,
+                c.email,
+                c.phone,
+                ro.order_id,
+                ro.order_date,
+                DATE_FORMAT(ro.order_date, '%Y-%m-%d') as formatted_order_date,
+                ro.total_amount,
+                ro.status
+              FROM customer c
+              INNER JOIN ride_order ro ON c.customer_id = ro.customer_id
+              WHERE DATE(ro.order_date) = ?
+              ORDER BY c.customer_id, ro.order_date
+            `;
+
+            const storeOrders = await new Promise((resolve, reject) => {
+              db.query(storeOrdersSql, [row.visit_date], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+              });
+            });
+
+            const rideOrders = await new Promise((resolve, reject) => {
+              db.query(rideOrdersSql, [row.visit_date], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+              });
+            });
+
+            // Count unique customers from both sources
+            const storeCustomerCount = new Set(storeOrders.map(o => o.customer_id)).size;
+            const rideCustomerCount = new Set(rideOrders.map(o => o.customer_id)).size;
+
+            return {
+              ...row,
+              store_order_details: storeOrders,
+              ride_order_details: rideOrders,
+              store_customer_count: storeCustomerCount,
+              ride_customer_count: rideCustomerCount
+            };
+          }));
+
+          res.json(detailedResults);
+        } catch (detailErr) {
+          console.error('Error fetching spike order details:', detailErr);
           // If detail fetch fails, return summary data without details
           res.json(results);
         }

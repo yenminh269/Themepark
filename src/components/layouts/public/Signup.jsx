@@ -130,7 +130,7 @@ function SignUp() {
   };
 
   return (
-    <div className="!min-h-screen !bg-gradient-to-br !from-[#FFFBDE] !from-0% !via-[#FFFBDE] !via-50% !to-[#4682A9] !to-100% !flex !items-center !justify-center !flex-wrap !p-6 !relative">
+    <div className="!min-h-screen bg-[#EEF5FF] !via-50% !to-[#4682A9] !to-100% !flex !items-center !justify-center !flex-wrap !p-6 !relative">
       <div className=" backdrop-blur-md !rounded-3xl !p-5 !shadow-2xl">
             <div className="!mt-6 !grid  !gap-4 !text-center">
               <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
@@ -158,7 +158,7 @@ function SignUp() {
 
               <div>
                 <InputLogin size="15" type="text" label="Email" name="email" feedback="Please provide a valid email." />
-                <small className="!text-gray-600 !text-sm !mt-1 !block">
+                <small className="!text-gray-700 !text-sm !mt-1 !block">
                   The email address you provide will be used to log in to your account. 
                   It cannot be changed after the account is created.</small>
               </div>
@@ -212,7 +212,7 @@ function SignUp() {
                 <InputLogin size="6" type="date" label="Date of birth" name="dob" feedback="Please provide a valid birthdate." />
                 <InputLogin size="6" type="tel" label="Phone Number" maxLength="10" name="phone"  pattern="[0-9]{3}-[0-9]{3}-[0-9]{4}" feedback="Please enter a valid phone number in format: 000-000-0000" />
               </div>
-              <small className="!text-gray-600 !text-sm !mt-1 !block">Note: Date of birth cannot be changed after account creation.</small>
+              <small className="!text-gray-700 !text-sm !mt-1 !block">Note: Date of birth cannot be changed after account creation.</small>
 
               <Form.Group>
                 <FloatingLabel label="Gender">
@@ -228,7 +228,7 @@ function SignUp() {
 
               <Form.Group className="my-3">
                 <Form.Check className='!text-[#176B87]'
-                required label={<span className='ml-2'>I agree to the <button type="button" 
+                required label={<span className='!ml-2'> I agree to the <button type="button" 
                 className="text-blue-600 underline" onClick={() => setShowTerms(!showTerms)}>Terms and Conditions</button> and consent to the use of my personal information.</span>} feedback="You must agree before submitting." feedbackType="invalid" />
                   {showTerms && (
                     <div className="mt-2 p-3 bg-transparent rounded text-sm text-gray-700">

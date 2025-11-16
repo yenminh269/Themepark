@@ -2,8 +2,110 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import db from '../config/db.js';
 import { makeToken, requireCustomerAuth } from '../middleware/auth.js';
+import GoogleStrategy from 'passport-google-oauth2';
+import session from 'express-session';
+import passport from 'passport';
+import env from "dotenv";
+env.config();
 
 const router = express.Router();
+// Session middleware setup
+router.use(session({
+    secret: process.env.SESSION_SECRET, 
+    //as an ecryption key to encrypt our db
+    resave: false,
+    saveUninitialized: true,
+    cookie:{
+    maxAge: 1000 * 60 * 60 * 24, //one-day length cookie
+    }
+  })
+);
+
+router.use(passport.initialize());
+router.use(passport.session());
+
+// Passport serialization for session management
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+
+passport.deserializeUser((user, done) => {
+  done(null, user);
+});
+
+// Google OAuth Strategy - must be defined before routes
+passport.use("google", new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "http://localhost:3001/api/customer/auth/google/callback",
+  userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+}, async (accessToken, refreshToken, profile, cb) => {
+  try {
+    // Extract user info from Google profile
+     const email = profile.email ? profile.email : null;
+    const firstName = profile.name && profile.name.givenName ? profile.name.givenName : profile.displayName;
+    const lastName = profile.name && profile.name.familyName ? profile.name.familyName : '';
+    console.log(email, firstName, lastName);
+     
+    if (!email) {
+      return cb(new Error("No email found in Google profile"));
+    }
+    // Check if customer already exists
+    db.query(
+      "SELECT customer_id, first_name, last_name, gender, email, dob, phone FROM customer WHERE email = ?",
+      [email],
+      async (err, rows) => {
+        if (err) {
+          console.error("Google OAuth DB error:", err);
+          return cb(err);
+        }
+        if (rows.length > 0) {
+          // Existing user - return their data
+          const existingCustomer = rows[0];
+          return cb(null, existingCustomer);
+        } else {
+          // New user - create account
+          // For Google OAuth users, we'll set default values for required fields
+          const defaultPassword = await bcrypt.hash("google" + Date.now(), 2);
+          const defaultDob = "1000-01-01"; // Default DOB - placeholder date
+          const defaultPhone = "0"; // Default phone
+          const defaultGender = "Others"; // Default gender
+
+          const insertSql = `
+            INSERT INTO customer
+            (first_name, last_name, gender, email, password, dob, phone)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `;
+
+          db.query(
+            insertSql,
+            [firstName, lastName, defaultGender, email, defaultPassword, defaultDob, defaultPhone],
+            (insertErr, result) => {
+              if (insertErr) {
+                console.error("Google OAuth insert error:", insertErr);
+                return cb(insertErr);
+              }
+
+              const newCustomer = {
+                customer_id: result.insertId,
+                first_name: firstName,
+                last_name: lastName,
+                gender: defaultGender,
+                email: email,
+                dob: defaultDob,
+                phone: defaultPhone,
+              };
+              return cb(null, newCustomer);
+            }
+          );
+        }
+      }
+    );
+  } catch (error) {
+    console.error("Google OAuth error:", error);
+    return cb(error);
+  }
+}));
 
 // SIGNUP ROUTE
 router.post("/signup", async (req, res) => {
@@ -158,6 +260,39 @@ router.post("/login", (req, res) => {
   });
 });
 
+// GOOGLE OAUTH ROUTES
+router.get("/auth/google", passport.authenticate("google", {
+  scope: ["profile", "email"]
+}));
+
+router.get("/auth/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: "http://localhost:5173/login?error=google_auth_failed",
+    session: false
+  }),
+  (req, res) => {
+    try {
+      // User is authenticated, create JWT token
+      const customer = req.user;
+      const token = makeToken({
+        customer_id: customer.customer_id,
+        email: customer.email
+      });
+
+      // Redirect to frontend with token and customer data
+      // Frontend will handle storing these in localStorage
+      const redirectUrl = `http://localhost:5173/login?` +
+        `token=${encodeURIComponent(token)}` +
+        `&customer=${encodeURIComponent(JSON.stringify(customer))}`;
+
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error("Google callback error:", error);
+      res.redirect("http://localhost:5173/login?error=auth_failed");
+    }
+  }
+);
+
 // GET CUSTOMER INFO (ME)
 router.get("/me", requireCustomerAuth, (req, res) => {
   const sql = `
@@ -193,7 +328,76 @@ router.get("/me", requireCustomerAuth, (req, res) => {
   });
 });
 
-// UPDATE CUSTOMER INFO
+// COMPLETE PROFILE (For Google OAuth users with default values)
+router.put("/complete-profile/:id", requireCustomerAuth, (req, res) => {
+  const customerId = req.params.id;
+
+  // Ensure customer can only update their own information
+  if (parseInt(customerId) !== req.customer_id) {
+    return res.status(403).json({ error: "Unauthorized to update this customer" });
+  }
+
+  const { dob, phone, gender } = req.body;
+
+  // Validate required fields
+  if (!dob || !phone || !gender) {
+    return res.status(400).json({ error: "Date of birth, phone, and gender are required" });
+  }
+
+  // Validate date of birth format and age (18+)
+  const dobDate = new Date(dob);
+  const today = new Date();
+  const age = today.getFullYear() - dobDate.getFullYear();
+  const monthDiff = today.getMonth() - dobDate.getMonth();
+  const dayDiff = today.getDate() - dobDate.getDate();
+  const isAdult = age > 18 || (age === 18 && (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)));
+
+  if (!isAdult) {
+    return res.status(400).json({ error: "You must be at least 18 years old" });
+  }
+
+  const sql = `
+    UPDATE customer
+    SET dob = ?, phone = ?, gender = ?
+    WHERE customer_id = ?
+  `;
+
+  db.query(
+    sql,
+    [dob, phone, gender, customerId],
+    (err, result) => {
+      if (err) {
+        console.error("COMPLETE PROFILE update error:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      // Fetch the updated customer data
+      const selectSql = `SELECT customer_id, first_name, last_name, gender, email, dob, phone FROM customer WHERE customer_id = ?`;
+      db.query(selectSql, [customerId], (selectErr, selectResult) => {
+        if (selectErr) {
+          console.error("SELECT customer error:", selectErr);
+          return res.status(500).json({ error: "Database error" });
+        }
+
+        if (selectResult.length === 0) {
+          return res.status(404).json({ error: "Customer not found" });
+        }
+
+        const customer = selectResult[0];
+        return res.json({
+          message: "Profile completed successfully",
+          customer,
+        });
+      });
+    }
+  );
+});
+
+// UPDATE CUSTOMER INFO (Regular updates - cannot change DOB)
 router.put("/:id", requireCustomerAuth, (req, res) => {
   const customerId = req.params.id;
 

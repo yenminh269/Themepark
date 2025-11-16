@@ -15,18 +15,18 @@ function CustomerSummary() {
   const [type, setType] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [period, setPeriod] = useState("weekly"); // for customer_spikes
+  const [viewMode, setViewMode] = useState("summary"); // summary or daily
+  const [period, setPeriod] = useState("weekly"); // for daily view
 
-  // Clear report data when type changes
+  // Clear report data when any form parameter changes
   useEffect(() => {
     setReportData(null);
     setConclusion("");
-  }, [type]);
+  }, [type, viewMode, period, startDate, endDate]);
 
   const typeOption = [
     { value: 'new_customers', label: 'Number of New Customers Registered' },
-    { value: 'avg_purchases', label: 'Average Number of Customer Purchase' },
-    { value: 'customer_spikes', label: 'Spike in Average Number of Customers with Purchase Activity' }
+    { value: 'purchase_activity', label: 'Customer Purchase Activity' }
   ];
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -58,39 +58,50 @@ function CustomerSummary() {
     return conclusionText;
   };
 
-  const generateAvgPurchasesConclusion = (data) => {
+  const generatePurchaseActivityConclusion = (data, mode) => {
     if (!data || data.length === 0) return "";
 
-    const item = data[0]; // Backend returns single row with aggregated data
-    const avgCustomer = parseFloat(item.avg_customer || 0);
+    if (mode === 'summary') {
+      // Summary view conclusion
+      const item = data[0]; // Backend returns single row with aggregated data
+      const avgCustomer = parseFloat(item.avg_customer || 0);
+      const totalUnique = item.total_unique_customers || 0;
+      const numDays = item.num_days || 0;
 
-    let conclusionText = `During this period, there were <strong>${item.total_unique_customers?.toLocaleString() || 0}</strong> unique customers. `;
-    conclusionText += `Store customers: <strong>${item.store_customers?.toLocaleString() || 0}</strong>, `;
-    conclusionText += `Ride customers: <strong>${item.ride_customers?.toLocaleString() || 0}</strong>. `;
-    conclusionText += `The average number of customers is <strong>${avgCustomer.toFixed(2)}</strong>.`;
+      let conclusionText = `During this period, there were <strong>${totalUnique.toLocaleString()}</strong> unique customers. `;
+      conclusionText += `Store customers: <strong>${item.store_customers?.toLocaleString() || 0}</strong>, `;
+      conclusionText += `Ride customers: <strong>${item.ride_customers?.toLocaleString() || 0}</strong>. `;
+      conclusionText += `<br/>The average number of customers per day is <strong>${avgCustomer.toFixed(2)}</strong> `;
+      conclusionText += `(calculated as: ${totalUnique.toLocaleString()} unique customers ÷ ${numDays} days).`;
 
-    return conclusionText;
-  };
+      return conclusionText;
+    } else {
+      // Daily breakdown conclusion
+      const spikes = data.filter(item => item.status === 'Spike');
+      const totalDays = data.length;
 
-  const generateCustomerSpikesConclusion = (data) => {
-    if (!data || data.length === 0) return "";
+      if (spikes.length === 0) {
+        const totalUnique = data.reduce((sum, item) => sum + (item.num_customers || 0), 0);
+        const avgPerDay = (totalUnique / totalDays).toFixed(2);
+        return `Analyzed ${totalDays} days with an average of <strong>${avgPerDay}</strong> unique customers per day. No significant spikes (>20% above ${period === 'weekly' ? 'week' : 'month'} average) were detected.`;
+      }
 
-    const spikes = data.filter(item => item.status === 'Spike');
+      const avgDuringSpikes = (spikes.reduce((sum, item) => sum + (item.num_customers || 0), 0) / spikes.length).toFixed(2);
+      const maxSpike = Math.max(...spikes.map(item => item.num_customers || 0));
+      const spikePercentage = ((spikes.length / totalDays) * 100).toFixed(1);
 
-    if (spikes.length === 0) {
-      return "No significant spikes in customer numbers were detected during this period.";
+      // Get period info from first item
+      const periodType = period === 'weekly' ? 'week' : 'month';
+
+      let conclusionText = `<strong>${spikes.length}</strong> spike(s) detected out of ${totalDays} days (${spikePercentage}% of period). `;
+      conclusionText += `During spike periods, the average number of customers during spike days was <strong>${avgDuringSpikes}</strong>, `;
+      conclusionText += `with the highest spike reaching <strong>${maxSpike.toLocaleString()}</strong> customers.`;
+      conclusionText += `<br/><br/><strong>How it's calculated:</strong> `;
+      conclusionText += `The ${periodType} average is computed from the daily unique customer count across all days in each ${periodType}. `;
+      conclusionText += `A "Spike" is detected when a day's customer count exceeds the ${periodType} average by more than 20%.`;
+
+      return conclusionText;
     }
-
-    const avgDuringSpikes = (spikes.reduce((sum, item) => sum + (item.num_customers || 0), 0) / spikes.length).toFixed(2);
-    const maxSpike = Math.max(...spikes.map(item => item.num_customers || 0));
-    const totalDays = data.length;
-    const spikePercentage = ((spikes.length / totalDays) * 100).toFixed(1);
-
-    let conclusionText = `<strong>${spikes.length}</strong> spike(s) detected out of ${totalDays} days (${spikePercentage}% of period). `;
-    conclusionText += `During spike periods, the average number of customers during spike days was <strong>${avgDuringSpikes}</strong>, `;
-    conclusionText += `with the highest spike reaching <strong>${maxSpike.toLocaleString()}</strong> customers.`;
-
-    return conclusionText;
   };
 
   const handleSubmit = async (e) => {
@@ -105,7 +116,8 @@ function CustomerSummary() {
         type,
         startDate,
         endDate,
-        ...(type === 'customer_spikes' && { period })
+        ...(type === 'purchase_activity' && { viewMode }),
+        ...(type === 'purchase_activity' && viewMode === 'daily' && { period })
       };
 
       const data = await api.getCustomerReport(params);
@@ -114,10 +126,8 @@ function CustomerSummary() {
       // Generate conclusion based on report type
       if (type === 'new_customers') {
         setConclusion(generateNewCustomersConclusion(data));
-      } else if (type === 'avg_purchases') {
-        setConclusion(generateAvgPurchasesConclusion(data));
-      } else if (type === 'customer_spikes') {
-        setConclusion(generateCustomerSpikesConclusion(data));
+      } else if (type === 'purchase_activity') {
+        setConclusion(generatePurchaseActivityConclusion(data, viewMode));
       }
     } catch (err) {
       setError(err.message || "Failed to fetch report data");
@@ -133,14 +143,18 @@ function CustomerSummary() {
     try {
       // Create a formatted report text based on report type
       let reportTitle = '';
-      if (type === 'new_customers') reportTitle = 'NUMBER OF NEW CUSTOMERS REGISTERED REPORT';
-      else if (type === 'avg_purchases') reportTitle = 'AVERAGE NUMBER OF CUSTOMER PURCHASE REPORT';
-      else if (type === 'customer_spikes') reportTitle = 'SPIKE IN AVERAGE NUMBER OF CUSTOMERS WITH PURCHASE ACTIVITY';
+      if (type === 'new_customers') {
+        reportTitle = 'NUMBER OF NEW CUSTOMERS REGISTERED REPORT';
+      } else if (type === 'purchase_activity') {
+        reportTitle = viewMode === 'summary'
+          ? 'CUSTOMER PURCHASE ACTIVITY REPORT - SUMMARY VIEW'
+          : 'CUSTOMER PURCHASE ACTIVITY REPORT - DAILY BREAKDOWN';
+      }
 
       let reportText = `${reportTitle}
 Generated: ${new Date().toLocaleString()}
 Date Range: ${startDate} to ${endDate}
-${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + period.slice(1)}` : ''}
+${type === 'purchase_activity' && viewMode === 'daily' ? `Period: ${period.charAt(0).toUpperCase() + period.slice(1)}` : ''}
 
 ==============================
 `;
@@ -163,7 +177,7 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
               const email = (detail.email || '').substring(0, 30).padEnd(30);
               const dob = (detail.formatted_dob || '').padEnd(12);
               const phone = (detail.phone || '').padEnd(15);
-              const createdAt = (detail.formatted_created_at || '').padEnd(20);
+              const createdAt = (detail.formatted_created_at || '').padEnd(10);
               const ridePurchase = (detail.has_ride_purchase || 'No').padEnd(15);
               const storePurchase = (detail.has_store_purchase || 'No').padEnd(15);
 
@@ -176,7 +190,7 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
           reportText += `Date: ${formattedDate}\n`;
           reportText += `  New Customers: ${item.new_customer?.toLocaleString() || 0}\n`;
           reportText += `  Cumulative Customers: ${item.cumulative_customers?.toLocaleString() || 0}\n\n`;
-        } else if (type === 'avg_purchases') {
+        } else if (type === 'purchase_activity' && viewMode === 'summary') {
           // Store Customers Details
           if (item.store_customer_details && item.store_customer_details.length > 0) {
             reportText += `\nSTORE CUSTOMERS (${item.store_customers || 0}):\n`;
@@ -225,25 +239,71 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
           reportText += `Total Store Customers:      ${item.store_customers?.toLocaleString() || 0}\n`;
           reportText += `Total Ride Customers:       ${item.ride_customers?.toLocaleString() || 0}\n`;
           reportText += `Total Unique Customers:     ${item.total_unique_customers?.toLocaleString() || 0}\n`;
+          reportText += `Number of Days:             ${item.num_days || 0}\n`;
           reportText += `Average Customers per Day:  ${parseFloat(item.avg_customer || 0).toFixed(2)}\n`;
+          reportText += `  (Calculated as: ${item.total_unique_customers?.toLocaleString() || 0} unique customers ÷ ${item.num_days || 0} days)\n`;
           reportText += `${'='.repeat(80)}\n\n`;
-        } else if (type === 'customer_spikes') {
+        } else if (type === 'purchase_activity' && viewMode === 'daily') {
           const formattedDate = item.visit_date?.split('T')[0] || item.visit_date;
+
+          // Store Orders Details
+          if (item.store_order_details && item.store_order_details.length > 0) {
+            reportText += `\nSTORE ORDERS ON ${formattedDate} (${item.store_customer_count || 0} unique customers):\n`;
+            reportText += `${'='.repeat(150)}\n`;
+            reportText += `${'Customer Name'.padEnd(25)} | ${'Email'.padEnd(30)} | ${'Phone'.padEnd(15)} | ${'Order Time'.padEnd(20)} | ${'Amount'.padEnd(12)} | ${'Status'.padEnd(12)} | ${'Payment'.padEnd(15)}\n`;
+            reportText += `${'-'.repeat(150)}\n`;
+
+            item.store_order_details.forEach(detail => {
+              const customerName = `${detail.first_name} ${detail.last_name}`.substring(0, 25).padEnd(25);
+              const email = (detail.email || '').substring(0, 30).padEnd(30);
+              const phone = (detail.phone || '').padEnd(15);
+              const orderTime = (detail.formatted_order_date || '').padEnd(10);
+              const amount = `$${detail.total_amount?.toFixed(2) || '0.00'}`.padEnd(12);
+              const status = (detail.status || '').padEnd(12);
+              const payment = (detail.payment_method || '').padEnd(15);
+
+              reportText += `${customerName} | ${email} | ${phone} | ${orderTime} | ${amount} | ${status} | ${payment}\n`;
+            });
+            reportText += `${'='.repeat(150)}\n\n`;
+          }
+
+          // Ride Orders Details
+          if (item.ride_order_details && item.ride_order_details.length > 0) {
+            reportText += `\nRIDE ORDERS ON ${formattedDate} (${item.ride_customer_count || 0} unique customers):\n`;
+            reportText += `${'='.repeat(130)}\n`;
+            reportText += `${'Customer Name'.padEnd(25)} | ${'Email'.padEnd(30)} | ${'Phone'.padEnd(15)} | ${'Order Time'.padEnd(20)} | ${'Amount'.padEnd(12)} | ${'Status'.padEnd(12)}\n`;
+            reportText += `${'-'.repeat(130)}\n`;
+
+            item.ride_order_details.forEach(detail => {
+              const customerName = `${detail.first_name} ${detail.last_name}`.substring(0, 25).padEnd(25);
+              const email = (detail.email || '').substring(0, 30).padEnd(30);
+              const phone = (detail.phone || '').padEnd(15);
+              const orderTime = (detail.formatted_order_date || '').padEnd(10);
+              const amount = `$${detail.total_amount?.toFixed(2) || '0.00'}`.padEnd(12);
+              const status = (detail.status || '').padEnd(12);
+
+              reportText += `${customerName} | ${email} | ${phone} | ${orderTime} | ${amount} | ${status}\n`;
+            });
+            reportText += `${'='.repeat(130)}\n\n`;
+          }
+
+          // Summary for this date
           reportText += `Date: ${formattedDate}\n`;
-          reportText += `  Customer Count: ${item.num_customers?.toLocaleString() || 0}\n`;
+          reportText += `  Total Unique Customers: ${item.num_customers?.toLocaleString() || 0}\n`;
+          reportText += `  Store Customers: ${item.store_customer_count || 0}\n`;
+          reportText += `  Ride Customers: ${item.ride_customer_count || 0}\n`;
           reportText += `  ${period === 'weekly' ? 'Week' : 'Month'} Average: ${parseFloat(item.avg_customers || 0).toFixed(2)}\n`;
-          reportText += `  Status: ${item.status}\n\n`;
+          reportText += `    (Calculated from ${item.days_in_week || item.days_in_month || 0} days in this ${period === 'weekly' ? 'week' : 'month'})\n`;
+          reportText += `  Status: ${item.status}${item.status === 'Spike' ? ' (>20% above average)' : ''}\n\n`;
         }
       });
 
       // Add grand total for new_customers report
       if (type === 'new_customers' && reportData.length > 0) {
-        const totalNewCustomers = reportData.reduce((sum, item) => sum + (item.new_customer || 0), 0);
         const totalCumulative = reportData[reportData.length - 1]?.cumulative_customers || 0;
 
         reportText += `==============================\n`;
         reportText += `GRAND TOTAL:\n`;
-        reportText += `  Total New Customers: ${totalNewCustomers.toLocaleString()}\n`;
         reportText += `  Total Cumulative Customers: ${totalCumulative.toLocaleString()}\n`;
       }
 
@@ -293,10 +353,10 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
   };
 
   return (
-  <div className="w-full max-w-5xl mx-auto my-6">
-    <form onSubmit={handleSubmit}
+  <div className="w-full max-w-6xl mx-auto my-6">
+  <form onSubmit={handleSubmit}
           className="flex flex-col px-5 rounded w-full mb-6"
-          style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
+          style={{ boxShadow: '-8px -5px 12px 5px rgba(0,0,0,0.25)' }}
     >
       <h2 className="text-2xl text-center font-extrabold mb-4 pt-3" style={{ color: '#4B5945' }}>
          Customer Activity Report
@@ -312,7 +372,40 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
             />
          </FormControl>
       </div>
-      {type === 'customer_spikes' && (
+
+      {type === 'purchase_activity' && (
+        <div className="mt-3">
+          <FormControl isRequired>
+            <FormLabel color="#4B5945" fontWeight="500">View Mode</FormLabel>
+            <div className="flex gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="viewMode"
+                  value="summary"
+                  checked={viewMode === 'summary'}
+                  onChange={(e) => setViewMode(e.target.value)}
+                  className="w-4 h-4 text-[#176B87] focus:ring-[#176B87]"
+                />
+                <span style={{ color: '#4B5945' }}>Summary</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="viewMode"
+                  value="daily"
+                  checked={viewMode === 'daily'}
+                  onChange={(e) => setViewMode(e.target.value)}
+                  className="w-4 h-4 text-[#176B87] focus:ring-[#176B87]"
+                />
+                <span style={{ color: '#4B5945' }}>Daily Breakdown</span>
+              </label>
+            </div>
+          </FormControl>
+        </div>
+      )}
+
+      {type === 'purchase_activity' && viewMode === 'daily' && (
         <div className="mt-3">
           <FormControl isRequired>
             <FormLabel color="#4B5945" fontWeight="500">Period</FormLabel>
@@ -386,69 +479,59 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
        </div>
     )}
   </form>
-
-        {reportData && reportData.length > 0 && (
-          <div
-            className="flex flex-col items-center justify-center p-6 mt-4 rounded w-full relative"
-            style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
-          >
-            <button
-              onClick={handleCloseReport}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+  {reportData && reportData.length > 0 && (
+    <div className="flex flex-col items-center justify-center p-6 mt-4 rounded w-full relative" >
+      <button onClick={handleCloseReport}
+              className="px-1 !border !border-gray-700 !rounded-sm absolute top-2 right-4 text-gray-500 text-2xl font-bold"
               style={{ cursor: 'pointer' }}
               aria-label="Close report"
-            >X
-            </button>
-            <h3 className="text-xl font-bold mb-4" style={{ color: '#4B5945' }}>
-              {type === 'new_customers' && 'Number of New Customers Registered Report'}
-              {type === 'avg_purchases' && 'Average Number of Customer Purchase Report'}
-              {type === 'customer_spikes' && 'Spike in Average Number of Customers with Purchase Activity'}
-            </h3>
-
-            <div className="overflow-x-auto w-full">
-              <table className="mx-auto">
-                <thead className="bg-[#176B87] text-white">
+      >X</button>
+      <h3 className="bg-white border !border-gray-500 px-4 py-3 text-xl font-bold mb-4">
+       {type === 'new_customers' && 'Number of New Customers Registered Report'}
+         {type === 'purchase_activity' && viewMode === 'summary' && 'Customer Purchase Activity Report - Summary View'}
+        {type === 'purchase_activity' && viewMode === 'daily' && 'Customer Purchase Activity Report - Daily Breakdown'}
+      </h3>
+      <div className="overflow-x-auto w-full">
+         <table className="mx-auto">
+                <thead className="bg-gray-500 text-white">
                   <tr>
                     {type === 'new_customers' && (
                       <>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Date</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">New Customers</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Cumulative Customers</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">Date</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">New Customers</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">Cumulative Customers</th>
                       </>
                     )}
-                    {type === 'avg_purchases' && (
+                    {type === 'purchase_activity' && viewMode === 'summary' && (
                       <>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Store Customers</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Ride Customers</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Total Unique Customers</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Average Customers</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">Store Customers</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">Ride Customers</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">Total Unique Customers</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">Average Customers</th>
                       </>
                     )}
-                    {type === 'customer_spikes' && (
+                    {type === 'purchase_activity' && viewMode === 'daily' && (
                       <>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Date</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Customer Count</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">{period === 'weekly' ? 'Week' : 'Month'} Average</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Status</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">Date</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">Unique Customer Count</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">{period === 'weekly' ? 'Week' : 'Month'} Average</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold text-center">Status</th>
                       </>
                     )}
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.map((item, index) => (
+                {reportData.map((item, index) => (
                     <>
                       {type === 'new_customers' && (
                         <>
                           {/* Customer Details */}
                           {item.customer_details && item.customer_details.length > 0 && (
                             <tr key={`${index}-details`}>
-                              <td colSpan="3" className="!px-6 !py-4 border !border-gray-500 bg-gray-50">
+                              <td colSpan="3" className=" !py-4 border !border-gray-500 bg-gray-50">
                                 <div className="pl-4">
-                                  <h4 className="font-semibold text-gray-700 mb-3">
-                                    New Customers on {item.sign_up_date?.split('T')[0] || item.sign_up_date} ({item.new_customer || 0} customers):
-                                  </h4>
                                   <table className="min-w-full border-collapse">
-                                    <thead className="bg-purple-200">
+                                    <thead className="bg-[#91C8E4]">
                                       <tr>
                                         <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">First Name</th>
                                         <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Last Name</th>
@@ -472,12 +555,12 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
                                           <td className="py-2 px-4 border border-gray-300 text-sm">{detail.phone}</td>
                                           <td className="py-2 px-4 border border-gray-300 text-sm">{detail.formatted_created_at}</td>
                                           <td className="py-2 px-4 border border-gray-300 text-sm text-center">
-                                            <span className={detail.has_ride_purchase === 'Yes' ? 'text-green-600 font-semibold' : 'text-red-600'}>
+                                            <span className={detail.has_ride_purchase === 'Yes' ? '!text-[#66785F] font-semibold' : '!text-red-600'}>
                                               {detail.has_ride_purchase}
                                             </span>
                                           </td>
                                           <td className="py-2 px-4 border border-gray-300 text-sm text-center">
-                                            <span className={detail.has_store_purchase === 'Yes' ? 'text-green-600 font-semibold' : 'text-red-600'}>
+                                            <span className={detail.has_store_purchase === 'Yes' ? '!text-[#66785F] font-semibold' : '!text-red-600'}>
                                               {detail.has_store_purchase}
                                             </span>
                                           </td>
@@ -491,7 +574,7 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
                           )}
 
                           {/* Summary Row */}
-                          <tr key={`${index}-summary`} className="bg-blue-50 font-semibold">
+                          <tr key={`${index}-summary`} className="bg-blue-100 font-semibold">
                             <td className="py-3 !px-6 border !border-gray-500 text-center">
                               {item.sign_up_date?.split('T')[0] || item.sign_up_date}
                             </td>
@@ -504,7 +587,7 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
                           </tr>
                         </>
                       )}
-                      {type === 'avg_purchases' && (
+                      {type === 'purchase_activity' && viewMode === 'summary' && (
                         <>
                           {/* Store Customers Detail */}
                           {item.store_customer_details && item.store_customer_details.length > 0 && (
@@ -513,7 +596,7 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
                                 <div className="pl-4">
                                   <h4 className="font-semibold text-gray-700 mb-3">Store Customers ({item.store_customers || 0}):</h4>
                                   <table className="min-w-full border-collapse">
-                                    <thead className="bg-blue-200">
+                                    <thead className="!bg-[#91C8E4]">
                                       <tr>
                                         <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Customer Name</th>
                                         <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Email</th>
@@ -585,9 +668,8 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
                               </td>
                             </tr>
                           )}
-
                           {/* Summary Row */}
-                          <tr key={`${index}-summary`} className="bg-yellow-100 border-t-4 border-yellow-600">
+                          <tr key={`${index}-summary`} className="bg-gray-500 border-t-4 text-white">
                             <td className="py-4 !px-6 border !border-gray-500 font-bold text-center">
                               Total Store Customers
                             </td>
@@ -601,7 +683,7 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
                               Average Customers
                             </td>
                           </tr>
-                          <tr key={`${index}-summary-values`} className="bg-yellow-50">
+                          <tr key={`${index}-summary-values`} className="bg-[white]">
                             <td className="py-4 !px-6 border !border-gray-500 text-center font-semibold text-lg">
                               {item.store_customers?.toLocaleString() || 0}
                             </td>
@@ -617,55 +699,135 @@ ${type === 'customer_spikes' ? `Period: ${period.charAt(0).toUpperCase() + perio
                           </tr>
                         </>
                       )}
-                      {type === 'customer_spikes' && (
-                        <tr key={index}>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.visit_date?.split('T')[0] || item.visit_date}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.num_customers?.toLocaleString() || 0}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {parseFloat(item.avg_customers || 0).toFixed(2)}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            <span className={item.status === 'Spike' ? 'text-red-600 font-bold' : ''}>
-                              {item.status}
-                            </span>
-                          </td>
-                        </tr>
+                      {type === 'purchase_activity' && viewMode === 'daily' && (
+                        <>
+                          {/* Store Orders Detail */}
+                          {item.store_order_details && item.store_order_details.length > 0 && (
+                            <tr key={`${index}-store-details`}>
+                              <td colSpan="4" className="!px-6 !py-4 border !border-gray-500 bg-gray-50">
+                                <div className="pl-4">
+                                  <h5 className="font-semibold text-gray-700 mb-3">Store Orders ({item.store_customer_count || 0} unique customers):</h5>
+                                  <table className="min-w-full border-collapse">
+                                    <thead className="bg-[#91C8E4]">
+                                      <tr>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Customer Name</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Email</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Phone</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Order Time</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Total Amount</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Status</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Payment Method</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {item.store_order_details.map((detail, detailIndex) => (
+                                        <tr key={detailIndex} className="hover:bg-gray-100">
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">
+                                            {detail.first_name} {detail.last_name}
+                                          </td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">{detail.email}</td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">{detail.phone}</td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">{detail.formatted_order_date}</td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm text-right">
+                                            ${detail.total_amount?.toFixed(2) || '0.00'}
+                                          </td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">{detail.status}</td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">{detail.payment_method}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+
+                          {/* Ride Orders Detail */}
+                          {item.ride_order_details && item.ride_order_details.length > 0 && (
+                            <tr key={`${index}-ride-details`}>
+                              <td colSpan="4" className="!px-6 !py-4 border !border-gray-500 bg-gray-50">
+                                <div className="pl-4">
+                                  <h5 className="font-bold text-gray-700 mb-3">Ride Orders ({item.ride_customer_count || 0} unique customers):</h5>
+                                  <table className="min-w-full border-collapse">
+                                    <thead className="bg-green-200">
+                                      <tr>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Customer Name</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Email</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Phone</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Order Time</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Total Amount</th>
+                                        <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {item.ride_order_details.map((detail, detailIndex) => (
+                                        <tr key={detailIndex} className="hover:bg-gray-100">
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">
+                                            {detail.first_name} {detail.last_name}
+                                          </td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">{detail.email}</td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">{detail.phone}</td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">{detail.formatted_order_date}</td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm text-right">
+                                            ${detail.total_amount?.toFixed(2) || '0.00'}
+                                          </td>
+                                          <td className="py-2 px-4 border border-gray-300 text-sm">{detail.status}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+
+                          {/* Summary Row */}
+                          <tr key={`${index}-summary`} className="bg-blue-100 font-semibold">
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              {item.visit_date?.split('T')[0] || item.visit_date}
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              {item.num_customers?.toLocaleString() || 0}
+                              <div className="text-xs text-gray-600 font-normal">
+                                (Store: {item.store_customer_count || 0}, Ride: {item.ride_customer_count || 0})
+                              </div>
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              {parseFloat(item.avg_customers || 0).toFixed(2)}
+                              <div className="text-xs text-gray-600 font-normal">
+                                ({item.days_in_week || item.days_in_month || 0} days in {period === 'weekly' ? 'week' : 'month'})
+                              </div>
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              <span className={item.status === 'Spike' ? '!text-red-600 font-bold' : ''}>
+                                {item.status}
+                              </span>
+                              {item.status === 'Spike' && (
+                                <div className="text-xs text-gray-600 font-normal">
+                                  (&gt;20% above avg)
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        </>
                       )}
                     </>
                   ))}
 
-                  {/* Grand Total Summary Row for new_customers */}
-                  {type === 'new_customers' && reportData.length > 0 && (
-                    <tfoot>
-                      <tr className="bg-green-100 border-t-4 border-green-600">
-                        <td className="py-4 !px-6 border !border-gray-500 text-right font-bold text-lg">
-                          TOTAL:
-                        </td>
-                        <td className="py-4 !px-6 border !border-gray-500 text-center font-bold text-lg">
-                          {reportData.reduce((sum, item) => sum + (item.new_customer || 0), 0).toLocaleString()}
-                        </td>
-                        <td className="py-4 !px-6 border !border-gray-500 text-center font-bold text-lg">
-                          {reportData[reportData.length - 1]?.cumulative_customers?.toLocaleString() || 0}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
+               
                 </tbody>
               </table>
-            </div>
+                {/* Grand Total Summary Row for new_customers */}
+               {type === 'new_customers' && reportData.length > 0 && (
+                   <div  className="bg-white my-3 text-black py-3 !pr-8 border !border-gray-500 !text-right font-bold text-xl">
+                      Total Cumulative Customers: {reportData[reportData.length - 1]?.cumulative_customers?.toLocaleString() || 0}
+                   </div>
+                )}
+         </div>
 
             {conclusion && (
-              <div>
-              <h4 className="text-lg font-semibold mb-3" style={{ color: '#4B5945' }}>
-                📝Insights
-              </h4>
-              <div className="bg-[#EEEFE0] p-4 rounded">
-                <p className="my-2 text-gray-700" dangerouslySetInnerHTML={{ __html: conclusion }}></p>
-              </div>
+            <div className="mt-3 w-full bg-[#EEEFE0] p-2 rounded">
+                <span className="font-bold">Insights: </span><p className="my-1 !text-gray-700" dangerouslySetInnerHTML={{ __html: conclusion }}></p>
               </div>
             )}
 

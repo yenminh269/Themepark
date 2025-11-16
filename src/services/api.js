@@ -265,6 +265,7 @@ export const api = {
     getCustomerReport: async (params) => {
         const queryParams = new URLSearchParams();
         if (params.type) queryParams.append('type', params.type);
+        if (params.viewMode) queryParams.append('viewMode', params.viewMode);
         if (params.period) queryParams.append('period', params.period);
         if (params.startDate) queryParams.append('startDate', params.startDate);
         if (params.endDate) queryParams.append('endDate', params.endDate);
@@ -389,7 +390,30 @@ export async function fetchCurrentCustomer() {
     return body.customer;
 }
 
-// UPDATE CUSTOMER
+// COMPLETE CUSTOMER PROFILE (For Google OAuth users - includes DOB)
+export async function completeCustomerProfile(customerId, profileData) {
+    const token = getCustomerToken();
+    if (!token) throw new Error('No authentication token');
+
+    const res = await fetch(`${SERVER_URL}/api/customer/complete-profile/${customerId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(profileData),
+    });
+
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to complete profile');
+    }
+
+    const body = await res.json();
+    return body.customer;
+}
+
+// UPDATE CUSTOMER (Regular updates - cannot change DOB)
 export async function updateCustomer(customerId, customerData) {
     const token = getCustomerToken();
     if (!token) throw new Error('No authentication token');

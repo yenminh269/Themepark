@@ -41,7 +41,7 @@ export default function Navbar() {
   }, [cartDropdownOpen]);
 
   return (
-    <nav className="!sticky !top-0 !z-50  !border-b !border-[#B4D4FF]/30 !shadow-sm">
+    <nav className="!sticky !top-0 !z-50  !border-b !border-[#B4D4FF]/30 ">
       <div className="!mx-auto !max-w-7xl !px-6 !py-4">
         <div className="!flex !items-center !justify-between">
           {/* Logo */}
