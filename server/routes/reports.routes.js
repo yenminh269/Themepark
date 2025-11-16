@@ -27,7 +27,7 @@ router.get('/customer-report', async (req, res) => {
             COUNT(*) AS new_customer
           FROM customer
           WHERE created_at >= ?
-            AND created_at < ?
+            AND created_at < DATE_ADD(?, INTERVAL 1 DAY)
           GROUP BY sign_up_date
         ) AS count_customer
         ORDER BY sign_up_date;`;

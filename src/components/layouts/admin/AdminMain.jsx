@@ -69,7 +69,7 @@ function AdminMain() {
           >
             <Box>
               <Box fontSize="2xl" fontWeight="bold" color="#A7C1A8">
-                Theme Park
+                Velocity Valley
               </Box>
               <Box fontSize="14px" color="#EEEFE0">
                 Management System

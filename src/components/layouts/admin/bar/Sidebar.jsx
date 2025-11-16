@@ -17,16 +17,16 @@ const Sidebar = ({ isOpen = true, onToggle, onClose }) => {
 
   const SidebarContent = () => (
     <Flex direction="column" h="100%" px="14px">
-      <Box mb="10px" px="20px" >
-        <Flex alignItems="center" gap="10px">
+      <Box mb="8px" px="20px" >
+        <Flex height='30' alignItems="center" gap="10px">
           <Box color="#A7C1A8">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-roller-coaster-icon lucide-roller-coaster"><path d="M6 19V5"/><path d="M10 19V6.8"/><path d="M14 19v-7.8"/><path d="M18 5v4"/><path d="M18 19v-6"/><path d="M22 19V9"/><path d="M2 19V9a4 4 0 0 1 4-4c2 0 4 1.33 6 4s4 4 6 4a4 4 0 1 0-3-6.65"/></svg>
           </Box>
-          <Text fontSize="3xl" fontWeight="bold" color="#A7C1A8">
-            Theme Park
+          <Text className='mt-4' fontSize="2xl" fontWeight="bold" color="#A7C1A8">
+            Velocity Valley
           </Text>
         </Flex>
-        <Text fontSize="16px" color="#EEEFE0" mt="5px">
+        <Text fontSize="18px" color="#EEEFE0" mt="8px">
           Management System
         </Text>
       </Box>
@@ -126,7 +126,7 @@ const Sidebar = ({ isOpen = true, onToggle, onClose }) => {
           zIndex="999"
         >
           {/* Close Button */}
-          <Flex justify="flex-end" p="12px" flexShrink="0">
+          <Flex justify="flex-end" p="8px" flexShrink="0">
             <IconButton
               icon={<CloseIcon />}
               onClick={onToggle}

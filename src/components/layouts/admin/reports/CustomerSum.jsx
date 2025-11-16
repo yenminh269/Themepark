@@ -51,7 +51,8 @@ function CustomerSummary() {
       }
     });
 
-    let conclusionText = `A total of <strong>${totalNew.toLocaleString()}</strong> new customers registered during this period, averaging <strong>${avgPerPeriod}</strong> registrations per day. `;
+    let conclusionText = `A total of <strong>${totalNew.toLocaleString()}</strong> new customers registered during this period, averaging <strong>${avgPerPeriod}</strong> registrations per day `;
+    conclusionText += `(calculated as: ${totalNew.toLocaleString()} total customers ÷ ${data.length} days). `;
     const formattedDate = peakPeriod.sign_up_date?.split('T')[0] || peakPeriod.sign_up_date;
     conclusionText += `The highest registration was <strong>${peakPeriod.new_customer.toLocaleString()}</strong> new customers on ${formattedDate}.`;
 

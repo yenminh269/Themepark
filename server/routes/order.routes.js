@@ -226,9 +226,11 @@ router.get("/store-orders", requireCustomerAuth, async (req, res) => {
 
 // POST /api/unified-order - Create unified order (rides + store items in one transaction)
 router.post('/unified-order', requireCustomerAuth, async (req, res) => {
+  console.log('🛒 Unified order request received');
   try {
     const { rideCart = [], storeCart = [], grandTotal, payment_method, email, firstName } = req.body;
     const customer_id = req.customer_id;
+     console.log(`Ride items: ${rideCart.length}, Store items: ${storeCart.length}, Total: $${grandTotal}`);
 
     if (rideCart.length === 0 && storeCart.length === 0) {
       return res.status(400).json({ error: 'Cart is empty' });
@@ -287,9 +289,6 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
 
     // Process store orders if any (grouped by store)
     if (storeCart.length > 0) {
-      // Group store items by store_id
-      console.log('storeCart received:', JSON.stringify(storeCart, null, 2));
-
       // Validate all store items have storeId
       for (const item of storeCart) {
         if (!item.storeId) {
@@ -303,7 +302,9 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
       }
 
       const storeGroups = storeCart.reduce((groups, item) => {
-        const storeId = item.storeId;
+        // Ensure storeId is consistently a number to avoid duplicate groups
+        const storeId = parseInt(item.storeId);
+        console.log(`Processing item: ${item.name}, storeId type: ${typeof item.storeId}, value: ${item.storeId}, parsed: ${storeId}`);
         if (!groups[storeId]) {
           groups[storeId] = [];
         }
@@ -311,6 +312,7 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
         return groups;
       }, {});
       console.log('Grouped stores:', Object.keys(storeGroups));
+      console.log('Number of store groups:', Object.keys(storeGroups).length);
       console.log('Store groups detail:', JSON.stringify(storeGroups, null, 2));
 
       // Create order for each store
@@ -356,6 +358,7 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
         });
 
         const store_order_id = orderResult.insertId;
+        console.log(`Created store_order with ID ${store_order_id} for store ${storeId}`);
 
         // Insert order details
         // Note: Inventory is automatically decreased by the after_store_order_detail_insert trigger
@@ -406,20 +409,28 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
 
     // Send single consolidated email
     if (customerEmail && customerFirstName) {
-      await sendConsolidatedEmail(customerEmail, customerFirstName, {
-        rideItems: rideCart,
-        storeItems: storeCart,
-        grandTotal: grandTotal,
-      });
+      try {
+        await sendConsolidatedEmail(customerEmail, customerFirstName, {
+          rideItems: rideCart,
+          storeItems: storeCart,
+          grandTotal: grandTotal,
+        });
+        console.log('Email sent successfully');
+      } catch (emailError) {
+        console.error('❌ Email sending failed:', emailError);
+        // Continue even if email fails - order is still created
+      }
+    } else {
+      console.log('⚠️ Skipping email - missing email or firstName');
     }
-    console.log('Order created successfully');
     res.json({
       message: 'Order created successfully',
       orders: createdOrders,
       total_amount: grandTotal,
     });
   } catch (err) {
-    console.error('Error creating unified order:', err);
+    console.error('❌ Error creating unified order:', err);
+    console.error('Error stack:', err.stack);
     res.status(500).json({ error: 'Failed to create order', message: err.message });
   }
 });

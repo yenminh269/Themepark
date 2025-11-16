@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { useCart } from "./CartContext";
@@ -25,9 +25,22 @@ export default function CheckoutPage() {
   });
 
   const [loading, setLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    // Card number validation: only allow digits and max 16 characters
+    if (name === 'cardNumber') {
+      const digitsOnly = value.replace(/\D/g, ''); // Remove non-digits
+      if (digitsOnly.length <= 16) {
+        // Format with spaces: 1234 5678 9012 3456
+        const formatted = digitsOnly.replace(/(\d{4})(?=\d)/g, '$1 ');
+        setForm((prev) => ({ ...prev, [name]: formatted }));
+      }
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -40,7 +53,15 @@ export default function CheckoutPage() {
       return;
     }
 
+    // Prevent duplicate submissions using ref (protects against React StrictMode double-invoke)
+    if (isSubmittingRef.current) {
+      console.log('Already processing order, ignoring duplicate submission');
+      return;
+    }
+
+    isSubmittingRef.current = true;
     setLoading(true);
+
     try {
       // Separate ride items from store items
       const rideItems = cart.filter(item => item.type === 'ride');
@@ -53,7 +74,8 @@ export default function CheckoutPage() {
         grandTotal: grandTotal,
         payment_method: form.paymentMethod,
         email: form.email,
-        firstName: form.firstName
+        firstName: form.firstName,
+        cardNumber: form.cardNumber.replace(/\s/g, '') // Send digits only
       });
 
       // Clear cart after successful order
@@ -64,6 +86,8 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error('Checkout error:', error);
       alert('Failed to complete your order. Please try again.');
+      // Reset the ref on error so user can retry
+      isSubmittingRef.current = false;
     } finally {
       setLoading(false);
     }
@@ -147,6 +171,9 @@ export default function CheckoutPage() {
               onChange={handleChange}
               className="!w-full !p-3 !border !border-[#B4D4FF] !rounded-lg"
               placeholder="1234 5678 9012 3456"
+              maxLength="19"
+              pattern="[0-9]{4} [0-9]{4} [0-9]{4} [0-9]{4}"
+              title="Please enter exactly 16 digits"
               required
             />
           </div>
@@ -209,7 +236,7 @@ export default function CheckoutPage() {
               <option value="cash">💸 Cash (In-Park Only)</option>
             </select>
             <label className="!block !text-sm !font-semibold !text-slate-700">
-              First Name
+              Name
             </label>
             <input
                 name="firstName"

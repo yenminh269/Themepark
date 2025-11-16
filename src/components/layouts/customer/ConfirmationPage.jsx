@@ -11,16 +11,15 @@ export default function ConfirmationPage() {
       {/* Navbar is now global in App.jsx */}
       <div className="!bg-[#FFFCED] !rounded-xl !shadow-lg !p-10 !text-center !max-w-lg">
         <h1 className="!text-3xl !font-bold !text-[#176B87] !mb-4">Thank You!</h1>
-        <p className="!text-slate-700 !mb-6">
+        <p className="!text-slate-700 !mb-3">
           Your purchase has been confirmed. 
         </p>
-        <p className="!text-slate-700 !mb-6">
-          The recipe has been sent to your email. 
-          Please check your spam folder if you do not see it.
-         
+        <p className="!text-slate-700 mb-0 pb-0">
+          The recipe has been sent to your email💌
         </p>
-        <p className="!text-slate-700 !mb-6">
-           We can't wait to see you at the park!
+         <p className="!text-slate-700 !mb-3">Please check your spam folder if you do not see it.</p>
+        <p className="!text-slate-700 !mb-3">
+          Can't wait to see you at the park!
           If you have any questions, please contact us.
         </p>
         <button
