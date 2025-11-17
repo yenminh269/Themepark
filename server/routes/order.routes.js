@@ -12,12 +12,13 @@ const router = express.Router();
 // Consolidated email for mixed orders (rides + store items)
 async function sendConsolidatedEmail(email, first_name, orderDetails) {
   try {
-    const { rideItems = [], storeItems = [], grandTotal } = orderDetails;
+    const { rideItems = [], storeItems = [], grandTotal, rideOrderId = null, storeOrderIds = [] } = orderDetails;
     let itemsHtml = '';
     // Add ride items section
     if (rideItems.length > 0) {
       itemsHtml += `
         <h3 style="color: #176B87; margin-top: 20px;">🎢 Ride Tickets</h3>
+        ${rideOrderId ? `<p style="color: #666; font-size: 14px; margin: 5px 0 15px 0;"><strong>Order ID:</strong> #${rideOrderId}</p>` : ''}
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
           <thead>
             <tr style="background-color: #B4D4FF;">
@@ -49,37 +50,57 @@ async function sendConsolidatedEmail(email, first_name, orderDetails) {
 
     // Add store items section
     if (storeItems.length > 0) {
-      itemsHtml += `
-        <h3 style="color: #176B87; margin-top: 20px;">🛍️ Merchandise</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <thead>
-            <tr style="background-color: #B4D4FF;">
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Item</th>
-              <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Store</th>
-              <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Quantity</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Price</th>
-              <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
+      // Group store items by store for display
+      const storeGroups = storeItems.reduce((groups, item) => {
+        const storeId = item.storeId;
+        const storeName = item.storeName || 'Store';
+        if (!groups[storeId]) {
+          groups[storeId] = { storeName, items: [] };
+        }
+        groups[storeId].items.push(item);
+        return groups;
+      }, {});
 
-      storeItems.forEach(item => {
+      itemsHtml += `<h3 style="color: #176B87; margin-top: 20px;">🛍️ Merchandise</h3>`;
+
+      // Display each store group with its order ID
+      Object.keys(storeGroups).forEach((storeId) => {
+        const { storeName, items } = storeGroups[storeId];
+        const storeOrderInfo = storeOrderIds.find(order => order.storeId == storeId);
+
         itemsHtml += `
-          <tr>
-            <td style="padding: 10px; border: 1px solid #ddd;">${item.name}</td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${item.storeName || 'Store'}</td>
-            <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
-            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">$${item.price.toFixed(2)}</td>
-            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">$${(item.price * item.quantity).toFixed(2)}</td>
-          </tr>
+          <div style="margin-bottom: 25px;">
+            <h4 style="color: #176B87; margin: 10px 0 5px 0;">${storeName}</h4>
+            ${storeOrderInfo ? `<p style="color: #666; font-size: 14px; margin: 5px 0 15px 0;"><strong>Order ID:</strong> #${storeOrderInfo.orderId}</p>` : ''}
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+              <thead>
+                <tr style="background-color: #B4D4FF;">
+                  <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Item</th>
+                  <th style="padding: 10px; text-align: center; border: 1px solid #ddd;">Quantity</th>
+                  <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Price</th>
+                  <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        items.forEach(item => {
+          itemsHtml += `
+            <tr>
+              <td style="padding: 10px; border: 1px solid #ddd;">${item.name}</td>
+              <td style="padding: 10px; text-align: center; border: 1px solid #ddd;">${item.quantity}</td>
+              <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">$${item.price.toFixed(2)}</td>
+              <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">$${(item.price * item.quantity).toFixed(2)}</td>
+            </tr>
+          `;
+        });
+
+        itemsHtml += `
+              </tbody>
+            </table>
+          </div>
         `;
       });
-
-      itemsHtml += `
-          </tbody>
-        </table>
-      `;
     }
 
     const msg = {
@@ -410,10 +431,23 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
     // Send single consolidated email
     if (customerEmail && customerFirstName) {
       try {
+        // Extract ride order ID
+        const rideOrderId = createdOrders.find(order => order.type === 'ride')?.order_id || null;
+
+        // Extract store order IDs with their store IDs
+        const storeOrderIds = createdOrders
+          .filter(order => order.type === 'store')
+          .map(order => ({
+            storeId: order.store_id,
+            orderId: order.store_order_id
+          }));
+
         await sendConsolidatedEmail(customerEmail, customerFirstName, {
           rideItems: rideCart,
           storeItems: storeCart,
           grandTotal: grandTotal,
+          rideOrderId: rideOrderId,
+          storeOrderIds: storeOrderIds
         });
         console.log('Email sent successfully');
       } catch (emailError) {

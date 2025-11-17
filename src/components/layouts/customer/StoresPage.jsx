@@ -42,7 +42,7 @@ export default function StoresPage() {
       <main className="!flex-1 !max-w-6xl !mx-auto !p-6">
         <div className="!text-center !mb-8">
           <h1 className="!text-3xl !font-bold !text-[#176B87] !mb-4">
-            🛍️ Shop at Velocity Valley
+            🏰 Shop at Velocity Valley
           </h1>
           <p className="!text-lg !text-gray-700">
             Browse our merchandise stores and find the perfect souvenirs!

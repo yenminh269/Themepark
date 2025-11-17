@@ -136,23 +136,53 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Stats Section */}
-          <div className="!grid md:!grid-cols-4 !gap-6 !mt-16 !bg-white/80 backdrop-blur-sm !rounded-2xl !p-8 !shadow-xl">
-            <div className="!text-center">
-              <div className="!text-4xl !font-black !text-[#176B87] !mb-2">50+</div>
-              <div className="!text-gray-600 !font-medium">Attractions</div>
+          {/* Park Information Section */}
+          <div className="!mt-16 !bg-white/80 backdrop-blur-sm !rounded-2xl !p-8 !shadow-xl">
+            {/* Park Location */}
+            <div className="!mb-8">
+              <h3 className="!text-2xl !font-bold !text-[#176B87] !mb-4 !flex !items-center !gap-2">
+                <span>📍</span>
+                <span>Velocity Valley Theme Park</span>
+              </h3>
+              <div className="!text-gray-700 !leading-relaxed !pl-8">
+                <p>1450 Velocity Parkway</p>
+                <p>Aurora Springs, Colorado 80517</p>
+                <p>United States</p>
+              </div>
             </div>
-            <div className="!text-center">
-              <div className="!text-4xl !font-black !text-[#176B87] !mb-2">1M+</div>
-              <div className="!text-gray-600 !font-medium">Happy Visitors</div>
+
+            {/* Park Description */}
+            <div className="!mb-8">
+              <h3 className="!text-2xl !font-bold !text-[#176B87] !mb-4 !flex !items-center !gap-2">
+                <span>🎨</span>
+                <span>Description</span>
+              </h3>
+              <div className="!text-gray-700 !leading-relaxed !space-y-4">
+                <p>
+                  Velocity Valley is a modern high-energy amusement park designed for adrenaline seekers and families alike.
+                  Nestled against the scenic foothills of Colorado's Aurora Springs, the park blends cutting-edge ride technology
+                  with immersive themed zones. Guests can dive into futuristic high-speed coasters, explore adventure-themed lands,
+                  relax in shaded plazas, and enjoy an evening illuminated by vibrant neon displays.
+                </p>
+                <p>
+                  From towering water slides to precision-engineered launch coasters, Velocity Valley delivers a full-day experience
+                  of speed, excitement, and unforgettable memories.
+                </p>
+              </div>
             </div>
-            <div className="!text-center">
-              <div className="!text-4xl !font-black !text-[#176B87] !mb-2">24/7</div>
-              <div className="!text-gray-600 !font-medium">Support</div>
-            </div>
-            <div className="!text-center">
-              <div className="!text-4xl !font-black !text-[#176B87] !mb-2">⭐️ 4.9</div>
-              <div className="!text-gray-600 !font-medium">Rating</div>
+
+            {/* Mission Statement */}
+            <div>
+              <h3 className="!text-2xl !font-bold !text-[#176B87] !mb-4 !flex !items-center !gap-2">
+                <span>🎯</span>
+                <span>Mission Statement</span>
+              </h3>
+              <div className="!text-gray-700 !leading-relaxed !pl-8">
+                <p className="!italic !text-lg">
+                  "To create unforgettable moments through innovation, excitement, and world-class entertainment —
+                  bringing guests together through the thrill of speed, adventure, and imagination."
+                </p>
+              </div>
             </div>
           </div>
         </div>

@@ -22,6 +22,9 @@ function RideMaintenance() {
   const [emp, setEmp] = useState([]);
   const [rides, setRides] = useState([]);
   const [maintenanceSchedules, setMaintenanceSchedules] = useState([]);
+  const [showAllMaintenance, setShowAllMaintenance] = useState(false);
+  const [showAllRides, setShowAllRides] = useState(false);
+  const [showAllEmployees, setShowAllEmployees] = useState(false);
   const toast = useToast();
 
   const RideAttr = [
@@ -275,71 +278,107 @@ function RideMaintenance() {
                 <p className="text-sm mt-2">Click "Schedule New Maintenance" to add one.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse border border-gray-300">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      {MaintenanceAttr.map((header, idx) => (
-                        <th key={idx} className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold">
-                          {header}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {maintenanceSchedules.map((maintObj, rowIdx) => (
-                      <tr key={rowIdx} className="hover:bg-gray-50">
-                        <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.maintenance_id}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.ride_name}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.assigned_employees || 'No employees assigned'}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.description}</td>
-                        <td className="border border-gray-300 px-4 py-2 text-sm">
-                          {maintObj.scheduled_date ? new Date(maintObj.scheduled_date).toLocaleDateString() : ''}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2 text-sm">
-                          {maintObj.status === 'done' ? '✓ Completed' : maintObj.status === 'cancelled' ? '✖ Cancelled' : '📅 Scheduled'}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2 text-sm text-center">
-                          {(maintObj.status !== 'done' && maintObj.status !== 'cancelled') && (
-                            <button
-                              onClick={() => handleCancelMaintenance(maintObj.maintenance_id)}
-                              className="px-3 py-1 !bg-red-600 text-white rounded hover:bg-red-600 transition-colors text-xs"
-                            >
-                              Cancel
-                            </button>
-                          )}
-                          {(maintObj.status === 'done' || maintObj.status === 'cancelled') && (
-                            <span className="text-gray-400 text-xs">--</span>
-                          )}
-                        </td>
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse border border-gray-300">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        {MaintenanceAttr.map((header, idx) => (
+                          <th key={idx} className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold">
+                            {header}
+                          </th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {(showAllMaintenance ? maintenanceSchedules : maintenanceSchedules.slice(0, 7)).map((maintObj, rowIdx) => (
+                        <tr key={rowIdx} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.maintenance_id}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.ride_name}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.assigned_employees || 'No employees assigned'}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.description}</td>
+                          <td className="border border-gray-300 px-4 py-2 text-sm">
+                            {maintObj.scheduled_date ? new Date(maintObj.scheduled_date).toLocaleDateString() : ''}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2 text-sm">
+                            {maintObj.status === 'done' ? '✓ Completed' : maintObj.status === 'cancelled' ? '✖ Cancelled' : '📅 Scheduled'}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2 text-sm text-center">
+                            {(maintObj.status !== 'done' && maintObj.status !== 'cancelled') && (
+                              <button
+                                onClick={() => handleCancelMaintenance(maintObj.maintenance_id)}
+                                className="px-3 py-1 !bg-red-600 text-white rounded hover:bg-red-600 transition-colors text-xs"
+                              >
+                                Cancel
+                              </button>
+                            )}
+                            {(maintObj.status === 'done' || maintObj.status === 'cancelled') && (
+                              <span className="text-gray-400 text-xs">--</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Show More / Show Less Button */}
+                {maintenanceSchedules.length > 7 && (
+                  <div className="text-center mt-5">
+                    <button
+                      onClick={() => setShowAllMaintenance(!showAllMaintenance)}
+                      className="px-6 py-3 bg-[#4682A9] text-white rounded-lg font-bold hover:bg-[#3a6b8a] transition border-none"
+                    >
+                      {showAllMaintenance ? 'Show Less' : `Show More (${maintenanceSchedules.length - 7} more)`}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
           {/* Rides Table */}
           <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-xl font-semibold text-[#4682A9]">Available Rides</h3>
+            <h3 className="text-xl font-semibold text-[#4682A9]">Available Rides ({rides.length})</h3>
             <DataTable
               title=""
               columns={RideAttr}
-              data={formattedRideData}
+              data={showAllRides ? formattedRideData : formattedRideData.slice(0, 7)}
               onRowSelect={handleRideSelect}
             />
+            {/* Show More / Show Less Button */}
+            {rides.length > 7 && (
+              <div className="text-center mt-5">
+                <button
+                  onClick={() => setShowAllRides(!showAllRides)}
+                  className="px-6 py-3 bg-[#4682A9] text-white rounded-lg font-bold hover:bg-[#3a6b8a] transition border-none"
+                >
+                  {showAllRides ? 'Show Less' : `Show More (${rides.length - 7} more)`}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Employees Table */}
           <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-xl font-semibold text-[#4682A9]">Maintenance Employees</h3>
+            <h3 className="text-xl font-semibold text-[#4682A9]">Maintenance Employees ({emp.length})</h3>
             <DataTable
               title=""
               columns={EMAttr}
-              data={formattedEmpData}
+              data={showAllEmployees ? formattedEmpData : formattedEmpData.slice(0, 7)}
               onRowSelect={handleEmpSelect}
             />
+            {/* Show More / Show Less Button */}
+            {emp.length > 7 && (
+              <div className="text-center mt-5">
+                <button
+                  onClick={() => setShowAllEmployees(!showAllEmployees)}
+                  className="px-6 py-3 bg-[#4682A9] text-white rounded-lg font-bold hover:bg-[#3a6b8a] transition border-none"
+                >
+                  {showAllEmployees ? 'Show Less' : `Show More (${emp.length - 7} more)`}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

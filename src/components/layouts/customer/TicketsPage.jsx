@@ -142,7 +142,7 @@ export default function TicketsPage() {
                         +
                       </button>
                     </div>
-                    <p className="!text-xs !text-gray-500 !text-center">
+                    <p className="!text-sm !text-gray-600 !text-center">
                       Limit: {RIDE_LIMIT} per order
                       {getQuantity(ride.id) >= RIDE_LIMIT && (
                         <span className="!text-orange-600 !font-semibold !ml-1">
