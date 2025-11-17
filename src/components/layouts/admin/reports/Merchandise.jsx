@@ -5,6 +5,7 @@ import { api } from '../../../../services/api';
 import { useToast } from '@chakra-ui/react';
 import { FormControl, FormLabel } from '@chakra-ui/react';
 import Select from 'react-select';
+import { getDateRange, QUICK_FILTER_OPTIONS, getButtonClass } from '../../../../utils/dateRangeHelpers';
 
 function MerchandiseReport() {
   const [loading, setLoading] = useState(false);
@@ -20,6 +21,17 @@ function MerchandiseReport() {
   const [type, setType] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [activeFilter, setActiveFilter] = useState(null);
+
+  // Handle quick date range
+  const handleQuickDateRange = (rangeId) => {
+    const range = getDateRange(rangeId);
+    if (range) {
+      setStartDate(range.startDate);
+      setEndDate(range.endDate);
+      setActiveFilter(rangeId);
+    }
+  };
 
   // Selected specific values
   const [selectedItemId, setSelectedItemId] = useState(null);
@@ -393,6 +405,27 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
             </FormControl>
           </div>
         )}
+
+        {/* Quick Date Range Filters */}
+        <div className="mt-4 mb-4">
+          <FormLabel color="#4B5945" fontWeight="500" mb={2}>Quick Filters</FormLabel>
+          <div className="flex gap-2 flex-wrap">
+            {QUICK_FILTER_OPTIONS.map(option => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => handleQuickDateRange(option.id)}
+                className={`px-4 py-2 rounded font-semibold transition border border-gray-300 ${
+                  activeFilter === option.id 
+                    ? '!bg-green-200 text-black border-green-600' 
+                    : 'bg-white text-gray-700'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="flex gap-2 justify-between mt-2">
           <FormControl isRequired>

@@ -18,6 +18,57 @@ function RideReport() {
   const [endDate, setEndDate] = useState("");
   const [type, setType] = useState("");
   const [rideOption, setRideOption] = useState([]);
+  const [activeFilter, setActiveFilter] = useState(null);
+
+  // Utility function to format date as YYYY-MM-DD
+  const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Quick date range handlers
+  const handleQuickDateRange = (range) => {
+    const today = new Date();
+    let start, end;
+
+    switch (range) {
+      case 'last7':
+        start = new Date(today);
+        start.setDate(start.getDate() - 7);
+        end = today;
+        break;
+      case 'last30':
+        start = new Date(today);
+        start.setDate(start.getDate() - 30);
+        end = today;
+        break;
+      case 'last90':
+        start = new Date(today);
+        start.setDate(start.getDate() - 90);
+        end = today;
+        break;
+      case 'thisMonth':
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = today;
+        break;
+      case 'lastMonth':
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+      case 'thisYear':
+        start = new Date(today.getFullYear(), 0, 1);
+        end = today;
+        break;
+      default:
+        return;
+    }
+
+    setStartDate(formatDate(start));
+    setEndDate(formatDate(end));
+    setActiveFilter(range);
+  };
 
   // Clear report data when type, group, or name changes
   useEffect(() => {
@@ -367,6 +418,80 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
           </FormControl>
       </div>
       )}
+      
+      {/* Quick Date Range Filters */}
+      <div className="mt-4 mb-4">
+        <FormLabel color="#4B5945" fontWeight="500" mb={2}>Quick Date Filters</FormLabel>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => handleQuickDateRange('last7')}
+            className={`px-4 py-2 rounded font-semibold transition border border-gray-300 ${
+              activeFilter === 'last7' 
+                ? '!bg-green-200 text-black border-green-600' 
+                : 'bg-white text-gray-700'
+            }`}
+          >
+            Last 7 Days
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickDateRange('last30')}
+            className={`px-4 py-2 rounded font-semibold transition border border-gray-300 ${
+              activeFilter === 'last30' 
+                ? '!bg-green-200 text-black border-green-600' 
+                : 'bg-white text-gray-700'
+            }`}
+          >
+            Last 30 Days
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickDateRange('last90')}
+            className={`px-4 py-2 rounded font-semibold transition border border-gray-300 ${
+              activeFilter === 'last90' 
+                ? '!bg-green-200 text-black border-green-600' 
+                : 'bg-white text-gray-700'
+            }`}
+          >
+            Last 90 Days
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickDateRange('thisMonth')}
+            className={`px-4 py-2 rounded font-semibold transition border border-gray-300 ${
+              activeFilter === 'thisMonth' 
+                ? '!bg-green-200 text-black border-green-600' 
+                : 'bg-white text-gray-700'
+            }`}
+          >
+            This Month
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickDateRange('lastMonth')}
+            className={`px-4 py-2 rounded font-semibold transition border border-gray-300 ${
+              activeFilter === 'lastMonth' 
+                ? '!bg-green-200 text-black border-green-600' 
+                : 'bg-white text-gray-700'
+            }`}
+          >
+            Last Month
+          </button>
+          <button
+            type="button"
+            onClick={() => handleQuickDateRange('thisYear')}
+            className={`px-4 py-2 rounded font-semibold transition border border-gray-300 ${
+              activeFilter === 'thisYear' 
+                ? '!bg-green-200 text-black border-green-600' 
+                : 'bg-white text-gray-700'
+            }`}
+          >
+            This Year
+          </button>
+        </div>
+      </div>
+
       <div className="flex gap-2 justify-between">
                 <FormControl isRequired>
                   <FormLabel color="#4B5945" fontWeight="500">Activity date from</FormLabel>
