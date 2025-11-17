@@ -748,7 +748,8 @@ body {
   background: white;
   border-radius: var(--radius);
   box-shadow: var(--shadow-md);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: visible; 
 }
 
 .inventory-table {
@@ -2577,6 +2578,7 @@ body {
 
 .orders-table {
   width: 100%;
+  min-width: 1200px;
   border-collapse: separate;
   border-spacing: 0;
   background: white;
@@ -2672,7 +2674,7 @@ body {
 }
 
 .details-table th {
-  background: #f8f9fa;
+  background: #69a680;
   padding: 12px;
   text-align: left;
   font-size: 11px;
