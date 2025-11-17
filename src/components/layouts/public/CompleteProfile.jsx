@@ -22,6 +22,14 @@ function CompleteProfile() {
         return null;
     }
 
+    // Handle logout
+    const handleLogout = () => {
+        localStorage.removeItem('themepark_user');
+        localStorage.removeItem('customer_token');
+        toast.info('You have been logged out');
+        navigate('/login');
+    };
+
     // Format phone number as user types (XXX-XXX-XXXX)
     const handlePhoneChange = (e) => {
         let input = e.target.value.replace(/\D/g, ''); // Remove all non-digits
@@ -195,6 +203,18 @@ function CompleteProfile() {
                                     className="!w-full !py-4 !bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !text-white !text-lg !font-bold !rounded-xl hover:!shadow-2xl hover:!scale-[1.02] !transition-all disabled:!opacity-50 disabled:!cursor-not-allowed !border-none"
                                 >
                                     {loading ? '🔄 Saving...' : '✨ Complete Profile'}
+                                </button>
+                            </div>
+
+                            {/* Logout Button */}
+                            <div className="!pt-2">
+                                <button
+                                    type="button"
+                                    onClick={handleLogout}
+                                    disabled={loading}
+                                    className="!w-full !py-3 !bg-white !text-gray-700 !text-base !font-semibold !rounded-xl !border-2 !border-gray-300 hover:!bg-gray-50 hover:!shadow-lg !transition-all disabled:!opacity-50 disabled:!cursor-not-allowed"
+                                >
+                                    Log Out
                                 </button>
                             </div>
 

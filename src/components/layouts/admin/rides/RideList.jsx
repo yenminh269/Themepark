@@ -12,6 +12,7 @@ function RideLists() {
   const [editingId, setEditingId] = useState(null);
   const [editedData, setEditedData] = useState({});
   const [photoFile, setPhotoFile] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'open', 'closed', 'maintenance', 'approve_expand', 'reject_expand', 'pending_expand_request'
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = useRef();
   const toast = useToast();
@@ -40,14 +41,21 @@ function RideLists() {
   };
 
   const filteredData = useMemo(() => {
-    if (!searchText) return rides;
+    // First filter by status
+    let filtered = rides;
+    if (statusFilter !== 'all') {
+      filtered = rides.filter(ride => ride.status?.toLowerCase() === statusFilter.toLowerCase());
+    }
+
+    // Then apply search filter
+    if (!searchText) return filtered;
     const normalizedSearch = searchText.toLowerCase().trim();
-    return rides.filter(ride =>
+    return filtered.filter(ride =>
       ride.name?.toLowerCase().includes(normalizedSearch) ||
       ride.description?.toLowerCase().includes(normalizedSearch) ||
       ride.status?.toLowerCase().includes(normalizedSearch)
     );
-  }, [rides, searchText]);
+  }, [rides, searchText, statusFilter]);
 
   const handleEdit = (ride) => {
     setEditingId(ride.ride_id);
@@ -66,6 +74,33 @@ function RideLists() {
 
   const handleSave = async (rideId) => {
   try {
+  const currentRide = rides.find(r => r.ride_id === rideId);
+
+  // For rides with pending_expand_request, we only need to update the status
+  if (currentRide?.status === 'pending_expand_request') {
+    setLoading(true);
+    // Only send status update
+    const updateData = {
+      ride_id: rideId,
+      status: editedData.status
+    };
+    await api.updateRide(updateData, rideId);
+    await fetchRides();
+    setEditingId(null);
+    setEditedData({});
+    setPhotoFile(null);
+    toast({
+      title: 'Success',
+      description: 'Ride status updated successfully.',
+      status: 'success',
+      duration: 3000,
+      isClosable: true,
+    });
+    setLoading(false);
+    return;
+  }
+
+  // For other rides, validate and update all fields
   // Validate photo is required
   if (!photoFile && !editedData.photo_path) {
   toast({
@@ -118,9 +153,9 @@ function RideLists() {
   }
 
   setLoading(true);
-  
+
   let updateData;
-  
+
   // If photoFile is selected, use FormData; otherwise send JSON
   if (photoFile) {
   const formData = new FormData();
@@ -129,15 +164,16 @@ function RideLists() {
   formData.append('description', editedData.description);
   formData.append('price', editedData.price);
     formData.append('capacity', editedData.capacity);
-         formData.append('status', editedData.status);
     formData.append('open_time', editedData.open_time);
     formData.append('close_time', editedData.close_time);
          formData.append('ride_id', rideId);
          updateData = formData;
        } else {
-         updateData = { ride_id: rideId, ...editedData };
+         // Remove status from editedData before sending
+         const { status, ...dataWithoutStatus } = editedData;
+         updateData = { ride_id: rideId, ...dataWithoutStatus };
        }
-       
+
        await api.updateRide(updateData, rideId);
   await fetchRides();
   setEditingId(null);
@@ -213,6 +249,87 @@ function RideLists() {
   return (
     <Box position="relative">
       <h2 className="text-2xl font-bold mb-4 !text-[#4B5945]" >Manage Rides</h2>
+
+      {/* Status Filter Buttons */}
+      <HStack spacing={2} mb={4} flexWrap="wrap">
+        <Button
+          size="sm"
+          bg={statusFilter === 'all' ? "#4B5945" : "transparent"}
+          color={statusFilter === 'all' ? "white" : "black"}
+          border={statusFilter === 'all' ? "none" : "1px solid black"}
+          _hover={{ bg: statusFilter === 'all' ? "#3a4635" : "gray.200" }}
+          onClick={() => setStatusFilter('all')}
+        >
+          All ({rides.length})
+        </Button>
+
+        <Button
+          size="sm"
+          bg={statusFilter === 'open' ? "#28a745" : "transparent"}
+          color={statusFilter === 'open' ? "white" : "black"}
+          border={statusFilter === 'open' ? "none" : "1px solid black"}
+          _hover={{ bg: statusFilter === 'open' ? "#218838" : "gray.200" }}
+          onClick={() => setStatusFilter('open')}
+        >
+          Open ({rides.filter(r => r.status === 'open').length})
+        </Button>
+
+        <Button
+          size="sm"
+          bg={statusFilter === 'closed' ? "#dc3545" : "transparent"}
+          color={statusFilter === 'closed' ? "white" : "black"}
+          border={statusFilter === 'closed' ? "none" : "1px solid black"}
+          _hover={{ bg: statusFilter === 'closed' ? "#c82333" : "gray.200" }}
+          onClick={() => setStatusFilter('closed')}
+        >
+          Closed ({rides.filter(r => r.status === 'closed').length})
+        </Button>
+
+        <Button
+          size="sm"
+          bg={statusFilter === 'maintenance' ? "#ffc107" : "transparent"}
+          color={statusFilter === 'maintenance' ? "black" : "black"}
+          border={statusFilter === 'maintenance' ? "none" : "1px solid black"}
+          _hover={{ bg: statusFilter === 'maintenance' ? "#e0a800" : "gray.200" }}
+          onClick={() => setStatusFilter('maintenance')}
+        >
+          Maintenance ({rides.filter(r => r.status === 'maintenance').length})
+        </Button>
+
+        <Button
+          size="sm"
+          bg={statusFilter === 'approve_expand' ? "#17a2b8" : "transparent"}
+          color={statusFilter === 'approve_expand' ? "white" : "black"}
+          border={statusFilter === 'approve_expand' ? "none" : "1px solid black"}
+          _hover={{ bg: statusFilter === 'approve_expand' ? "#138496" : "gray.200" }}
+          onClick={() => setStatusFilter('approve_expand')}
+        >
+          Approved Expand ({rides.filter(r => r.status === 'approve_expand').length})
+        </Button>
+
+        <Button
+          size="sm"
+          bg={statusFilter === 'reject_expand' ? "#6c757d" : "transparent"}
+          color={statusFilter === 'reject_expand' ? "white" : "black"}
+          border={statusFilter === 'reject_expand' ? "none" : "1px solid black"}
+          _hover={{ bg: statusFilter === 'reject_expand' ? "#5a6268" : "gray.200" }}
+          onClick={() => setStatusFilter('reject_expand')}
+        >
+          Rejected Expand ({rides.filter(r => r.status === 'reject_expand').length})
+        </Button>
+
+        <Button
+          size="sm"
+          bg={statusFilter === 'pending_expand_request' ? "#007bff" : "transparent"}
+          color={statusFilter === 'pending_expand_request' ? "white" : "black"}
+          border={statusFilter === 'pending_expand_request' ? "none" : "1px solid black"}
+          _hover={{ bg: statusFilter === 'pending_expand_request' ? "#0056b3" : "gray.200" }}
+          onClick={() => setStatusFilter('pending_expand_request')}
+        >
+          Pending Expand ({rides.filter(r => r.status === 'pending_expand_request').length})
+        </Button>
+      </HStack>
+
       {/* Search Bar */}
       <input
         type="text"
@@ -250,117 +367,167 @@ function RideLists() {
                 {editingId === ride.ride_id ? (
                   // Edit Mode
                   <Box>
-                    <label className='font-bold text-[#176B87]'>Ride Name:</label>
-                    <input
-                      type="text"
-                      value={editedData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      placeholder="Ride Name"
-                      className="border border-black rounded px-2 py-1 mb-3 w-full"
-                      style={{ fontSize: '18px', fontWeight: 'bold' }}
-                    />
+                    {ride.status === 'pending_expand_request' ? (
+                      // Only show status selector for pending_expand_request rides
+                      <Box>
+                        <Text fontSize="xl" fontWeight="bold" color="#3A6F43">
+                          {ride.name}
+                        </Text>
+                        <Text fontSize="sm" color="gray.600" >
+                          {ride.description}
+                        </Text>
 
-                    <label className='font-bold text-[#176B87]'>Description:</label>
-                    <textarea
-                    value={editedData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value.slice(0, 150))}
-                    placeholder="Description"
-                    className="border border-black rounded px-2 py-1  w-full"
-                    rows={2}
-                    style={{ fontSize: '14px', resize: 'none' }}
-                    />
-                    <Text fontSize="xs" color="gray.600" mb={0}>{editedData.description.length}/150 characters</Text>
-                    
-                    <label className='font-bold text-[#176B87]'>Photo: <span style={{color: 'red'}}>*</span></label>
-                    <div style={{marginBottom: '8px'}}>
-                    <label style={{fontSize: '14px', color: 'gray.600'}}>Choose a file from your device:</label>
-                    <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      setPhotoFile(e.target.files[0]);
-                      handleInputChange('photo_path', '');
-                      }}
-                      className="border border-black rounded px-2 py-1 w-full"
-                        style={{ fontSize: '13px' }}
-                      />
-                    {photoFile && <Text fontSize="xs" color="green.500">File selected: {photoFile.name}</Text>}
-                    </div>
-                    <div>
-                    <label style={{fontSize: '14px', color: 'gray.600'}}>Or paste URL/Path:</label>
-                    <input
-                    type="text"
-                    value={editedData.photo_path}
-                    onChange={(e) => {
-                      handleInputChange('photo_path', e.target.value);
-                        setPhotoFile(null);
-                      }}
-                        placeholder="Photo URL or Path"
-                           className="border border-black rounded px-2 py-1 w-full"
-                           style={{ fontSize: '13px' }}
-                           maxLength="255"
-                         />
-                         <Text fontSize="xs" color={editedData.photo_path.length > 255 ? 'red.500' : 'gray.600'}>{editedData.photo_path.length}/255 characters</Text>
-                       </div>
-                    
+                        <Box p={3} bg="blue.100" borderRadius="md" mb={4}>
+                          <Text fontSize="md" fontWeight="bold" color="blue.800" mb={2}>
+                            Expansion Request Decision
+                          </Text>
+                          <Text fontSize="sm" color="gray.800" mb={3}>
+                            This ride has a pending expansion request. Please approve or reject the request.
+                          </Text>
+                        </Box>
 
-                    <Box fontSize="sm" color="gray.700" space={2}>
-                      <HStack justify="space-between" mb={2} >
-                        <label className='font-bold text-[#176B87]'>Price:</label>
-                        <input type="number"
-                              step="0.01"
-                              value={editedData.price}
-                              onChange={(e) => handleInputChange('price', e.target.value)}
-                              className="border border-black rounded px-2 py-1"
-                              style={{ width: '100px', paddingLeft: '22px'}}
-                            />
-                      </HStack>
-
-                      <HStack justify="space-between">
-                      <label className='font-bold text-[#176B87]'>Capacity:</label>
-                      <input
-                      type="number"
-                      value={editedData.capacity}
-                      onChange={(e) => handleInputChange('capacity', e.target.value)}
-                      className="border border-black rounded px-2 py-1"
-                      style={{ width: '100px' }}
-                      />
-                      </HStack>
-                      <Text margin={0} padding={0} fontSize="xs" color="gray.600">Range(2-70)</Text>
-
-                       <HStack justify="space-between" mb={2}>
-                       <label className='font-bold text-[#176B87]'>Status:</label>
-                        <select
-                        value={editedData.status || ''}
-                        onChange={(e) => handleInputChange('status', e.target.value)}
-                        className="border border-black rounded px-2 py-1"
-                        style={{ width: '100px', fontSize: '14px' }}
-                        >
-                        <option value="open">Open</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="closed">Closed</option>
-                        </select>
-                       </HStack>
-                      
-                      <HStack justify="space-between" mb={2}>
-                        <label className='font-bold w-full text-[#176B87]'>Open Time:</label>
+                        <HStack justify="space-between" mb={2}>
+                          <label className='font-bold text-red-600'>Decision:</label>
+                          <select
+                            value={editedData.status}
+                            onChange={(e) => handleInputChange('status', e.target.value)}
+                            className="border border-black rounded px-2 py-1"
+                            style={{ width: '180px' }}
+                          >
+                            <option value="pending_expand_request">Pending</option>
+                            <option value="approve_expand">Approve Expansion</option>
+                            <option value="reject_expand">Reject Expansion</option>
+                          </select>
+                        </HStack>
+                        <Box fontSize="sm" color="gray.700" mt={4} p={3} bg="gray.50" borderRadius="md">
+                          <HStack justify="space-between">
+                            <Text fontWeight="bold">Price:</Text>
+                            <Text>${parseFloat(ride.price).toFixed(2)}</Text>
+                          </HStack>
+                          <HStack justify="space-between" >
+                            <Text fontWeight="bold">Capacity:</Text>
+                            <Text>{ride.capacity}</Text>
+                          </HStack>
+                          <HStack justify="space-between">
+                            <Text fontWeight="bold">Hours:</Text>
+                            <Text fontSize="xs">
+                              {new Date(`2000-01-01T${ride.open_time}`).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true})} - {new Date(`2000-01-01T${ride.close_time}`).toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true})}
+                            </Text>
+                          </HStack>
+                        </Box>
+                      </Box>
+                    ) : (
+                      // Full edit mode for other rides
+                      <Box>
+                        <label className='font-bold text-[#176B87]'>Ride Name:</label>
                         <input
-                        type="time"
-                        value={editedData.open_time}
-                        onChange={(e) => handleInputChange('open_time', e.target.value)}
-                        className="border  border-black  rounded px-2 py-1"
+                          type="text"
+                          value={editedData.name}
+                          onChange={(e) => handleInputChange('name', e.target.value)}
+                          placeholder="Ride Name"
+                          className="border border-black rounded px-2 py-1 mb-3 w-full"
+                          style={{ fontSize: '18px', fontWeight: 'bold' }}
                         />
-                      </HStack>
-                      <HStack justify="space-between">
-                        <label className='font-bold w-full text-[#176B87]'>Close Time:</label>
+
+                        <label className='font-bold text-[#176B87]'>Description:</label>
+                        <textarea
+                        value={editedData.description}
+                        onChange={(e) => handleInputChange('description', e.target.value.slice(0, 150))}
+                        placeholder="Description"
+                        className="border border-black rounded px-2 py-1  w-full"
+                        rows={2}
+                        style={{ fontSize: '14px', resize: 'none' }}
+                        />
+                        <Text fontSize="xs" color="gray.600" mb={0}>{editedData.description.length}/150 characters</Text>
+
+                        <label className='font-bold text-[#176B87]'>Photo: <span style={{color: 'red'}}>*</span></label>
+                        <div style={{marginBottom: '8px'}}>
+                        <label style={{fontSize: '14px', color: 'gray.600'}}>Choose a file from your device:</label>
                         <input
-                        type="time"
-                        value={editedData.close_time}
-                        onChange={(e) => handleInputChange('close_time', e.target.value)}
-                          className="border border-black rounded px-2 py-1"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          setPhotoFile(e.target.files[0]);
+                          handleInputChange('photo_path', '');
+                          }}
+                          className="border border-black rounded px-2 py-1 w-full"
+                            style={{ fontSize: '13px' }}
                           />
-                      </HStack>
-                    </Box>
+                        {photoFile && <Text fontSize="xs" color="green.500">File selected: {photoFile.name}</Text>}
+                        </div>
+                        <div>
+                        <label style={{fontSize: '14px', color: 'gray.600'}}>Or paste URL/Path:</label>
+                        <input
+                        type="text"
+                        value={editedData.photo_path}
+                        onChange={(e) => {
+                          handleInputChange('photo_path', e.target.value);
+                            setPhotoFile(null);
+                          }}
+                            placeholder="Photo URL or Path"
+                              className="border border-black rounded px-2 py-1 w-full"
+                              style={{ fontSize: '13px' }}
+                              maxLength="255"
+                            />
+                            <Text fontSize="xs" color={editedData.photo_path.length > 255 ? 'red.500' : 'gray.600'}>{editedData.photo_path.length}/255 characters</Text>
+                          </div>
+
+
+                        <Box fontSize="sm" color="gray.700" space={2}>
+                          <HStack justify="space-between" mb={2} >
+                            <label className='font-bold text-[#176B87]'>Price:</label>
+                            <input type="number"
+                                  step="0.01"
+                                  value={editedData.price}
+                                  onChange={(e) => handleInputChange('price', e.target.value)}
+                                  className="border border-black rounded px-2 py-1"
+                                  style={{ width: '100px', paddingLeft: '22px'}}
+                                />
+                          </HStack>
+
+                          <HStack justify="space-between">
+                          <label className='font-bold text-[#176B87]'>Capacity:</label>
+                          <input
+                          type="number"
+                          value={editedData.capacity}
+                          onChange={(e) => handleInputChange('capacity', e.target.value)}
+                          className="border border-black rounded px-2 py-1"
+                          style={{ width: '100px' }}
+                          />
+                          </HStack>
+                          <Text margin={0} padding={0} fontSize="xs" color="gray.600">Range(2-70)</Text>
+
+                          <HStack justify="space-between" mb={2}>
+                          <label className='font-bold text-[#176B87]'>Status:</label>
+                            <Text
+                              className="border border-gray-300 rounded px-2 py-1 bg-gray-100"
+                              style={{ width: '100px', fontSize: '14px' }}
+                            >
+                              {editedData.status || ''}
+                            </Text>
+                          </HStack>
+
+                          <HStack justify="space-between" mb={2}>
+                            <label className='font-bold w-full text-[#176B87]'>Open Time:</label>
+                            <input
+                            type="time"
+                            value={editedData.open_time}
+                            onChange={(e) => handleInputChange('open_time', e.target.value)}
+                            className="border  border-black  rounded px-2 py-1"
+                            />
+                          </HStack>
+                          <HStack justify="space-between">
+                            <label className='font-bold w-full text-[#176B87]'>Close Time:</label>
+                            <input
+                            type="time"
+                            value={editedData.close_time}
+                            onChange={(e) => handleInputChange('close_time', e.target.value)}
+                              className="border border-black rounded px-2 py-1"
+                              />
+                          </HStack>
+                        </Box>
+                      </Box>
+                    )}
                   </Box>
                 ) : (
                   // View Mode

@@ -45,7 +45,6 @@ passport.use("google", new GoogleStrategy({
      const email = profile.email ? profile.email : null;
     const firstName = profile.name && profile.name.givenName ? profile.name.givenName : profile.displayName;
     const lastName = profile.name && profile.name.familyName ? profile.name.familyName : '';
-    console.log(email, firstName, lastName);
      
     if (!email) {
       return cb(new Error("No email found in Google profile"));

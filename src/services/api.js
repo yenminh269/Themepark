@@ -158,6 +158,9 @@ export const api = {
     RideStatusCheck: async () => {
         return await fetchAPI('/api/maintenance/ride-status-check', null, "POST", false);
     },
+    updateMaintenance: async (id, data) => {
+        return await fetchAPI(`/maintenances/${id}`, data, "PUT", false);
+    },
 
     // ===== MERCHANDISE =====
     getAllMerchandise: async () => {

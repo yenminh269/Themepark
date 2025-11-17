@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import CustomButton from "../../../button/CustomButton";
 import "../Add.css";
 import { api } from '../../../../services/api';
-import { useToast, Tooltip } from '@chakra-ui/react';
+import { useToast } from '@chakra-ui/react';
 import { FormControl, FormLabel } from '@chakra-ui/react';
 import Select from 'react-select';
 
@@ -28,6 +28,10 @@ function MerchandiseReport() {
   // Options states
   const [itemOptions, setItemOptions] = useState([]);
   const [storeOptions, setStoreOptions] = useState([]);
+
+  // Info tooltip states
+  const [showGrowthInfo, setShowGrowthInfo] = useState(false);
+  const [showMonthlyGrowthInfo, setShowMonthlyGrowthInfo] = useState(false);
 
   // Clear report data when parameters change
   useEffect(() => {
@@ -147,10 +151,10 @@ function MerchandiseReport() {
           { name: '', revenue: 0, quantity: 0 }
         );
 
-        let conclusionText = `<strong>Total Revenue:</strong> $${totalRevenue.toFixed(2)}<br/><strong>Total Items Sold:</strong> ${totalQuantity}`;
+        let conclusionText = `<u>Total Revenue:</u> <strong>$${totalRevenue.toFixed(2)}</strong><br/><u>Total Items Sold:</u> <strong>${totalQuantity}</strong>`;
 
         if (items === 'all') {
-          conclusionText += `<br/><strong>Best-Selling Item:</strong> ${bestSellingItem.name} (${bestSellingItem.quantity} units, $${bestSellingItem.revenue.toFixed(2)})`;
+          conclusionText += `<br/><u>Best-Selling Item:</u> <strong>${bestSellingItem.name}</strong> (<strong>${bestSellingItem.quantity}</strong> units, <strong>$${bestSellingItem.revenue.toFixed(2)}</strong>)`;
         }
 
         if (store === 'all') {
@@ -166,7 +170,7 @@ function MerchandiseReport() {
             revenue > max.revenue ? { name, revenue } : max,
             { name: '', revenue: 0 }
           );
-          conclusionText += `<br/><strong>Best Performing Store:</strong> ${bestStore.name} ($${bestStore.revenue.toFixed(2)})`;
+          conclusionText += `<br/><u>Best Performing Store:</u> <strong>${bestStore.name}</strong> (with total revenue of <strong>$${bestStore.revenue.toFixed(2)}</strong>)`;
         }
 
         setConclusion(conclusionText);
@@ -176,8 +180,8 @@ function MerchandiseReport() {
         const topDate = new Date(topGrowing.order_date).toLocaleDateString();
         const growthExplanation = store === 'specific'
           ? 'Average of daily revenue changes compared to previous day'
-          : 'Average performance compared to other stores';
-        setConclusion(`<strong>Average Growth Rate:</strong> ${avgGrowth.toFixed(2)}% <span style="color: #666; font-size: 0.9em;">(${growthExplanation})</span><br/><strong>Top Performing:</strong> ${topGrowing.store_name} on ${topDate} (${parseFloat(topGrowing.growth_rate).toFixed(2)}%)`);
+          : 'Average performance between all stores';
+        setConclusion(`<u>Average ${store === 'specific' ? 'Daily' : 'Store'} Growth Rate:</u> <strong>${avgGrowth.toFixed(2)}% </strong> <span style="color: #666; font-size: 0.9em;">(${growthExplanation})</span><br/><u>Top Performing:</u> <strong>${topGrowing.store_name}</strong> on <strong>${topDate} </strong>with <strong>${parseFloat(topGrowing.growth_rate).toFixed(2)}% </strong>growth`);
       } else if (type === 'monthly_growth' && data.length > 0) {
         const totalRevenue = data.reduce((sum, item) => sum + parseFloat(item.total_revenue), 0);
         const avgMonthlyGrowth = data.reduce((sum, item) => sum + parseFloat(item.growth_rate), 0) / data.length;
@@ -185,10 +189,10 @@ function MerchandiseReport() {
 
         if (store === 'specific') {
           // For specific store: show which month had highest growth
-          setConclusion(`<strong>Total Revenue:</strong> $${totalRevenue.toFixed(2)}<br/><strong>Average Monthly Growth:</strong> ${avgMonthlyGrowth.toFixed(2)}%<br/><strong>Best Growth Month:</strong> ${topMonth.month_name} ${topMonth.year} (${parseFloat(topMonth.growth_rate).toFixed(2)}%)`);
+          setConclusion(`<u>Total Revenue:</u> <strong>$${totalRevenue.toFixed(2)}</strong><br/><u>Average Monthly Growth:</u> <strong>${avgMonthlyGrowth.toFixed(2)}%</strong><br/><u>Best Growth Month:</u> <strong>${topMonth.month_name} ${topMonth.year}</strong> (<strong>${parseFloat(topMonth.growth_rate).toFixed(2)}%</strong>)`);
         } else {
           // For all stores: show which store led the best month
-          setConclusion(`<strong>Total Revenue:</strong> $${totalRevenue.toFixed(2)}<br/><strong>Average Monthly Growth:</strong> ${avgMonthlyGrowth.toFixed(2)}%<br/><strong>Best Month:</strong> ${topMonth.month_name} ${topMonth.year} (${parseFloat(topMonth.growth_rate).toFixed(2)}% growth, led by ${topMonth.top_contributor})`);
+          setConclusion(`<u>Total Revenue:</u> <strong>$${totalRevenue.toFixed(2)}</strong><br/><u>Average Monthly Growth:</u> <strong>${avgMonthlyGrowth.toFixed(2)}%</strong><br/><u>Best Growth Month:</u> <strong>${topMonth.month_name} ${topMonth.year}</strong> (<strong>${parseFloat(topMonth.growth_rate).toFixed(2)}%</strong>)`);
         }
       }
     } catch (err) {
@@ -204,7 +208,7 @@ function MerchandiseReport() {
 
     try {
       let reportTitle = '';
-      if (type === 'total_revenue') reportTitle = 'MERCHANDISE TOTAL REVENUES REPORT';
+      if (type === 'total_revenue') reportTitle = 'TOTAL MERCHANDISE REVENUES REPORT';
       else if (type === 'growth') reportTitle = 'STORE AVERAGE GROWTH REPORT';
       else if (type === 'monthly_growth') reportTitle = 'MONTHLY GROWTH ANALYSIS REPORT';
 
@@ -448,7 +452,7 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
           </button>
 
           <h3 className="bg-white border !border-gray-500 px-4 py-3 text-xl font-bold mb-4">
-            {type === 'total_revenue' && ' Merchandise Total Revenues Report'}
+            {type === 'total_revenue' && 'Total Merchandise Revenues Report'}
             {type === 'growth' && 'Store Average Growth Report'}
             {type === 'monthly_growth' && 'Monthly Growth Analysis Report'}
           </h3>
@@ -460,11 +464,12 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                   {type === 'total_revenue' && (
                     <>
                       <th className="py-3 !px-6 border !border-black font-semibold">Customer Name</th>
+                      <th className="py-3 !px-4 border !border-black font-semibold">Email</th>
                       <th className="py-3 !px-6 border !border-black font-semibold">Order Date</th>
                       <th className="py-3 !px-6 border !border-black font-semibold">Item Name</th>
                       {store === 'all' && <th className="py-3 !px-6 border !border-black font-semibold">Store</th>}
                       {items === 'all' && <th className="py-3 !px-6 border !border-black font-semibold">Category</th>}
-                      <th className="py-3 !px-6 border !border-black font-semibold">Quantity</th>
+                      <th className="py-3 !px-4 border !border-black font-semibold">Quantity</th>
                       <th className="py-3 !px-6 border !border-black font-semibold">Price/Item</th>
                       <th className="py-3 !px-6 border !border-black font-semibold">Subtotal</th>
                     </>
@@ -472,27 +477,34 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                   {type === 'growth' && (
                     <>
                       <th className="py-3 !px-6 border !border-black font-semibold" colSpan="2">Order Date & Store</th>
-                      <th className="py-3 !px-6 border !border-black font-semibold">Count Orders</th>
+                      <th className="py-3 !px-6 border !border-black font-semibold">No.of orders</th>
                       <th className="py-3 !px-6 border !border-black font-semibold" colSpan="2">Total Revenue</th>
                       <th className="py-3 !px-6 border !border-black font-semibold">
-                        <Tooltip
-                          label={
-                            store === 'specific'
-                              ? "Growth rate compares each day's revenue to the previous day's revenue: ((Current Day - Previous Day) / Previous Day) × 100"
-                              : "Growth rate compares each store's revenue to the average of other stores on the same date: ((Store Revenue - Avg of Others) / Avg of Others) × 100"
-                          }
-                          placement="top"
-                          hasArrow
-                          bg="gray.700"
-                          color="white"
-                          fontSize="sm"
-                          px={3}
-                          py={2}
-                        >
-                          <span style={{ color: 'white', cursor: 'help', borderBottom: '1px dotted white' }}>
-                            Growth Rate (%)
-                          </span>
-                        </Tooltip>
+                        <div className="flex flex-col items-center justify-center gap-1 relative">
+                          <div className="flex items-center gap-1">
+                            <span className="pb-0 text-black">Growth Rate (%)</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowGrowthInfo(!showGrowthInfo)}
+                              className="!text-gray-600 underline text-xs"
+                            >(i)
+                            </button>
+                          </div>
+                          {showGrowthInfo && (
+                            <div className="absolute top-full mt-2 bg-gray-700 text-white text-xs p-3 rounded shadow-lg z-10 max-w-xs text-left">
+                              <button
+                                type="button"
+                                onClick={() => setShowGrowthInfo(false)}
+                                className="absolute top-1 right-2 text-white hover:text-gray-300 font-bold"
+                              >
+                                ×
+                              </button>
+                              {store === 'specific'
+                                ? "Growth rate compares each day's revenue to the previous day's revenue: ((Current Day - Previous Day) / Previous Day) × 100"
+                                : "Growth rate compares each store's revenue to the average of other stores on the same date: ((Store Revenue - Avg of Others) / Avg of Others) × 100"}
+                            </div>
+                          )}
+                        </div>
                       </th>
                     </>
                   )}
@@ -502,21 +514,30 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                       {store === 'specific' && <th className="py-3 !px-6 border !border-black font-semibold">Store</th>}
                       <th className="py-3 !px-6 border !border-black font-semibold">Total Orders</th>
                       <th className="py-3 !px-6 border !border-black font-semibold">Total Revenue</th>
-                      <th className="py-3 !px-6 border !border-black font-semibold">
-                        <Tooltip
-                          label="Month-over-month growth rate: ((Current Month - Previous Month) / Previous Month) × 100"
-                          placement="top"
-                          hasArrow
-                          bg="gray.700"
-                          color="white"
-                          fontSize="sm"
-                          px={3}
-                          py={2}
-                        >
-                          <span style={{ color: 'black', cursor: 'help', borderBottom: '1px dotted white' }}>
-                            Growth Rate (%)
-                          </span>
-                        </Tooltip>
+                      <th className="py-3 !px-4 border !border-black font-semibold">
+                        <div className="flex flex-col items-center justify-center gap-1 relative">
+                          <div className="flex items-center gap-1">
+                            <span className="pb-0 text-black">Growth Rate (%)</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowMonthlyGrowthInfo(!showMonthlyGrowthInfo)}
+                               className="!text-gray-600 underline text-xs"
+                            >(i)
+                            </button>
+                          </div>
+                          {showMonthlyGrowthInfo && (
+                            <div className="absolute top-full mt-2 bg-gray-700 text-white text-xs p-3 rounded shadow-lg z-10 max-w-xs text-left">
+                              <button
+                                type="button"
+                                onClick={() => setShowMonthlyGrowthInfo(false)}
+                                className="absolute top-1 right-2 text-white hover:text-gray-300 font-bold"
+                              >
+                                ×
+                              </button>
+                              Month-over-month growth rate: ((Current Month - Previous Month) / Previous Month) × 100
+                            </div>
+                          )}
+                        </div>
                       </th>
                       {store === 'all' && (
                         <>
@@ -535,7 +556,7 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                     {type === 'growth' && item.details && item.details.length > 0 && (
                       <tr key={`${index}-details`}>
                         <td colSpan="6" className="!py-4 border !border-gray-500 bg-gray-50">
-                          <div className="!px-3">
+                          <div className="!px-2">
                             <table className="min-w-full border-collapse">
                               <thead className="bg-gray-200">
                                 <tr>
@@ -557,7 +578,7 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                                     <td className="py-2 px-4 border border-gray-300 text-sm">
                                       {detail.first_name} {detail.last_name}
                                     </td>
-                                    <td className="py-2 px-4 border border-gray-300 text-sm">{detail.email}</td>
+                                    <td className="py-2 px-2 border border-gray-300 text-sm">{detail.email}</td>
                                     <td className="py-2 px-4 border border-gray-300 text-sm">{detail.phone}</td>
                                     <td className="py-2 px-4 border border-gray-300 text-sm">{detail.item_name}</td>
                                     <td className="py-2 px-4 border border-gray-300 text-sm text-center">{detail.quantity}</td>
@@ -575,11 +596,62 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                       </tr>
                     )}
 
+                    {/* Order Details Row - Display BEFORE the summary row for Monthly Growth type */}
+                     {type === 'monthly_growth' && item.details && item.details.length > 0 && (
+                       <tr key={`${index}-details`}>
+                         <td colSpan={store === 'all' ? '6' : '5'} className="!py-4 border !border-gray-500 bg-gray-50">
+                           <div>
+                             <table className="min-w-full border-collapse">
+                               <thead className="bg-gray-200">
+                                 <tr>
+                                   {store === 'specific' && <th className="py-2 px-3 border border-gray-400 text-left text-sm font-semibold">Order ID</th>}
+                                   <th className="py-2 px-3 border border-gray-400 text-left text-sm font-semibold">Customer Name</th>
+                                   <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Email</th>
+                                   <th className="py-2 px-3 border border-gray-400 text-left text-sm font-semibold">Phone</th>
+                                   <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Order Date</th>
+                                   {store === 'all' && <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Store</th>}
+                                   <th className="py-2 px-2 border border-gray-400 text-left text-sm font-semibold">Item Name</th>
+                                   <th className="py-2 px-2 border border-gray-400 text-left text-sm font-semibold">Quantity</th>
+                                   <th className="py-2 px-3 border border-gray-400 text-left text-sm font-semibold">Price/Item</th>
+                                   <th className="py-2 px-3 border border-gray-400 text-left text-sm font-semibold">Subtotal</th>
+                                   {store === 'all' && <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Order Total</th>}
+                                   <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Status</th>
+                                   <th className="py-2 px-2 border border-gray-400 text-left text-sm font-semibold">Payment</th>
+                                 </tr>
+                               </thead>
+                               <tbody>
+                                 {item.details.map((detail, detailIndex) => (
+                                   <tr key={detailIndex} className="hover:bg-gray-100">
+                                     {store === 'specific' && <td className="py-2 px-4 border border-gray-300 text-sm">{detail.store_order_id}</td>}
+                                     <td className="py-2 px-4 border border-gray-300 text-sm">
+                                       {detail.first_name} {detail.last_name}
+                                     </td>
+                                     <td className="py-2 px-3 border border-gray-300 text-sm">{detail.email}</td>
+                                     <td className="py-2 px-4 border border-gray-300 text-sm">{detail.phone}</td>
+                                     <td className="py-2 px-4 border border-gray-300 text-sm">{detail.formatted_order_date}</td>
+                                     {store === 'all' && <td className="py-2 px-4 border border-gray-300 text-sm">{detail.store_name}</td>}
+                                     <td className="py-2 px-3 border border-gray-300 text-sm">{detail.item_name}</td>
+                                     <td className="py-2 px-2 border border-gray-300 text-sm text-center">{detail.quantity}</td>
+                                     <td className="py-2 px-4 border border-gray-300 text-sm text-right">${parseFloat(detail.price_per_item).toFixed(2)}</td>
+                                     <td className="py-2 px-3 border border-gray-300 text-sm text-right">${parseFloat(detail.subtotal).toFixed(2)}</td>
+                                     {store === 'all' && <td className="py-2 px-4 border border-gray-300 text-sm text-right">${parseFloat(detail.order_total).toFixed(2)}</td>}
+                                     <td className="py-2 px-2 border border-gray-300 text-sm capitalize">{detail.status}</td>
+                                     <td className="py-2 px-4 border border-gray-300 text-sm">{detail.payment_method?.replace('_', ' ')}</td>
+                                   </tr>
+                                 ))}
+                               </tbody>
+                             </table>
+                           </div>
+                         </td>
+                       </tr>
+                     )}
+
                     {/* Summary Row */}
-                    <tr key={index} className="bg-blue-100">
+                    <tr key={index} className="bg-gray-100">
                       {type === 'total_revenue' && (
                         <>
                           <td className="py-3 !px-6 border !border-gray-400">{item.first_name} {item.last_name}</td>
+                          <td className="py-3 !px-6 border !border-gray-400">{item.email}</td>
                           <td className="py-3 !px-6 border !border-gray-400">{new Date(item.order_date).toLocaleDateString()}</td>
                           <td className="py-3 !px-6 border !border-gray-400">{item.item_name}</td>
                           {store === 'all' && <td className="py-3 !px-6 border !border-gray-400">{item.store_name}</td>}
@@ -653,7 +725,7 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                                 <tr>
                                   <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Store Name</th>
                                   <th className="py-2 px-4 border border-gray-400 text-center text-sm font-semibold">Orders</th>
-                                  <th className="py-2 px-4 border border-gray-400 text-right text-sm font-semibold">Revenue</th>
+                                  <th className="py-2 px-4 border border-gray-400 !text-center text-sm font-semibold">Revenue</th>
                                   <th className="py-2 px-4 border border-gray-400 text-center text-sm font-semibold">Contribution %</th>
                                 </tr>
                               </thead>
@@ -664,14 +736,14 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                                       {store.store_name}
                                     </td>
                                     <td className="py-2 px-4 border border-gray-300 text-sm text-center">{store.order_count}</td>
-                                    <td className="py-2 px-4 border border-gray-300 text-sm text-right">
+                                    <td className="py-2 px-4 border border-gray-300 text-sm text-center">
                                       ${parseFloat(store.total_revenue).toFixed(2)}
                                     </td>
                                     <td className="py-2 px-4 border border-gray-300 text-sm text-center">
                                       <span className={`font-semibold ${
-                                        store.contribution_percentage >= 40 ? 'text-green-600' :
-                                        store.contribution_percentage >= 25 ? 'text-blue-600' :
-                                        'text-gray-600'
+                                        store.contribution_percentage >= 40 ? '!text-green-600' :
+                                        store.contribution_percentage >= 25 ? '!text-blue-600' :
+                                        '!text-gray-600'
                                       }`}>
                                         {parseFloat(store.contribution_percentage).toFixed(1)}%
                                       </span>
@@ -690,14 +762,16 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                 {/* Grand Total Row for Total Revenue */}
                 {type === 'total_revenue' && reportData.length > 0 && (
                   <tr className="bg-green-100 font-bold">
-                    <td className="py-3 !px-6 border !border-black" colSpan={items === 'all' && store === 'all' ? '5' : items === 'all' || store === 'all' ? '4' : '3'}>
+                    <td className="py-3 !px-6 border !border-black" colSpan={items === 'all' && store === 'all' ? '6' : items === 'all' || store === 'all' ? '4' : '4'}>
                       <strong>GRAND TOTAL:</strong>
                     </td>
                     <td className="py-3 !px-6 border !border-black text-center">
                       {reportData.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0)}
+                       <div className="text-sm font-normal text-gray-700">(Items Sold)</div>
                     </td>
-                    <td className="py-3 !px-6 border !border-black text-right" colSpan="2">
+                    <td className="py-3 !px-6 border !border-black text-center" colSpan="3">
                       ${reportData.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0).toFixed(2)}
+                       <div className="text-sm font-normal text-gray-700">(Revenue)</div>
                     </td>
                   </tr>
                 )}
@@ -705,8 +779,8 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                 {/* Grand Total Row for Store Average Growth */}
                 {type === 'growth' && reportData.length > 0 && (
                   <tr className="bg-green-100 font-bold">
-                    <td className="py-3 !px-6 border !border-black" colSpan="2">
-                      <strong>GRAND TOTAL:</strong>
+                    <td className="!px-6 border !border-black" colSpan="2">
+                      <strong>Average {store === 'specific' ? 'Daily' : 'Store'} Growth Rate with Total Revenue:</strong>
                     </td>
                     <td className="py-3 !px-6 border !border-black text-center">
                       {reportData.reduce((sum, item) => sum + parseInt(item.order_count || 0), 0)}
@@ -716,9 +790,9 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                     </td>
                     <td className="py-3 !px-6 border !border-black text-center">
                       <span className={`font-semibold ${
-                        (reportData.reduce((sum, item) => sum + parseFloat(item.growth_rate || 0), 0) / reportData.length) > 0 ? 'text-green-600' :
-                        (reportData.reduce((sum, item) => sum + parseFloat(item.growth_rate || 0), 0) / reportData.length) < 0 ? 'text-red-600' :
-                        'text-gray-600'
+                        (reportData.reduce((sum, item) => sum + parseFloat(item.growth_rate || 0), 0) / reportData.length) > 0 ? '!text-green-600' :
+                        (reportData.reduce((sum, item) => sum + parseFloat(item.growth_rate || 0), 0) / reportData.length) < 0 ? '!text-red-600' :
+                        '!text-gray-600'
                       }`}>
                         {((reportData.reduce((sum, item) => sum + parseFloat(item.growth_rate || 0), 0) / reportData.length) > 0 ? '+' : '')}
                         {(reportData.reduce((sum, item) => sum + parseFloat(item.growth_rate || 0), 0) / reportData.length).toFixed(2)}%
@@ -726,6 +800,54 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
                     </td>
                   </tr>
                 )}
+
+                {/* Summary for Monthly Growth Analysis */}
+                {type === 'monthly_growth' && reportData.length > 0 && (() => {
+                  const totalRevenue = reportData.reduce((sum, item) => sum + parseFloat(item.total_revenue || 0), 0);
+                  const totalOrders = reportData.reduce((sum, item) => sum + parseInt(item.total_orders || 0), 0);
+                  const avgGrowth = reportData.reduce((sum, item) => sum + parseFloat(item.growth_rate || 0), 0) / reportData.length;
+                  const bestMonth = reportData.reduce((max, item) => parseFloat(item.growth_rate) > parseFloat(max.growth_rate) ? item : max);
+
+                  return (
+                    <tr className="bg-green-100 font-bold">
+                      <td className="py-3 !px-6 border !border-black" colSpan={store === 'specific' ? '2' : '1'}>
+                        <strong>AVERAGE MONTHLY GROWTH:</strong>
+                      </td>
+                      <td className="py-3 !px-6 border !border-black text-center">
+                        {totalOrders}
+                        <div className="text-xs font-normal text-gray-600">(Total Orders)</div>
+                      </td>
+                      <td className="py-3 !px-6 border !border-black text-right">
+                        ${totalRevenue.toFixed(2)}
+                        <div className="text-xs font-normal text-gray-600">(Total Revenue)</div>
+                      </td>
+                      <td className="py-3 !px-6 border !border-black text-center">
+                        <span className={`font-semibold ${
+                          avgGrowth > 0 ? 'text-green-600' :
+                          avgGrowth < 0 ? 'text-red-600' :
+                          'text-gray-600'
+                        }`}>
+                          {avgGrowth > 0 ? '+' : ''}{avgGrowth.toFixed(2)}%
+                        </span>
+                        <div className="text-xs font-normal text-gray-600">(Average)</div>
+                      </td>
+                      {store === 'all' && (
+                        <>
+                          <td className="py-3 !px-6 border !border-black">
+                            {bestMonth.month_name} {bestMonth.year}
+                            <div className="text-xs font-normal text-gray-600">Best Growth Month</div>
+                          </td>
+                          <td className="py-3 !px-6 border !border-black text-center">
+                            <span className="text-green-600">
+                              +{parseFloat(bestMonth.growth_rate).toFixed(2)}%
+                              <div className="text-xs font-normal text-gray-600">With Growth Rate</div>
+                            </span>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })()}
               </tbody>
             </table>
           </div>
@@ -743,7 +865,11 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
 
       {reportData && reportData.length === 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded p-4 mt-4">
-          <p className="text-yellow-800">No merchandise data available for the selected criteria.</p>
+          <p className="text-yellow-800">
+            {type === 'total_revenue'
+              ? 'No sales found for the selected merchandise. The item may be in inventory but has not been purchased yet during this date range.'
+              : 'No merchandise data available for the selected criteria.'}
+          </p>
         </div>
       )}
     </div>

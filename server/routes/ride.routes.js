@@ -105,8 +105,59 @@ router.get('/avg-month', async (req, res) => {
 // Update a ride
 router.put('/:id', upload.single('file'), (req, res) => {
   const { id } = req.params;
-  const { name, price, capacity, description, open_time, close_time, photo_path } = req.body;
+  const { name, price, capacity, description, open_time, close_time, photo_path, status } = req.body;
 
+  // Check if this is a status-only update (for expansion request decisions)
+  if (status && !name && !price && !capacity && !description && !open_time && !close_time) {
+    // Status-only update for expansion request decisions
+    const statusSql = 'UPDATE ride SET status = ? WHERE ride_id = ?';
+
+    db.query(statusSql, [status, id], (err, result) => {
+      if (err) {
+        console.error("Error updating ride status:", err);
+        return res.status(500).json({
+          message: 'Error updating ride status',
+          error: err.message
+        });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Ride not found' });
+      }
+
+      // If status is approve_expand, record in expansion history
+      if (status === 'approve_expand') {
+        const historySQL = 'INSERT INTO ride_expansion_history (ride_id, expand_date) VALUES (?, NOW())';
+        
+        db.query(historySQL, [id], (historyErr) => {
+          if (historyErr) {
+            console.error("Error recording expansion history:", historyErr);
+            // Still return success for status update even if history recording fails
+            return res.status(200).json({
+              message: 'Ride status updated successfully, but failed to record expansion history',
+              rideId: id,
+              status: status,
+              warning: historyErr.message
+            });
+          }
+
+          res.status(200).json({
+            message: 'Ride status updated and expansion recorded successfully',
+            rideId: id,
+            status: status
+          });
+        });
+      } else {
+        res.status(200).json({
+          message: 'Ride status updated successfully',
+          rideId: id,
+          status: status
+        });
+      }
+    });
+    return;
+  }
+
+  // Full ride update
   if (!name || !price || !capacity || !description || !open_time || !close_time) {
     return res.status(400).json({ message: 'All required fields must be provided' });
   }
@@ -118,7 +169,7 @@ router.put('/:id', upload.single('file'), (req, res) => {
   }
 
   const sql = `
-    UPDATE ride 
+    UPDATE ride
     SET name = ?, price = ?, capacity = ?, description = ?, open_time = ?, close_time = ?, photo_path = ?
     WHERE ride_id = ?
   `;

@@ -141,7 +141,7 @@ currentPage * rowsPerPage
     setCurrentPage(pageNum);
   };
 
-  // ✅ Fetch rain outs
+  // Fetch rain outs
   const fetchRainOuts = async () => {
     try {
       const data = await api.getAllRainOuts();
@@ -151,7 +151,7 @@ currentPage * rowsPerPage
     }
   };
 
-  // ✅ Create new rain out (will close all rides automatically via trigger)
+  // Create new rain out (will close all rides automatically via trigger)
   const handleCreateRainOut = async (e) => {
     e.preventDefault();
     try {
@@ -184,7 +184,7 @@ currentPage * rowsPerPage
     }
   };
 
-  // ✅ Clear rain out (will open all rides automatically via trigger)
+  // Clear rain out (will open all rides automatically via trigger)
   const handleClearRainOut = async (id) => {
     setRainOutToClear(id);
     setShowConfirmModal(true);
@@ -283,7 +283,7 @@ currentPage * rowsPerPage
             onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
             onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
           >
-            Logout
+            Log Out
           </button>
         </div>
       </nav>
@@ -338,7 +338,7 @@ currentPage * rowsPerPage
             <table className="table">
               <thead>
                 <tr>
-                  <th>Maintenance ID</th>
+                  <th>ID</th>
                   <th>Ride Name</th>
                   <th>Ride ID</th>
                   <th>Description</th>
@@ -372,6 +372,14 @@ currentPage * rowsPerPage
                           fontSize: '14px'
                         }}>
                           ✓ Completed
+                        </span>
+                      ) : task.status === 'cancelled' ? (
+                        <span style={{
+                          color: '#dc3545',
+                          fontWeight: 'bold',
+                          fontSize: '14px'
+                        }}>
+                          ✖ Cancelled
                         </span>
                       ) : (
                         <button

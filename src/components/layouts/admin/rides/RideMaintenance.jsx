@@ -25,12 +25,11 @@ function RideMaintenance() {
   const toast = useToast();
 
   const RideAttr = [
-    'Ride Id', 'Ride Name', 'Price', 'Capacity', 'Description',
-    'Status', 'Open Time', 'Close Time', 'Date Added'
+    'Ride Id', 'Ride Name', 'Capacity', 'Description',
+    'Status', 'Date Added'
   ];
   const columnRideKeys = [
-    'ride_id', 'name', 'price', 'capacity', 'description', 'status',
-    'open_time', 'close_time', 'created_at'
+    'ride_id', 'name', 'capacity', 'description', 'status', 'created_at'
   ];
   
   const EMAttr = [
@@ -44,11 +43,11 @@ function RideMaintenance() {
 
   const MaintenanceAttr = [
     'Maintenance ID', 'Ride Name', 'Employee', 'Description',
-    'Scheduled Date', 'Status'
+    'Scheduled Date', 'Status', 'Actions'
   ];
   const maintenanceKeys = [
     'maintenance_id', 'ride_name', 'employee_name', 'description',
-    'scheduled_date', 'status'
+    'scheduled_date', 'status', 'actions'
   ];
 
   useEffect(() => {
@@ -102,13 +101,6 @@ function RideMaintenance() {
     columnRideKeys.map(key => {
       if (key === 'created_at' && rideObj[key])
         return new Date(rideObj[key]).toLocaleDateString();
-      if ((key === 'open_time' || key === 'close_time') && rideObj[key]) {
-        const [hour, minute] = rideObj[key].split(':');
-        const h = parseInt(hour, 10);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const displayHour = h % 12 || 12;
-        return `${displayHour}:${minute} ${ampm}`;
-      }
       return rideObj[key] ?? '';
     })
   );
@@ -128,7 +120,9 @@ function RideMaintenance() {
     if (key === 'scheduled_date' && maintObj[key])
       return new Date(maintObj[key]).toLocaleDateString();
     if (key === 'status') {
-      return maintObj[key] === 'done'? '✓ Completed':'📅 Scheduled';
+      if (maintObj[key] === 'done') return '✓ Completed';
+      if (maintObj[key] === 'cancelled') return '✖ Cancelled';
+      return '📅 Scheduled';
     }
     return maintObj[key] ?? '';
   });
@@ -145,6 +139,33 @@ function RideMaintenance() {
   const handleAddMaintenance = () => {
     setShowForm(true);
   };
+
+  const handleCancelMaintenance = async (maintenanceId) => {
+    try {
+      await api.updateMaintenance(maintenanceId, { status: 'cancelled' });
+      await fetchMaintenanceSchedules();
+
+      toast({
+        title: 'Maintenance Cancelled',
+        description: 'The maintenance schedule has been cancelled successfully.',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
+    } catch (err) {
+      console.error('Error cancelling maintenance:', err);
+      toast({
+        title: 'Failed to Cancel Maintenance',
+        description: err.message || 'An error occurred while cancelling the maintenance.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+        position: 'top',
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
   e.preventDefault();
 
@@ -245,26 +266,63 @@ function RideMaintenance() {
         <div className="flex flex-col gap-4 flex-1 min-w-[400px]">
           {/* Maintenance Schedule Table - Now at the top */}
           <div className="bg-white rounded-lg shadow-md p-4">
-            <h2 className="text-xl font-semibold mb-3 text-[#4682A9]">
+            <h3 className="text-xl font-semibold mb-3 text-[#4682A9]">
               Scheduled Maintenance ({maintenanceSchedules.length})
-            </h2>
+            </h3>
             {maintenanceSchedules.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p>No maintenance schedules yet.</p>
                 <p className="text-sm mt-2">Click "Schedule New Maintenance" to add one.</p>
               </div>
             ) : (
-              <DataTable
-                title=""
-                columns={MaintenanceAttr}
-                data={formattedMaintenanceData}
-              />
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse border border-gray-300">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      {MaintenanceAttr.map((header, idx) => (
+                        <th key={idx} className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {maintenanceSchedules.map((maintObj, rowIdx) => (
+                      <tr key={rowIdx} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.maintenance_id}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.ride_name}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.assigned_employees || 'No employees assigned'}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-sm">{maintObj.description}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-sm">
+                          {maintObj.scheduled_date ? new Date(maintObj.scheduled_date).toLocaleDateString() : ''}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-sm">
+                          {maintObj.status === 'done' ? '✓ Completed' : maintObj.status === 'cancelled' ? '✖ Cancelled' : '📅 Scheduled'}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-sm text-center">
+                          {(maintObj.status !== 'done' && maintObj.status !== 'cancelled') && (
+                            <button
+                              onClick={() => handleCancelMaintenance(maintObj.maintenance_id)}
+                              className="px-3 py-1 !bg-red-600 text-white rounded hover:bg-red-600 transition-colors text-xs"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                          {(maintObj.status === 'done' || maintObj.status === 'cancelled') && (
+                            <span className="text-gray-400 text-xs">--</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
           {/* Rides Table */}
           <div className="bg-white rounded-lg shadow-md p-4">
-            <h2 className="text-xl font-semibold mb-3 text-[#4682A9]">Available Rides</h2>
+            <h3 className="text-xl font-semibold text-[#4682A9]">Available Rides</h3>
             <DataTable
               title=""
               columns={RideAttr}
@@ -275,7 +333,7 @@ function RideMaintenance() {
 
           {/* Employees Table */}
           <div className="bg-white rounded-lg shadow-md p-4">
-            <h2 className="text-xl font-semibold mb-3 text-[#4682A9]">Maintenance Staff</h2>
+            <h3 className="text-xl font-semibold text-[#4682A9]">Maintenance Employees</h3>
             <DataTable
               title=""
               columns={EMAttr}

@@ -101,6 +101,7 @@ router.get('/customer-report', async (req, res) => {
               m.month_num,
               m.avg_customers,
               m.days_in_month,
+              DAYNAME(d.visit_date) AS day_of_week,
               CASE
                 WHEN d.num_customers > m.avg_customers * 1.2 THEN 'Spike'
                 ELSE 'Normal'
@@ -139,6 +140,7 @@ router.get('/customer-report', async (req, res) => {
               w.week_num,
               w.avg_customers,
               w.days_in_week,
+              DAYNAME(d.visit_date) AS day_of_week,
               CASE
                 WHEN d.num_customers > w.avg_customers * 1.2 THEN 'Spike'
                 ELSE 'Normal'
@@ -643,12 +645,16 @@ router.get('/ride-report', async (req, res) => {
                 rod.price_per_ticket,
                 rod.subtotal,
                 ro.order_date,
-                DATE_FORMAT(ro.order_date, '%Y-%m-%d') as formatted_order_date
+                DATE_FORMAT(ro.order_date, '%Y-%m-%d') as formatted_order_date,
+                c.first_name,
+                c.last_name,
+                c.email
               FROM ride_order_detail as rod
               LEFT JOIN ride_order as ro ON rod.order_id = ro.order_id
+              LEFT JOIN customer as c ON ro.customer_id = c.customer_id
               WHERE rod.ride_id = ?
                 AND DATE(ro.order_date) = DATE(?)
-              ORDER BY ro.order_date
+              ORDER BY c.first_name, c.last_name, ro.order_date
             `;
 
             // Construct date string from year, month, day
@@ -760,11 +766,12 @@ router.get('/merchandise-report', async (req, res) => {
           SELECT
             c.first_name,
             c.last_name,
+            c.email,
             so.order_date,
             DATE_FORMAT(so.order_date, '%Y-%m-%d') as formatted_order_date,
             m.name as item_name,
             s.name as store_name,
-            m.item_type as category,
+            m.type as category,
             sod.quantity,
             sod.price_per_item,
             sod.subtotal
@@ -785,7 +792,7 @@ router.get('/merchandise-report', async (req, res) => {
 
         // Filter by category (only when items === 'all')
         if (items === 'all' && category && category !== 'all') {
-          sql += ' AND m.item_type = ?';
+          sql += ' AND m.type = ?';
           params.push(category);
         }
 
@@ -953,8 +960,46 @@ router.get('/merchandise-report', async (req, res) => {
       else if (type === 'monthly_growth' && results.length > 0) {
         try {
           if (store === 'specific') {
-            // For specific store: show which months this store grew the most
-            const monthlyResults = results.map((row, index) => {
+            // For specific store: show which months this store grew the most with detailed order information
+            const monthlyResults = await Promise.all(results.map(async (row, index) => {
+              // Fetch order details for this month and store with customer information
+              // IMPORTANT: Respect the date range filter (startDate and endDate)
+              const detailSql = `
+                SELECT
+                  sod.store_order_id,
+                  sod.item_id,
+                  m.name as item_name,
+                  sod.quantity,
+                  sod.price_per_item,
+                  sod.subtotal,
+                  so.status,
+                  so.payment_method,
+                  so.total_amount as order_total,
+                  c.customer_id,
+                  c.first_name,
+                  c.last_name,
+                  c.email,
+                  c.phone,
+                  DATE_FORMAT(so.order_date, '%Y-%m-%d') as formatted_order_date
+                FROM store_order_detail sod
+                JOIN store_order so ON sod.store_order_id = so.store_order_id
+                JOIN merchandise m ON sod.item_id = m.item_id
+                JOIN customer c ON so.customer_id = c.customer_id
+                WHERE YEAR(so.order_date) = ?
+                  AND MONTH(so.order_date) = ?
+                  AND so.store_id = ?
+                  AND so.order_date >= ?
+                  AND so.order_date <= ?
+                ORDER BY so.store_order_id, sod.item_id
+              `;
+
+              const details = await new Promise((resolve, reject) => {
+                db.query(detailSql, [row.year, row.month, row.store_id, startDate, endDate], (detailErr, detailRows) => {
+                  if (detailErr) reject(detailErr);
+                  else resolve(detailRows);
+                });
+              });
+
               // Calculate growth rate compared to previous month for this specific store
               let growth_rate = 0;
               if (index > 0) {
@@ -972,9 +1017,10 @@ router.get('/merchandise-report', async (req, res) => {
                 store_name: row.store_name,
                 total_revenue: parseFloat(row.total_revenue),
                 total_orders: row.order_count,
-                growth_rate
+                growth_rate,
+                details
               };
-            });
+            }));
 
             res.json(monthlyResults);
           } else {
@@ -1005,12 +1051,51 @@ router.get('/merchandise-report', async (req, res) => {
               monthlyData[key].total_orders += row.order_count;
             });
 
-            // Calculate top contributor and growth rate for each month
-            const monthlyResults = Object.values(monthlyData).map((monthData, index) => {
+            // Calculate top contributor and growth rate for each month with detailed order information
+            const monthlyResults = await Promise.all(Object.values(monthlyData).map(async (monthData, index) => {
               // Find top contributing store
               const topStore = monthData.stores.reduce((max, store) =>
                 parseFloat(store.total_revenue) > parseFloat(max.total_revenue) ? store : max
               );
+
+              // Fetch order details for this month (all stores)
+              // IMPORTANT: Respect the date range filter (startDate and endDate)
+              const detailSql = `
+                SELECT
+                  sod.store_order_id,
+                  sod.item_id,
+                  m.name as item_name,
+                  sod.quantity,
+                  sod.price_per_item,
+                  sod.subtotal,
+                  so.status,
+                  so.payment_method,
+                  so.total_amount as order_total,
+                  c.customer_id,
+                  c.first_name,
+                  c.last_name,
+                  c.email,
+                  c.phone,
+                  s.name as store_name,
+                  DATE_FORMAT(so.order_date, '%Y-%m-%d') as formatted_order_date
+                FROM store_order_detail sod
+                JOIN store_order so ON sod.store_order_id = so.store_order_id
+                JOIN merchandise m ON sod.item_id = m.item_id
+                JOIN customer c ON so.customer_id = c.customer_id
+                JOIN store s ON so.store_id = s.store_id
+                WHERE YEAR(so.order_date) = ?
+                  AND MONTH(so.order_date) = ?
+                  AND so.order_date >= ?
+                  AND so.order_date <= ?
+                ORDER BY so.store_order_id, sod.item_id
+              `;
+
+              const details = await new Promise((resolve, reject) => {
+                db.query(detailSql, [monthData.year, monthData.month, startDate, endDate], (detailErr, detailRows) => {
+                  if (detailErr) reject(detailErr);
+                  else resolve(detailRows);
+                });
+              });
 
               // Calculate growth rate compared to previous month
               let growth_rate = 0;
@@ -1039,9 +1124,10 @@ router.get('/merchandise-report', async (req, res) => {
                 top_contributor: topStore.store_name,
                 top_contributor_revenue: topStore.total_revenue,
                 top_contributor_percentage: (parseFloat(topStore.total_revenue) / monthData.total_revenue) * 100,
-                stores: storesWithContribution
+                stores: storesWithContribution,
+                details
               };
-            });
+            }));
 
             res.json(monthlyResults);
           }

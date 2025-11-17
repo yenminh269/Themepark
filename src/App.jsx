@@ -35,9 +35,11 @@ function AppContent() {
 
   // Check for incomplete profile on route changes
   useEffect(() => {
-    // Skip check if already on complete-profile, login, signup, or logout pages
-    const excludedPaths = ['/complete-profile', '/login', '/signup', '/logout'];
-    if (excludedPaths.includes(location.pathname)) {
+    // Skip check if on public pages - allow browsing homepage and stores without profile
+    const excludedPaths = ['/', '/complete-profile', '/login', '/signup', '/logout', '/stores'];
+    const isStorePage = location.pathname.startsWith('/store/');
+
+    if (excludedPaths.includes(location.pathname) || isStorePage) {
       return;
     }
 
