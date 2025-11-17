@@ -5,12 +5,7 @@ export default function RainHistory() {
   const [rainOuts, setRainOuts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showAllRainOuts, setShowAllRainOuts] = useState(false);
-  const [newRainOut, setNewRainOut] = useState({
-    rain_out_date: '',
-    note: ''
-  });
 
   // Fetch all rain outs
   const fetchRainOuts = async () => {
@@ -30,21 +25,6 @@ export default function RainHistory() {
   useEffect(() => {
     fetchRainOuts();
   }, []);
-
-  // Create new rain out (will close all rides automatically via trigger)
-  const handleCreateRainOut = async (e) => {
-    e.preventDefault();
-    try {
-      await api.createRainOut(newRainOut);
-      alert('Rain out activated! All rides have been closed.');
-      setShowAddModal(false);
-      setNewRainOut({ rain_out_date: '', note: '' });
-      fetchRainOuts();
-    } catch (err) {
-      console.error('Error creating rain out:', err);
-      alert(err.message || 'Failed to create rain out');
-    }
-  };
 
 
   if (loading) {
@@ -92,12 +72,20 @@ export default function RainHistory() {
                           </span>
                           <div>
                             <h3 className="!text-xl !font-bold !text-gray-800">
-                              {new Date(rainOut.rain_out_date).toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
+                              {(() => {
+                                // Parse date as local time to avoid timezone issues
+                                const dateParts = rainOut.rain_out_date.split('-');
+                                const year = parseInt(dateParts[0], 10);
+                                const month = parseInt(dateParts[1], 10) - 1; // JS months are 0-indexed
+                                const day = parseInt(dateParts[2], 10);
+                                const localDate = new Date(year, month, day);
+                                return localDate.toLocaleDateString('en-US', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                });
+                              })()}
                             </h3>
                             <span
                               className={`!inline-block !px-3 !py-1 !rounded-full !text-sm !font-bold !mt-1 ${
@@ -127,7 +115,18 @@ export default function RainHistory() {
                           {rainOut.status === 'cleared' && rainOut.clear_emp_first_name && (
                             <p className="!text-sm !text-gray-600 !my-1">
                               <strong>Cleared by:</strong> {rainOut.clear_emp_first_name} {rainOut.clear_emp_last_name}
-                              <strong> At:</strong> {new Date(rainOut.resolved_at).toLocaleString()}
+                              <strong> At:</strong> {(() => {
+                                const date = new Date(rainOut.resolved_at);
+                                return date.toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                  hour12: true
+                                });
+                              })()}
                             </p>
                           )}
                         </div>
@@ -153,64 +152,7 @@ export default function RainHistory() {
         </div>
       </div>
 
-      {/* Add Rain Out Modal */}
-      {showAddModal && (
-        <div className="!fixed !inset-0 !bg-black/50 !flex !items-center !justify-center !z-50">
-          <div className="!bg-white !rounded-2xl !p-8 !max-w-md !w-full !mx-4 !shadow-2xl">
-            <h2 className="!text-2xl !font-bold !text-gray-800 !mb-6">☔ Activate Rain Out</h2>
 
-            <form onSubmit={handleCreateRainOut}>
-              <div className="!mb-4">
-                <label className="!block !text-sm !font-bold !text-gray-700 !mb-2">
-                  Date *
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={newRainOut.rain_out_date}
-                  onChange={(e) => setNewRainOut({ ...newRainOut, rain_out_date: e.target.value })}
-                  className="!w-full !px-4 !py-2 !border !border-gray-300 !rounded-lg focus:!outline-none focus:!ring-2 focus:!ring-blue-500"
-                />
-              </div>
-
-              <div className="!mb-6">
-                <label className="!block !text-sm !font-bold !text-gray-700 !mb-2">
-                  Note (optional)
-                </label>
-                <textarea
-                  value={newRainOut.note}
-                  onChange={(e) => setNewRainOut({ ...newRainOut, note: e.target.value })}
-                  placeholder="Heavy rain expected..."
-                  className="!w-full !px-4 !py-2 !border !border-gray-300 !rounded-lg focus:!outline-none focus:!ring-2 focus:!ring-blue-500"
-                  rows="3"
-                />
-              </div>
-
-              <div className="!bg-yellow-50 !border !border-yellow-300 !rounded-lg !p-4 !mb-6">
-                <p className="!text-sm !text-yellow-800 !font-semibold">
-                  ⚠️ Warning: This will automatically close ALL rides in the park!
-                </p>
-              </div>
-
-              <div className="!flex !gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="!flex-1 !px-4 !py-2 !bg-gray-300 !text-gray-700 !rounded-lg !font-bold hover:!bg-gray-400 !transition !border-none"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="!flex-1 !px-4 !py-2 !bg-red-600 !text-white !rounded-lg !font-bold hover:!bg-red-700 !transition !border-none"
-                >
-                  Activate Rain Out
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

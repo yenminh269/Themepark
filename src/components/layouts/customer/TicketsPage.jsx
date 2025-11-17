@@ -19,7 +19,6 @@ export default function TicketsPage() {
       try {
         setLoading(true);
         const result = await api.getAllRides();
-        // Map backend data to match cart structure (id instead of ride_id)
         const ridesData = result.map(ride => ({
           id: ride.ride_id,
           name: ride.name,
@@ -156,7 +155,7 @@ export default function TicketsPage() {
                     <p className="!text-sm !font-semibold !text-gray-500">
                       {ride.status === 'maintenance'
                         ? 'Currently under maintenance'
-                        : 'Ride is closed'}
+                        : 'Ride is closed because of rain out'}
                     </p>
                   </div>
                 )}

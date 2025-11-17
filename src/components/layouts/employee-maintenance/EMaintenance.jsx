@@ -21,8 +21,18 @@ const [showAddModal, setShowAddModal] = useState(false);
 const [showAllRainOuts, setShowAllRainOuts] = useState(false);
 const [showConfirmModal, setShowConfirmModal] = useState(false);
 const [rainOutToClear, setRainOutToClear] = useState(null);
+
+// Get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const [newRainOut, setNewRainOut] = useState({
-  rain_out_date: '',
+  rain_out_date: getTodayDate(),
   note: ''
 });
 
@@ -48,7 +58,7 @@ const handleLogout = () => {
   navigate("/login");
 };
 
-// ✅ Fetch maintenance tasks for this specific employee
+// Fetch maintenance tasks for this specific employee
 useEffect(() => {
   if (!employee) return;
 
@@ -74,14 +84,14 @@ useEffect(() => {
     });
 }, [employee]);
 
-  // ✅ Fetch rain outs
+  // Fetch rain outs
   useEffect(() => {
     api.getAllRainOuts()
       .then((data) => setRainOuts(data))
       .catch((err) => console.error("Error fetching rain outs:", err));
   }, []);
 
-// ✅ Filter data by search
+//  Filter data by search
 useEffect(() => {
 const filtered = maintenanceData.filter((item) =>
 item[searchField]?.toString().toLowerCase().includes(searchQuery.toLowerCase())
@@ -170,7 +180,7 @@ currentPage * rowsPerPage
         position: 'top-right'
       });
       setShowAddModal(false);
-      setNewRainOut({ rain_out_date: '', note: '' });
+      setNewRainOut({ rain_out_date: getTodayDate(), note: '' });
       fetchRainOuts();
     } catch (err) {
       toast({
@@ -289,13 +299,13 @@ currentPage * rowsPerPage
       </nav>
 
       {/* === Main Content === */}
-      <div style={{maxWidth: '1200px', margin: '0 auto', padding: '0 40px 40px'}}>
+      <div style={{maxWidth: '1200px', margin: '0 auto', padding: '0 10px 40px'}}>
         {/* Rain Out Management Section */}
         <div className="card" >
             <div className="card !flex flex-row !justify-between" >
               <div>
               <h2 style={{color: '#3e4b2b', marginBottom: '5px'}}>☔ Rain Out Management</h2>
-              <p style={{color: '#666', fontSize: '16px'}}>Control park operations during bad weather</p>
+              <p style={{color: '#4e4d4dff', fontSize: '18px'}}>Control park operations during bad weather</p>
               </div>
                 <button
                 onClick={() => setShowAddModal(true)}
@@ -688,13 +698,13 @@ currentPage * rowsPerPage
               <form onSubmit={handleCreateRainOut}>
                 <div style={{marginBottom: '16px'}}>
                   <label style={{display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#555', marginBottom: '8px'}}>
-                    Date *
+                    Date
                   </label>
                   <input
-                    type="date"   min={new Date().toISOString().split("T")[0]}
+                    type="date"
                     required
                     value={newRainOut.rain_out_date}
-                    onChange={(e) => setNewRainOut({ ...newRainOut, rain_out_date: e.target.value })}
+                    readOnly
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -702,9 +712,14 @@ currentPage * rowsPerPage
                       borderRadius: '8px',
                       fontSize: '16px',
                       outline: 'none',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      backgroundColor: '#f5f5f5',
+                      cursor: 'not-allowed'
                     }}
                   />
+                  <p style={{fontSize: '12px', color: '#666', marginTop: '4px', marginBottom: 0}}>
+                    Rain outs can only be activated for today's date
+                  </p>
                 </div>
 
                 <div style={{marginBottom: '24px'}}>
@@ -745,7 +760,10 @@ currentPage * rowsPerPage
                 <div style={{display: 'flex', gap: '12px'}}>
                   <button
                     type="button"
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setNewRainOut({ rain_out_date: getTodayDate(), note: '' });
+                    }}
                     style={{
                       flex: 1,
                       padding: '12px',
