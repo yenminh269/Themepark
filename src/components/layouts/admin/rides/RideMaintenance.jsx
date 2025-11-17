@@ -327,7 +327,7 @@ function RideMaintenance() {
                   <div className="text-center mt-5">
                     <button
                       onClick={() => setShowAllMaintenance(!showAllMaintenance)}
-                      className="px-6 py-3 bg-[#4682A9] text-white rounded-lg font-bold hover:bg-[#3a6b8a] transition border-none"
+                      className="!px-6 !py-3 !bg-[#4682A9] !text-white !rounded-lg font-bold transition border-none"
                     >
                       {showAllMaintenance ? 'Show Less' : `Show More (${maintenanceSchedules.length - 7} more)`}
                     </button>
