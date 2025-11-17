@@ -131,7 +131,11 @@ export default function TicketsPage() {
                         {getQuantity(ride.id)}
                       </span>
                       <button
-                        onClick={() => addToCart({ ...ride, type: 'ride' })}
+                        onClick={() => addToCart({
+                          ...ride,
+                          type: 'ride',
+                          image_url: getImageUrl(ride.photo_path, ride.name)
+                        })}
                         disabled={getQuantity(ride.id) >= RIDE_LIMIT}
                         className="!px-3 !py-2 !bg-[#176B87] !text-white !rounded-lg hover:!opacity-90 !transition !border-none disabled:!opacity-50 disabled:!cursor-not-allowed"
                       >

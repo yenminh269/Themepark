@@ -67,7 +67,8 @@ export default function StorePage() {
         price: parseFloat(item.price),
         storeId: parseInt(storeId),
         storeName: store.name,
-        type: 'store'
+        type: 'store',
+        image_url: item.image_url
       });
     } else {
       // Add to legacy storeCart for in-park only stores
@@ -75,7 +76,8 @@ export default function StorePage() {
         id: item.item_id,
         name: item.item_name,
         price: parseFloat(item.price),
-        storeId: parseInt(storeId)
+        storeId: parseInt(storeId),
+        image_url: item.image_url
       });
     }
   };

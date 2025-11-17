@@ -112,41 +112,53 @@ export default function CheckoutPage() {
               Your cart is empty. Add some rides or store items!
             </p>
           ) : (
-            <table className="!w-full !border !border-[#B4D4FF] !text-left !rounded-md !overflow-hidden">
-              <thead className="!bg-[#749BC2] !text-white">
-                <tr>
-                  <th className="!px-4 !py-2">Item</th>
-                  <th className="!px-4 !py-2">Type</th>
-                  <th className="!px-4 !py-2">Price</th>
-                  <th className="!px-4 !py-2">Quantity</th>
-                  <th className="!px-4 !py-2">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cart.map((item, index) => (
-                  <tr key={`${item.type}-${item.id}-${index}`} className="!bg-white/80">
-                    <td className="!px-4 !py-2">
-                      {item.name}
-                      {item.storeName && <div className="!text-xs !text-gray-500">from {item.storeName}</div>}
-                    </td>
-                    <td className="!px-4 !py-2">
-                      <span className={`!px-2 !py-1 !rounded !text-xs !font-semibold ${
-                        item.type === 'ride'
-                          ? '!bg-blue-100 !text-blue-700'
-                          : '!bg-green-100 !text-green-700'
-                      }`}>
-                        {item.type === 'ride' ? '🎢 Ride' : '🛍️ Store'}
-                      </span>
-                    </td>
-                    <td className="!px-4 !py-2">${item.price.toFixed(2)}</td>
-                    <td className="!px-4 !py-2">{item.quantity}</td>
-                    <td className="!px-4 !py-2">
-                      ${(item.price * item.quantity).toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="!space-y-4">
+              {cart.map((item, index) => (
+                <div key={`${item.type}-${item.id}-${index}`} className="!bg-white !rounded-lg !shadow !p-4 !border !border-[#B4D4FF]">
+                  <div className="!flex !gap-4">
+                    {/* Product Image */}
+                    <div className="!w-20 !h-20 !flex-shrink-0 !rounded-lg !overflow-hidden !bg-gradient-to-br !from-[#176B87] !to-[#86B6F6]">
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt={item.name}
+                          className="!w-full !h-full !object-cover"
+                        />
+                      ) : (
+                        <div className="!w-full !h-full !flex !items-center !justify-center !text-white !text-2xl">
+                          {item.type === 'ride' ? '🎢' : '📦'}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Product Details */}
+                    <div className="!flex-1">
+                      <div className="!flex !justify-between !items-start !mb-2">
+                        <div>
+                          <h4 className="!font-semibold !text-[#176B87]">{item.name}</h4>
+                          {item.storeName && <div className="!text-xs !text-gray-500">from {item.storeName}</div>}
+                        </div>
+                        <span className={`!px-2 !py-1 !rounded !text-xs !font-semibold !whitespace-nowrap ${
+                          item.type === 'ride'
+                            ? '!bg-blue-100 !text-blue-700'
+                            : '!bg-green-100 !text-green-700'
+                        }`}>
+                          {item.type === 'ride' ? '🎢 Ride' : '🛍️ Store'}
+                        </span>
+                      </div>
+                      <div className="!flex !justify-between !items-center !text-sm">
+                        <div className="!text-gray-600">
+                          ${item.price.toFixed(2)} × {item.quantity}
+                        </div>
+                        <div className="!font-bold !text-[#176B87]">
+                          ${(item.price * item.quantity).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
 
           <div className="!flex !justify-end !mt-4">
