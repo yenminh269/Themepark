@@ -15,20 +15,22 @@ router.get('/merchandise', (req, res) => {
   });
 });
 
-// POST /api/merchandise - Add new merchandise
+// POST /api/merchandise - Add new merchandise (FIXED - removed quantity)
 router.post('/merchandise', (req, res) => {
-  const { name, price, quantity, description, type, image_url } = req.body;
+  const { name, price, description, type, image_url } = req.body;
 
   if (!name || !price || !description || !type) {
-    return res.status(400).json({ error: 'All fields are required' });
+    return res.status(400).json({ error: 'Name, price, description, and type are required' });
   }
 
+  // CRITICAL FIX: merchandise table doesn't have 'quantity' column
+  // Quantity is managed in store_inventory table
   const sql = `
-    INSERT INTO merchandise (name, price, quantity, description, type, image_url)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO merchandise (name, price, description, type, image_url)
+    VALUES (?, ?, ?, ?, ?)
   `;
 
-  db.query(sql, [name, price, quantity, description, type, image_url], (err, result) => {
+  db.query(sql, [name, price, description, type, image_url || ''], (err, result) => {
     if (err) {
       console.error('Error adding merchandise:', err);
       return res.status(500).json({ error: 'Failed to add merchandise', message: err.message });
@@ -40,18 +42,19 @@ router.post('/merchandise', (req, res) => {
   });
 });
 
-// PUT /api/merchandise/:id - Update merchandise
+// PUT /api/merchandise/:id - Update merchandise (FIXED - removed quantity)
 router.put('/merchandise/:id', (req, res) => {
-  const { name, price, quantity, description, type, image_url } = req.body;
+  const { name, price, description, type, image_url } = req.body;
   const itemId = req.params.id;
 
+  // CRITICAL FIX: merchandise table doesn't have 'quantity' column
   const sql = `
     UPDATE merchandise
-    SET name = ?, price = ?, quantity = ?, description = ?, type = ?, image_url = ?
+    SET name = ?, price = ?, description = ?, type = ?, image_url = ?
     WHERE item_id = ?
   `;
 
-  db.query(sql, [name, price, quantity, description, type, image_url, itemId], (err, result) => {
+  db.query(sql, [name, price, description, type, image_url, itemId], (err, result) => {
     if (err) {
       console.error('Error updating merchandise:', err);
       return res.status(500).json({ error: 'Failed to update merchandise' });
@@ -63,61 +66,70 @@ router.put('/merchandise/:id', (req, res) => {
   });
 });
 
-// DELETE /api/merchandise/:id - Delete merchandise (hard delete since no deleted_at column)
+// DELETE /api/merchandise/:id - Delete merchandise
 router.delete('/merchandise/:id', (req, res) => {
   const itemId = req.params.id;
-  const sql = 'DELETE FROM merchandise WHERE item_id = ?';
-
-  db.query(sql, [itemId], (err, result) => {
-    if (err) {
-      console.error('Error deleting merchandise:', err);
-      return res.status(500).json({ error: 'Failed to delete merchandise' });
+  
+  // Check if item is in any store inventory first
+  const checkSql = 'SELECT COUNT(*) as count FROM store_inventory WHERE item_id = ?';
+  
+  db.query(checkSql, [itemId], (checkErr, checkResults) => {
+    if (checkErr) {
+      console.error('Error checking inventory:', checkErr);
+      return res.status(500).json({ error: 'Failed to check inventory' });
     }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Merchandise not found' });
+    
+    if (checkResults[0].count > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete merchandise that is in store inventory. Remove from all stores first.' 
+      });
     }
-    res.json({ message: 'Merchandise deleted successfully' });
+    
+    // Safe to delete
+    const sql = 'DELETE FROM merchandise WHERE item_id = ?';
+    
+    db.query(sql, [itemId], (err, result) => {
+      if (err) {
+        console.error('Error deleting merchandise:', err);
+        return res.status(500).json({ error: 'Failed to delete merchandise' });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'Merchandise not found' });
+      }
+      res.json({ message: 'Merchandise deleted successfully' });
+    });
   });
 });
 
 // GET /api/store-inventory - Get inventory for all stores
 router.get('/store-inventory', (req, res) => {
-  // First check if store_inventory table has any data
-  const checkSql = 'SELECT COUNT(*) as count FROM store_inventory';
+  const sql = `
+    SELECT 
+      si.store_id, 
+      si.item_id, 
+      si.stock_quantity, 
+      si.created_at, 
+      si.updated_at,
+      s.name as store_name, 
+      s.type as store_type,
+      m.name as item_name, 
+      m.price, 
+      m.description, 
+      m.type as item_type,
+      m.image_url
+    FROM store_inventory si
+    JOIN store s ON si.store_id = s.store_id
+    JOIN merchandise m ON si.item_id = m.item_id
+    WHERE s.deleted_at IS NULL
+    ORDER BY s.name, m.name
+  `;
 
-  db.query(checkSql, (checkErr, checkResults) => {
-    if (checkErr) {
-      console.error('Error checking store_inventory:', checkErr);
-      return res.status(500).json({ error: 'Failed to check inventory table' });
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('Error fetching store inventory:', err);
+      return res.status(500).json({ error: 'Failed to fetch inventory', details: err.message });
     }
-
-    console.log('Store inventory count:', checkResults[0].count);
-
-    if (checkResults[0].count === 0) {
-      return res.json({ data: [] });
-    }
-
-    const sql = `
-      SELECT si.store_id, si.item_id, si.stock_quantity, si.created_at, si.updated_at,
-             s.name as store_name, s.type as store_type,
-             m.name as item_name, m.price, m.description, m.type as item_type
-      FROM store_inventory si
-      JOIN store s ON si.store_id = s.store_id
-      JOIN merchandise m ON si.item_id = m.item_id
-      WHERE s.deleted_at IS NULL
-      ORDER BY s.name, m.name
-    `;
-
-    console.log('Executing inventory SQL');
-
-    db.query(sql, (err, results) => {
-      if (err) {
-        console.error('Error fetching store inventory:', err);
-        return res.status(500).json({ error: 'Failed to fetch inventory', details: err.message });
-      }
-      console.log('Inventory results:', results ? results.length : 'null');
-      res.json({ data: results || [] });
-    });
+    res.json({ data: results || [] });
   });
 });
 
@@ -125,8 +137,17 @@ router.get('/store-inventory', (req, res) => {
 router.get('/store-inventory/:storeId', (req, res) => {
   const storeId = req.params.storeId;
   const sql = `
-    SELECT si.store_id, si.item_id, si.stock_quantity, si.created_at, si.updated_at,
-           m.name as item_name, m.price, m.description, m.type as item_type, m.image_url
+    SELECT 
+      si.store_id, 
+      si.item_id, 
+      si.stock_quantity, 
+      si.created_at, 
+      si.updated_at,
+      m.name as item_name, 
+      m.price, 
+      m.description, 
+      m.type as item_type, 
+      m.image_url
     FROM store_inventory si
     JOIN merchandise m ON si.item_id = m.item_id
     WHERE si.store_id = ?
@@ -142,7 +163,7 @@ router.get('/store-inventory/:storeId', (req, res) => {
   });
 });
 
-// PUT /api/store-inventory/:storeId/:itemId - Update stock quantity for a store-item combination
+// PUT /api/store-inventory/:storeId/:itemId - Update stock quantity
 router.put('/store-inventory/:storeId/:itemId', (req, res) => {
   const { storeId, itemId } = req.params;
   const { stock_quantity } = req.body;
@@ -193,6 +214,24 @@ router.post('/store-inventory', (req, res) => {
       return res.status(500).json({ error: 'Failed to add to inventory', message: invErr.message });
     }
     res.json({ message: 'Item added to inventory successfully' });
+  });
+});
+
+// DELETE /api/store-inventory/:storeId/:itemId - Remove item from store
+router.delete('/store-inventory/:storeId/:itemId', (req, res) => {
+  const { storeId, itemId } = req.params;
+  
+  const sql = 'DELETE FROM store_inventory WHERE store_id = ? AND item_id = ?';
+  
+  db.query(sql, [storeId, itemId], (err, result) => {
+    if (err) {
+      console.error('Error removing from inventory:', err);
+      return res.status(500).json({ error: 'Failed to remove from inventory' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Inventory item not found' });
+    }
+    res.json({ message: 'Item removed from store inventory successfully' });
   });
 });
 

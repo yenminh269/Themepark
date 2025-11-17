@@ -30,7 +30,6 @@ import {
   MdDelete,
   MdRefresh 
 } from "react-icons/md";
-import { getImageUrl } from "../../../services/api";
 import "./ManagerPage.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -403,8 +402,8 @@ const OverviewTab = ({ managerInfo }) => {
             {topItems.map((item, index) => (
               <div key={item.item_id} className="top-item-card">
                 <div className="item-rank">#{index + 1}</div>
-                <img
-                  src={getImageUrl(item.image_url, item.name)}
+                <img 
+                  src={item.image_url || 'https://via.placeholder.com/80'} 
                   alt={item.name}
                   className="item-image"
                 />
@@ -696,7 +695,7 @@ const openRemoveEmployeeModal = (employee) => {
   onClick={() => openRemoveEmployeeModal(employee)}
 >
   <MdDeleteOutline size={18} />
-  Request Removal
+  Remove Employee
 </button>
 
             </div>
@@ -1296,7 +1295,7 @@ const handleDeleteInventory = async () => {
               <tr key={`${item.store_id}-${item.item_id}`}>
                 <td>
                   <div className="item-cell">
-                    <img src={getImageUrl(item.image_url, item.name)} alt={item.name || 'Item'} />
+                    <img src={item.image_url || 'https://via.placeholder.com/40'} alt={item.name || 'Item'} />
                     <div>
                       <p className="item-name">{item.name || 'Unnamed Item'}</p>
                       <p className="item-desc">{item.description ? item.description.substring(0, 40) + '...' : 'No description'}</p>
