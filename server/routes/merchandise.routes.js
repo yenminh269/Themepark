@@ -19,7 +19,7 @@ router.get('/merchandise', (req, res) => {
 router.post('/merchandise', (req, res) => {
   const { name, price, quantity, description, type, image_url } = req.body;
 
-  if (!name || !price || !quantity || !description || !type) {
+  if (!name || !price || !description || !type) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
