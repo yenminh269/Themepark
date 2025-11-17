@@ -825,8 +825,7 @@ ${type === 'purchase_activity' && viewMode === 'daily' ? `Period: ${period.charA
                    </div>
                 )}
          </div>
-
-            {conclusion && (
+          {conclusion && (
             <div className="mt-3 w-full bg-[#EEEFE0] p-2 rounded">
                 <span className="font-bold">Insights: </span><p className="my-1 !text-gray-700" dangerouslySetInnerHTML={{ __html: conclusion }}></p>
               </div>

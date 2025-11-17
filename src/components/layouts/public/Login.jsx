@@ -264,7 +264,7 @@ function Login(){
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="!w-full !py-4 !bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !text-white !text-lg !font-bold !rounded-xl hover:!shadow-2xl hover:!scale-[1.02] !transition-all disabled:!opacity-50 disabled:!cursor-not-allowed !border-none"
+                                className="!w-full !py-4 !bg-[#4682A9] !text-white !text-lg !font-bold !rounded-xl hover:!shadow-2xl hover:!scale-[1.02] !transition-all disabled:!cursor-not-allowed !border-none"
                             >
                                 {loading ? '🔄 Logging In...' : '🎢 Log In'}
                             </button>

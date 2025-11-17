@@ -1,6 +1,6 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from "./components/layouts/customer/AuthContext.jsx";
 import { CartProvider } from "./components/layouts/customer/CartContext.jsx";
@@ -23,13 +23,48 @@ import StorePage from './components/layouts/customer/StorePage.jsx';
 import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
 import EmployeeDashboard from './components/layouts/employee/EmployeeDashboard.jsx';
 import ProtectedRoute from './components/layouts/public/ProtectedRoute.jsx';
+import { useEffect } from 'react';
 
 // Component to conditionally render Navbar based on route
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const hideNavbar = location.pathname.startsWith('/admin') || location.pathname === '/manager' ||
   location.pathname === '/sales' || location.pathname === '/maintenance' || location.pathname === '/change-password' ||
   location.pathname === '/complete-profile';
+
+  // Check for incomplete profile on route changes
+  useEffect(() => {
+    // Skip check if already on complete-profile, login, signup, or logout pages
+    const excludedPaths = ['/complete-profile', '/login', '/signup', '/logout'];
+    if (excludedPaths.includes(location.pathname)) {
+      return;
+    }
+
+    // Check if user is logged in
+    const userDataStr = localStorage.getItem('themepark_user');
+    if (!userDataStr) {
+      return; // Not logged in, skip check
+    }
+
+    try {
+      const userData = JSON.parse(userDataStr);
+
+      // Check if profile is incomplete (Google OAuth users with default values)
+      const isIncompleteProfile =
+        userData.phone === '0' ||
+        userData.dob === '1000-01-01' ||
+        !userData.phone ||
+        !userData.dob;
+
+      if (isIncompleteProfile) {
+        toast.info('Please complete your profile to continue');
+        navigate('/complete-profile', { replace: true });
+      }
+    } catch (error) {
+      console.error('Error checking profile completion:', error);
+    }
+  }, [location.pathname, navigate]);
 
  return (
     <>

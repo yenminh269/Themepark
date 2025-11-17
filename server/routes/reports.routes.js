@@ -734,4 +734,330 @@ router.get('/ride-report', async (req, res) => {
   }
 });
 
+// GET /merchandise-report - Merchandise report
+router.get('/merchandise-report', async (req, res) => {
+  try {
+    const { type, items, store, category, itemId, storeId, startDate, endDate } = req.query;
+
+    // Validate required parameters
+    if (!type || !store || !startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Type, store, start date, and end date are required'
+      });
+    }
+
+    let sql = '';
+    let params = [];
+
+    switch (type) {
+      case 'total_revenue':
+        // Total Revenue Report - Detailed transaction data
+        if (!items) {
+          return res.status(400).json({ error: 'Items parameter is required for total revenue report' });
+        }
+
+        sql = `
+          SELECT
+            c.first_name,
+            c.last_name,
+            so.order_date,
+            DATE_FORMAT(so.order_date, '%Y-%m-%d') as formatted_order_date,
+            m.name as item_name,
+            s.name as store_name,
+            m.item_type as category,
+            sod.quantity,
+            sod.price_per_item,
+            sod.subtotal
+          FROM store_order_detail sod
+          JOIN store_order so ON sod.store_order_id = so.store_order_id
+          JOIN merchandise m ON sod.item_id = m.item_id
+          JOIN store s ON so.store_id = s.store_id
+          JOIN customer c ON so.customer_id = c.customer_id
+          WHERE so.order_date >= ? AND so.order_date <= ?
+        `;
+        params = [startDate, endDate];
+
+        // Filter by specific item
+        if (items === 'specific' && itemId) {
+          sql += ' AND m.item_id = ?';
+          params.push(itemId);
+        }
+
+        // Filter by category (only when items === 'all')
+        if (items === 'all' && category && category !== 'all') {
+          sql += ' AND m.item_type = ?';
+          params.push(category);
+        }
+
+        // Filter by specific store
+        if (store === 'specific' && storeId) {
+          sql += ' AND so.store_id = ?';
+          params.push(storeId);
+        }
+
+        sql += ' ORDER BY so.order_date DESC, c.last_name, c.first_name';
+        break;
+
+      case 'growth':
+        // Growth Report with detailed order information
+        sql = `
+          SELECT
+            DATE(so.order_date) as order_date,
+            s.store_id,
+            s.name as store_name,
+            COUNT(DISTINCT so.store_order_id) as order_count,
+            SUM(so.total_amount) as total_revenue
+          FROM store_order so
+          JOIN store s ON so.store_id = s.store_id
+          WHERE so.order_date >= ? AND so.order_date <= ?
+        `;
+        params = [startDate, endDate];
+
+        // Filter by specific store
+        if (store === 'specific' && storeId) {
+          sql += ' AND so.store_id = ?';
+          params.push(storeId);
+        }
+
+        sql += ' GROUP BY DATE(so.order_date), s.store_id, s.name ORDER BY order_date, s.name';
+        break;
+
+      case 'monthly_growth':
+        // Monthly Growth Analysis - shows which store contributed most to each month's growth
+        sql = `
+          SELECT
+            YEAR(so.order_date) as year,
+            MONTH(so.order_date) as month,
+            s.store_id,
+            s.name as store_name,
+            COUNT(DISTINCT so.store_order_id) as order_count,
+            SUM(so.total_amount) as total_revenue
+          FROM store_order so
+          JOIN store s ON so.store_id = s.store_id
+          WHERE so.order_date >= ? AND so.order_date <= ?
+        `;
+        params = [startDate, endDate];
+
+        // Filter by specific store
+        if (store === 'specific' && storeId) {
+          sql += ' AND so.store_id = ?';
+          params.push(storeId);
+        }
+
+        sql += ' GROUP BY YEAR(so.order_date), MONTH(so.order_date), s.store_id, s.name ORDER BY year, month, s.name';
+        break;
+
+      default:
+        return res.status(400).json({
+          error: 'Invalid report type. Valid types are: total_revenue, growth, monthly_growth'
+        });
+    }
+
+    db.query(sql, params, async (err, results) => {
+      if (err) {
+        console.error('Error fetching merchandise report:', err);
+        return res.status(500).json({
+          message: 'Error fetching merchandise report',
+          error: err.message
+        });
+      }
+
+      // For growth report, fetch detailed order information and calculate growth rate
+      if (type === 'growth' && results.length > 0) {
+        try {
+          const detailedResults = await Promise.all(results.map(async (row, index) => {
+            // Fetch order details for this date and store with customer information
+            const detailSql = `
+              SELECT
+                sod.store_order_id,
+                sod.item_id,
+                m.name as item_name,
+                sod.quantity,
+                sod.price_per_item,
+                sod.subtotal,
+                so.status,
+                so.payment_method,
+                so.total_amount as order_total,
+                c.customer_id,
+                c.first_name,
+                c.last_name,
+                c.email,
+                c.phone,
+                DATE_FORMAT(so.order_date, '%Y-%m-%d') as formatted_order_date
+              FROM store_order_detail sod
+              JOIN store_order so ON sod.store_order_id = so.store_order_id
+              JOIN merchandise m ON sod.item_id = m.item_id
+              JOIN customer c ON so.customer_id = c.customer_id
+              WHERE DATE(so.order_date) = ?
+                AND so.store_id = ?
+              ORDER BY so.store_order_id, sod.item_id
+            `;
+
+            const details = await new Promise((resolve, reject) => {
+              db.query(detailSql, [row.order_date, row.store_id], (detailErr, detailRows) => {
+                if (detailErr) reject(detailErr);
+                else resolve(detailRows);
+              });
+            });
+
+            // Calculate growth rate
+            let growth_rate = 0;
+
+            if (store === 'specific') {
+              // For specific store: compare to previous day (same store, previous day)
+              let prevIndex = -1;
+              for (let i = index - 1; i >= 0; i--) {
+                if (results[i].store_id === row.store_id) {
+                  prevIndex = i;
+                  break;
+                }
+              }
+
+              if (prevIndex >= 0) {
+                const prevRevenue = parseFloat(results[prevIndex].total_revenue);
+                const currRevenue = parseFloat(row.total_revenue);
+                if (prevRevenue > 0) {
+                  growth_rate = ((currRevenue - prevRevenue) / prevRevenue) * 100;
+                }
+              }
+            } else {
+              // For all stores: compare to average of other stores on same date
+              const sameDate = results.filter(r => r.order_date.toString() === row.order_date.toString() && r.store_id !== row.store_id);
+              if (sameDate.length > 0) {
+                const avgRevenue = sameDate.reduce((sum, r) => sum + parseFloat(r.total_revenue), 0) / sameDate.length;
+                const currRevenue = parseFloat(row.total_revenue);
+                if (avgRevenue > 0) {
+                  growth_rate = ((currRevenue - avgRevenue) / avgRevenue) * 100;
+                }
+              } else {
+                // If this is the only store with sales on this date, show +100% (outperformed others who had $0)
+                growth_rate = 100;
+              }
+            }
+
+            return {
+              ...row,
+              growth_rate,
+              details
+            };
+          }));
+
+          res.json(detailedResults);
+        } catch (detailErr) {
+          console.error('Error fetching growth report details:', detailErr);
+          // If detail fetch fails, return summary data without details
+          res.json(results.map(row => ({ ...row, growth_rate: 0, details: [] })));
+        }
+      }
+      // For monthly_growth report, calculate which store contributed most to each month
+      else if (type === 'monthly_growth' && results.length > 0) {
+        try {
+          if (store === 'specific') {
+            // For specific store: show which months this store grew the most
+            const monthlyResults = results.map((row, index) => {
+              // Calculate growth rate compared to previous month for this specific store
+              let growth_rate = 0;
+              if (index > 0) {
+                const prevRevenue = parseFloat(results[index - 1].total_revenue);
+                const currRevenue = parseFloat(row.total_revenue);
+                if (prevRevenue > 0) {
+                  growth_rate = ((currRevenue - prevRevenue) / prevRevenue) * 100;
+                }
+              }
+
+              return {
+                year: row.year,
+                month: row.month,
+                month_name: new Date(row.year, row.month - 1).toLocaleString('default', { month: 'long' }),
+                store_name: row.store_name,
+                total_revenue: parseFloat(row.total_revenue),
+                total_orders: row.order_count,
+                growth_rate
+              };
+            });
+
+            res.json(monthlyResults);
+          } else {
+            // For all stores: show which store contributed most to each month's growth
+            // Group by year and month
+            const monthlyData = {};
+
+            results.forEach(row => {
+              const key = `${row.year}-${row.month}`;
+              if (!monthlyData[key]) {
+                monthlyData[key] = {
+                  year: row.year,
+                  month: row.month,
+                  stores: [],
+                  total_revenue: 0,
+                  total_orders: 0
+                };
+              }
+
+              const revenue = parseFloat(row.total_revenue);
+              monthlyData[key].stores.push({
+                store_id: row.store_id,
+                store_name: row.store_name,
+                order_count: row.order_count,
+                total_revenue: revenue
+              });
+              monthlyData[key].total_revenue += revenue;
+              monthlyData[key].total_orders += row.order_count;
+            });
+
+            // Calculate top contributor and growth rate for each month
+            const monthlyResults = Object.values(monthlyData).map((monthData, index) => {
+              // Find top contributing store
+              const topStore = monthData.stores.reduce((max, store) =>
+                parseFloat(store.total_revenue) > parseFloat(max.total_revenue) ? store : max
+              );
+
+              // Calculate growth rate compared to previous month
+              let growth_rate = 0;
+              if (index > 0) {
+                const prevMonthData = Object.values(monthlyData)[index - 1];
+                const prevRevenue = prevMonthData.total_revenue;
+                const currRevenue = monthData.total_revenue;
+                if (prevRevenue > 0) {
+                  growth_rate = ((currRevenue - prevRevenue) / prevRevenue) * 100;
+                }
+              }
+
+              // Calculate each store's contribution percentage
+              const storesWithContribution = monthData.stores.map(store => ({
+                ...store,
+                contribution_percentage: (parseFloat(store.total_revenue) / monthData.total_revenue) * 100
+              })).sort((a, b) => b.total_revenue - a.total_revenue);
+
+              return {
+                year: monthData.year,
+                month: monthData.month,
+                month_name: new Date(monthData.year, monthData.month - 1).toLocaleString('default', { month: 'long' }),
+                total_revenue: monthData.total_revenue,
+                total_orders: monthData.total_orders,
+                growth_rate,
+                top_contributor: topStore.store_name,
+                top_contributor_revenue: topStore.total_revenue,
+                top_contributor_percentage: (parseFloat(topStore.total_revenue) / monthData.total_revenue) * 100,
+                stores: storesWithContribution
+              };
+            });
+
+            res.json(monthlyResults);
+          }
+        } catch (detailErr) {
+          console.error('Error processing monthly growth report:', detailErr);
+          res.json(results);
+        }
+      }
+      else {
+        res.json(results);
+      }
+    });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: 'Failed to fetch merchandise report' });
+  }
+});
+
 export default router;

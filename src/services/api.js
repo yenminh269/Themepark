@@ -281,6 +281,19 @@ export const api = {
 
         return await fetchAPI(`/api/reports/ride-report?${queryParams.toString()}`);
     },
+    getMerchandiseReport: async (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.type) queryParams.append('type', params.type);
+        if (params.items) queryParams.append('items', params.items);
+        if (params.store) queryParams.append('store', params.store);
+        if (params.category) queryParams.append('category', params.category);
+        if (params.itemId) queryParams.append('itemId', params.itemId);
+        if (params.storeId) queryParams.append('storeId', params.storeId);
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+
+        return await fetchAPI(`/api/reports/merchandise-report?${queryParams.toString()}`);
+    },
 };
 
 // =======================
