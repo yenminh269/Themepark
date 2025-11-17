@@ -440,52 +440,52 @@ router.delete('/inventory/:store_id/:item_id', (req, res) => {
   });
 });
 
-// Upload merchandise photo
-router.post('/upload/merchandise', uploadMerchandise.single('photo'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-
-  const photo_path = `/uploads/merchandise_photos/${req.file.filename}`;
-  res.json({ photo_path });
-});
-
-// Create merchandise
+// ============================================
+// MERCHANDISE ROUTES (CRITICAL FOR ADD ITEM)
+// ============================================
 router.post('/merchandise', (req, res) => {
   const { name, price, quantity, description, type, image_url } = req.body;
-
-  console.log('Creating merchandise with data:', { name, price, quantity, description, type, image_url });
-
+  
+  console.log('Creating merchandise:', req.body);
+  
+  if (!name || !price || !description || !type || !image_url) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
   const sql = `
     INSERT INTO merchandise (name, price, description, type, image_url)
     VALUES (?, ?, ?, ?, ?)
   `;
-
-  db.query(sql, [name, price, quantity, description, type, image_url], (err, result) => {
+  
+  db.query(sql, [
+    name, 
+    parseFloat(price), 
+    description, 
+    type, 
+    image_url
+  ], (err, result) => {
     if (err) {
       console.error('Error creating merchandise:', err);
-      console.error('SQL parameters:', [name, price, quantity, description, type, image_url]);
-      return res.status(500).json({ error: 'Database error', details: err.message });
+      return res.status(500).json({ error: 'Database error: ' + err.message });
     }
-    console.log('Merchandise created successfully with ID:', result.insertId);
-    res.json({
+    res.json({ 
       message: 'Merchandise created successfully',
-      item_id: result.insertId
+      item_id: result.insertId 
     });
   });
 });
 
 router.put('/merchandise/:item_id', (req, res) => {
   const { item_id } = req.params;
-  const { name, price, quantity, description, type, image_url } = req.body;
-
+  const { name, price, description, type } = req.body;
+  
   const sql = `
-    UPDATE merchandise
-    SET name = ?, price = ?, quantity = ?, description = ?, type = ?, image_url = ?
+    UPDATE merchandise 
+    SET name = ?, price = ?, description = ?, type = ?
     WHERE item_id = ?
   `;
-
-  db.query(sql, [name, price, quantity, description, type, image_url, item_id], (err, result) => {
+  
+  db.query(sql, [name, price, description, type, item_id], (err, result) => {
     if (err) {
       console.error('Error updating merchandise:', err);
       return res.status(500).json({ error: 'Database error' });
