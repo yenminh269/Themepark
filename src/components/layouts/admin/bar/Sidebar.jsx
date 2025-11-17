@@ -1,8 +1,9 @@
-import { Box, Flex, Text, VStack, HStack, Icon } from '@chakra-ui/react';
+import { Box, Flex, Text, VStack, HStack, Icon, IconButton } from '@chakra-ui/react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
 import entities from './entities'
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen = true, onToggle, onClose }) => {
   const location = useLocation();
 
   const routes = entities;
@@ -15,13 +16,13 @@ const Sidebar = () => {
   };
 
   const SidebarContent = () => (
-    <Flex direction="column" h="100%" pt="18px" px="14px">
+    <Flex direction="column" h="100%" px="14px">
       <Box mb="10px" px="20px" >
         <Flex alignItems="center" gap="10px">
           <Box color="#A7C1A8">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-roller-coaster-icon lucide-roller-coaster"><path d="M6 19V5"/><path d="M10 19V6.8"/><path d="M14 19v-7.8"/><path d="M18 5v4"/><path d="M18 19v-6"/><path d="M22 19V9"/><path d="M2 19V9a4 4 0 0 1 4-4c2 0 4 1.33 6 4s4 4 6 4a4 4 0 1 0-3-6.65"/></svg>
           </Box>
-          <Text className="mt-4" fontSize="3xl" fontWeight="bold" color="#A7C1A8">
+          <Text fontSize="3xl" fontWeight="bold" color="#A7C1A8">
             Theme Park
           </Text>
         </Flex>
@@ -52,7 +53,7 @@ const Sidebar = () => {
           const isActive = isActiveRoute(route.path);
 
           return (
-            <NavLink key={index} to={route.path} style={{ textDecoration: 'none' }}>
+            <NavLink key={index} to={route.path} onClick={onClose} style={{ textDecoration: 'none' }}>
               <HStack
                 px="8px"
                 borderRadius="10px"
@@ -95,14 +96,55 @@ const Sidebar = () => {
   );
 
   return (
-    <Box
-      position="fixed"
-      h="100vh"
-      w="280px"
-      bg=" #424c3dff"
-      display={{ base: 'none', lg: 'block' }}>
-      <SidebarContent />
-    </Box>
+    <>
+      {/* Hamburger Button */}
+      {!isOpen && (
+        <IconButton
+          icon={<HamburgerIcon />}
+          onClick={onToggle}
+          position="fixed"
+          left="0px"
+          top="7px"
+          zIndex="1000"
+          bg="transparent"
+          color="#4B5945"
+          _hover={{ bg: 'rgba(10, 13, 9, 0.1)' }}
+          display={{ base: 'none', lg: 'flex' }}
+          aria-label="Toggle Sidebar"
+        />
+      )}
+
+      {/* Sidebar */}
+      {isOpen && (
+        <Flex
+          position="fixed"
+          h="100vh"
+          w="280px"
+          bg="#424c3dff"
+          display={{ base: 'none', lg: 'flex' }}
+          direction="column"
+          zIndex="999"
+        >
+          {/* Close Button */}
+          <Flex justify="flex-end" p="12px" flexShrink="0">
+            <IconButton
+              icon={<CloseIcon />}
+              onClick={onToggle}
+              bg="transparent"
+              color="#EEEFE0"
+              _hover={{ bg: 'rgba(238, 239, 224, 0.1)' }}
+              size="sm"
+              aria-label="Close Sidebar"
+            />
+          </Flex>
+
+          {/* Sidebar Content */}
+          <Box flex="1" overflowY="hidden">
+            <SidebarContent />
+          </Box>
+        </Flex>
+      )}
+    </>
   );
 };
 

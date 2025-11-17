@@ -61,6 +61,35 @@ function Add({ store = false }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate description length
+    if (description.length > 150) {
+      toast({
+        title: 'Description Too Long',
+        description: 'Description must not exceed 150 characters',
+        status: 'warning',
+        duration: 4000,
+        isClosable: true,
+        position: 'top',
+      });
+      return;
+    }
+
+    // Validate price for rides (decimal 6,2 constraint: max 9999.99)
+    if (!isStore && price) {
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum < 0 || priceNum > 9999.99) {
+        toast({
+          title: 'Invalid Price',
+          description: 'Price must be between 0 and 9999.99',
+          status: 'warning',
+          duration: 4000,
+          isClosable: true,
+          position: 'top',
+        });
+        return;
+      }
+    }
+
     // Manual validation for react-select fields
     // Only stores need status selection - rides get 'open' automatically from database trigger
     if (isStore && !status) {
@@ -113,6 +142,19 @@ function Add({ store = false }) {
       return;
     }
 
+    // Validate photo_path length for rides
+    if (!isStore && photoLink.length > 0 && photoLink.length > 255) {
+      toast({
+        title: 'Photo Path Too Long',
+        description: 'Photo path must not exceed 255 characters',
+        status: 'warning',
+        duration: 4000,
+        isClosable: true,
+        position: 'top',
+      });
+      return;
+    }
+
     const formData = new FormData();
     formData.append('name', name);
     formData.append('description', description);
@@ -153,33 +195,54 @@ function Add({ store = false }) {
   );
 
   return (
-    <div className="flex justify-center items-center min-h-screen">
-      <Form onSubmit={handleSubmit} className=" p-3 rounded w-full max-w-2xl" style={{ boxShadow: '-8px -8px 12px rgba(0,0,0,0.25)' }}>
-
+    <div className="flex justify-center items-center ">
+      <Form onSubmit={handleSubmit} className=" p-3 rounded w-full max-w-2xl" style={{ boxShadow: '-8px -5px 12px 8px rgba(0,0,0,0.25)' }}>
         {/* Row 1: Name + Price (for rides only) */}
         <div className="flex gap-4 flex-wrap">
-          <Input required type="text" label="Name" className="custom-input" labelClassName="custom-form-label" value={name} onChange={e => setName(e.target.value)} />
-          {!isStore && (
-            <Input required type="currency" label="Price" className="custom-input" labelClassName="custom-form-label" value={price} onChange={e => setPrice(e.target.value)} />
-          )}
-        </div>
+        <Input required type="text" label="Name" className="custom-input" labelClassName="custom-form-label" value={name} onChange={e => setName(e.target.value)} />
+        {!isStore && (
+        <div style={{flex: 1, position: 'relative'}}>
+          <div style={{position: 'relative', display: 'flex', alignItems: 'center'}}>
+            <span style={{position: 'absolute', left: '12px', fontSize: '20px', fontWeight: 'bold', color: '#666'}}>$</span>
+            <input 
+            required 
+            type="number" 
+            step="0.01"
+            min="0"
+            max="9999.99"
+            placeholder="0.00"
+            className="custom-input" 
+            value={price} 
+            onChange={e => setPrice(e.target.value)}
+              style={{paddingLeft: '35px', paddingTop: '10px', height: '55px', fontSize: '20px'}}
+              />
+          </div>
+          </div>
+            )}
+         </div>
 
         {/* Row 2: Description */}
-        <div className="flex gap-4 flex-wrap">
-          <Input required type="text" label="Description" className="custom-input" labelClassName="custom-form-label" value={description} onChange={e => setDescription(e.target.value)} style={{flex: 1}} />
+        <div className="mb-2 flex flex-wrap flex-col">
+         <Input required type="text" label="Description" className="custom-input mb-0" labelClassName="custom-form-label" value={description} onChange={e => setDescription(e.target.value.slice(0, 150))} style={{flex: 1}} />
+          <small style={{color: description.length > 150 ? 'red' : '#555454ff'}}>
+              {description.length}/150 characters
+            </small>
         </div>
 
         {/* Row 3: Open + Close Time */}
         <div className="flex gap-4 flex-wrap">
-          <Input required type="time" label="Open Time" className="custom-input" labelClassName="custom-form-label" value={openTime} onChange={e => setOpenTime(e.target.value)} />
-          <Input required type="time" label="Close Time" className="custom-input" labelClassName="custom-form-label" value={closeTime} onChange={e => setCloseTime(e.target.value)} />
+          <Input required type="time" label="Open Time" className="custom-input" labelClassName="custom-form-label" value={openTime} onChange={e => setOpenTime(e.target.value)}  
+          min="00:00" max="11:59"/>
+          <Input required type="time" label="Close Time" className="custom-input" labelClassName="custom-form-label" value={closeTime} onChange={e => setCloseTime(e.target.value)}
+          min={openTime && openTime >= "12:00" ? openTime : "12:00"} // ensures it’s after noon
+          max="23:59" />
         </div>
 
         {/* Row 4: Capacity (rides) OR Status + Store Type (stores) */}
         <div className="flex gap-4 flex-wrap">
           {!isStore ? (
             // For rides: only show capacity (status is auto-set to 'open' by database)
-            <Input required type="number" label="Capacity" min={1} max={50} className="custom-input" labelClassName="custom-form-label" value={capacity} onChange={e => setCapacity(e.target.value)} />
+            <Input required type="number" label="Capacity" min={2} max={70} className="custom-input" labelClassName="custom-form-label" value={capacity} onChange={e => setCapacity(e.target.value)} />
           ) : (
             // For stores: show operational status and store type
             <>
@@ -200,7 +263,7 @@ function Add({ store = false }) {
         <ImageInputToggle useLink={useLink} setUseLink={setUseLink} photoFile={photoPath} setPhotoFile={setPhotoPath} photoLink={photoLink} setPhotoLink={setPhotoLink} />
 
         <div className="flex justify-center">
-          <CustomButton text={isStore ? "Add New Store" : "Add New Ride"} className="custom-button" />
+          <CustomButton text={isStore ? "🏬 Add New Store" : "🎠 Add New Ride"} className="custom-button" />
         </div>
       </Form>
     </div>

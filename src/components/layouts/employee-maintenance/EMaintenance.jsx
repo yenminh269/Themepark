@@ -96,7 +96,7 @@ const showNotification = (message, type = 'success') => {
   setTimeout(() => setNotification(null), 3000);
 };
 
-// ✅ Complete maintenance task
+// complete maintenance task
 const handleCompleteTask = async (maintenanceId) => {
   try {
     console.log('Updating maintenance ID:', maintenanceId, 'to status: done');

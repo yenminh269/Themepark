@@ -49,7 +49,9 @@ function RideReport() {
         }));
         setRideOption(rideOptions);
       } catch (error) {
-        setError(error.message);
+        console.error("Error fetching rides:", error);
+        // Don't block the form, just show empty ride options
+        setRideOption([]);
       }
     };
     fetchRides();
@@ -67,19 +69,10 @@ function RideReport() {
     let highestMaintenanceRide = null;
     let highestPercentage = 0;
 
-    // Find ride with most rides
-    let mostPopularRide = null;
-    let mostRides = 0;
-
     data.forEach(item => {
       if (parseFloat(item.percent_needing_maintenance) > highestPercentage) {
         highestPercentage = parseFloat(item.percent_needing_maintenance);
         highestMaintenanceRide = item.ride_name;
-      }
-
-      if (item.total_rides > mostRides) {
-        mostRides = item.total_rides;
-        mostPopularRide = item.ride_name;
       }
     });
 
@@ -89,11 +82,6 @@ function RideReport() {
       const highestMaintenanceData = data.find(d => d.ride_name === highestMaintenanceRide);
       conclusionText += `<strong>${highestMaintenanceRide}</strong> has the highest maintenance rate at ${highestPercentage}% (${highestMaintenanceData.total_maintenance_count} maintenance records per ${highestMaintenanceData.total_rides.toLocaleString()} rides). `;
     }
-
-    if (mostPopularRide) {
-      conclusionText += `<strong>${mostPopularRide}</strong> is the most popular ride with ${mostRides.toLocaleString()} total rides.`;
-    }
-
     return conclusionText;
   };
 
@@ -176,12 +164,69 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
           reportText += `Date: ${item.year}-${String(item.month).padStart(2, '0')}-${String(item.day).padStart(2, '0')}\n`;
           reportText += `  Ride: ${item.name}\n`;
           reportText += `  Total Tickets: ${item.total_tickets?.toLocaleString() || 0}\n`;
-          reportText += `  Total Revenue: $${item.total_revenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}\n\n`;
+          reportText += `  Total Revenue: $${item.total_revenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}\n`;
+
+          // Add detailed transaction information
+          if (item.details && item.details.length > 0) {
+            reportText += `\n  Transaction Details:\n`;
+            reportText += `  ${'='.repeat(80)}\n`;
+            reportText += `  ${'Order ID'.padEnd(12)} | ${'Order Date'.padEnd(20)} | ${'Tickets'.padEnd(8)} | ${'Price/Ticket'.padEnd(13)} | ${'Subtotal'.padEnd(10)}\n`;
+            reportText += `  ${'-'.repeat(80)}\n`;
+
+            let totalTickets = 0;
+            let totalRevenue = 0;
+
+            item.details.forEach(detail => {
+              const orderId = String(detail.order_id).padEnd(12);
+              const orderDate = (detail.formatted_order_date || '').padEnd(10);
+              const tickets = String(detail.number_of_tickets).padEnd(8);
+              const pricePerTicket = `$${detail.price_per_ticket?.toFixed(2) || '0.00'}`.padEnd(13);
+              const subtotal = `$${detail.subtotal?.toFixed(2) || '0.00'}`.padEnd(10);
+
+              reportText += `  ${orderId} | ${orderDate} | ${tickets} | ${pricePerTicket} | ${subtotal}\n`;
+
+              totalTickets += detail.number_of_tickets || 0;
+              totalRevenue += detail.subtotal || 0;
+            });
+
+            // Add summary row
+            reportText += `  ${'-'.repeat(80)}\n`;
+            const totalLabel = 'Total:'.padEnd(35);
+            const totalTicketsStr = String(totalTickets).padEnd(8);
+            const totalRevenueStr = `$${totalRevenue.toFixed(2)}`.padEnd(10);
+            reportText += `  ${totalLabel} | ${totalTicketsStr} | ${'-'.padEnd(13)} | ${totalRevenueStr}\n`;
+            reportText += `  ${'='.repeat(80)}\n`;
+          }
+          reportText += `\n`;
         } else if (type === 'total_maintenance') {
           reportText += `Ride: ${item.ride_name}\n`;
           reportText += `  Total Rides: ${item.total_rides?.toLocaleString() || 0}\n`;
           reportText += `  Maintenance Count: ${item.total_maintenance_count || 0}\n`;
-          reportText += `  Maintenance Rate: ${parseFloat(item.percent_needing_maintenance || 0).toFixed(2)}%\n\n`;
+          reportText += `  Maintenance Rate: ${parseFloat(item.percent_needing_maintenance || 0).toFixed(2)}%\n`;
+
+          // Add detailed maintenance information
+          if (item.maintenance_details && item.maintenance_details.length > 0) {
+            reportText += `\n  Maintenance Details:\n`;
+            reportText += `  ${'='.repeat(130)}\n`;
+            reportText += `  ${'Maint ID'.padEnd(10)} | ${'Description'.padEnd(25)} | ${'Scheduled'.padEnd(12)} | ${'Status'.padEnd(12)} | ${'Employee Name'.padEnd(20)} | ${'Work Date'.padEnd(12)} | ${'Hours'.padEnd(8)}\n`;
+            reportText += `  ${'-'.repeat(130)}\n`;
+
+            item.maintenance_details.forEach(detail => {
+              const maintId = String(detail.maintenance_id).padEnd(10);
+              const description = (detail.description || 'N/A').substring(0, 25).padEnd(25);
+              const scheduledDate = (detail.formatted_scheduled_date || '').padEnd(12);
+              const status = (detail.status || '').padEnd(12);
+              const employeeName = (detail.first_name && detail.last_name
+                ? `${detail.first_name} ${detail.last_name}`
+                : '-').substring(0, 20).padEnd(20);
+              const workDate = (detail.formatted_work_date || '-').padEnd(12);
+              const hoursWorked = String(detail.worked_hour || '-').padEnd(8);
+
+              reportText += `  ${maintId} | ${description} | ${scheduledDate} | ${status} | ${employeeName} | ${workDate} | ${hoursWorked}\n`;
+            });
+            reportText += `  ${'='.repeat(130)}\n`;
+          }
+          reportText += `\n`;
         } else if (type === 'most_popular') {
           reportText += `Rank by Tickets: ${item.rank_by_tickets || index + 1}\n`;
           reportText += `Ride: ${item.ride_name}\n`;
@@ -191,6 +236,17 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
           reportText += `  Rank by Orders: ${item.rank_by_orders || '-'}\n\n`;
         }
       });
+
+      // Add grand total for total_rides report
+      if (type === 'total_rides' && reportData.length > 0) {
+        const grandTotalTickets = reportData.reduce((sum, item) => sum + (item.total_tickets || 0), 0);
+        const grandTotalRevenue = reportData.reduce((sum, item) => sum + (item.total_revenue || 0), 0);
+
+        reportText += `==============================\n`;
+        reportText += `GRAND TOTAL:\n`;
+        reportText += `  Total Tickets: ${grandTotalTickets.toLocaleString()}\n`;
+        reportText += `  Total Revenue: $${grandTotalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+      }
 
       reportText += `==============================\n`;
       if (conclusion) {
@@ -238,7 +294,7 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
   };
 
   return (
-  <div className=" w-full max-w-5xl">
+  <div className="w-full max-w-5xl mx-auto my-6">
     <form onSubmit={handleSubmit}
           className="flex flex-col px-5 rounded w-full mb-6"
           style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
@@ -257,14 +313,14 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
              />
        </FormControl>
        <FormControl isRequired>
-           <FormLabel color="#4B5945" fontWeight="500">Type</FormLabel>
-              <Select options={typeOption}
-                placeholder="Select group"
-                 className="custom-react-select"
-                  classNamePrefix="react-select"
-                 onChange={(option) => setType(option.value)}
-            />
-         </FormControl>
+            <FormLabel color="#4B5945" fontWeight="500">Type</FormLabel>
+               <Select options={group === 'all' ? typeOption : typeOption.filter(opt => opt.value !== 'most_popular')}
+                 placeholder="Select group"
+                  className="custom-react-select"
+                   classNamePrefix="react-select"
+                  onChange={(option) => setType(option.value)}
+             />
+          </FormControl>
       </div>
       {group === 'ride' && (
       <div className="mt-2 flex-1">
@@ -326,7 +382,7 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
         {reportData && reportData.length > 0 && (
           <div
             className="flex flex-col items-center justify-center p-6 mt-4 rounded w-full relative"
-            style={{ boxShadow: '-8px -8px 12px rgba(0,0,0,0.25)' }}
+            style={{ boxShadow: '-8px -8px 12px 8px rgba(0,0,0,0.25)' }}
           >
             <button
               onClick={handleCloseReport}
@@ -347,12 +403,9 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
                   <tr>
                     {type === 'total_rides' && (
                       <>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Year</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Month</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Day</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Ride Name</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold" colSpan="4">Date & Ride</th>
                         <th className="py-3 !px-6 border !border-black font-semibold">Total Tickets</th>
-                        <th className="py-3 !px-6 border !border-black font-semibold">Total Revenue</th>
+                        <th className="py-3 !px-6 border !border-black font-semibold" colSpan="2">Total Revenue</th>
                       </>
                     )}
                     {(type === 'total_maintenance') && (
@@ -377,31 +430,108 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
                 </thead>
                 <tbody>
                   {reportData.map((item, index) => (
-                    <tr
-                      key={index}
-                    >
-                      {type === 'total_rides' && (
-                        <>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.year}
+                    <>
+                      {/* Transaction Details Row - Display BEFORE the summary row */}
+                      {type === 'total_rides' && item.details && item.details.length > 0 && (
+                        <tr key={`${index}-details`}>
+                          <td colSpan="7" className="!px-6 !py-4 border !border-gray-500 bg-gray-50">
+                            <div className="pl-8">
+                              <h4 className="font-semibold text-gray-700 mb-3">Transaction Details:</h4>
+                              <table className="min-w-full border-collapse">
+                                <thead className="bg-gray-200">
+                                  <tr>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Order ID</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Order Date</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Number of Tickets</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Price per Ticket</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Subtotal</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {item.details.map((detail, detailIndex) => (
+                                    <tr key={detailIndex} className="hover:bg-gray-100">
+                                      <td className="py-2 px-4 border border-gray-300 text-sm">{detail.order_id}</td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm">{detail.formatted_order_date}</td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm text-center">{detail.number_of_tickets}</td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm text-right">${detail.price_per_ticket?.toFixed(2)}</td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm text-right">${detail.subtotal?.toFixed(2)}</td>
+                                    </tr>
+                                  ))}
+                                  {/* Summary row for details */}
+                                  <tr className="bg-blue-100 font-semibold">
+                                    <td colSpan="2" className="py-2 px-4 border border-gray-400 text-sm text-right">Total:</td>
+                                    <td className="py-2 px-4 border border-gray-400 text-sm text-center">
+                                      {item.details.reduce((sum, detail) => sum + (detail.number_of_tickets || 0), 0)}
+                                    </td>
+                                    <td className="py-2 px-4 border border-gray-400 text-sm text-right">-</td>
+                                    <td className="py-2 px-4 border border-gray-400 text-sm text-right">
+                                      ${item.details.reduce((sum, detail) => sum + (detail.subtotal || 0), 0).toFixed(2)}
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
                           </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {monthNames[item.month - 1]}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.day}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500">
-                            {item.name}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.total_tickets?.toLocaleString() || 0}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            ${item.total_revenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                          </td>
-                        </>
+                        </tr>
                       )}
+
+                      {/* Maintenance Details Row - Display BEFORE the summary row */}
+                      {type === 'total_maintenance' && item.maintenance_details && item.maintenance_details.length > 0 && (
+                        <tr key={`${index}-maintenance-details`}>
+                          <td colSpan="4" className="!px-6 !py-4 border !border-gray-500 bg-gray-50">
+                            <div className="pl-8">
+                              <h4 className="font-semibold text-gray-700 mb-3">Maintenance Details:</h4>
+                              <table className="min-w-full border-collapse">
+                                <thead className="bg-gray-200">
+                                  <tr>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Maintenance ID</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Description</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Scheduled Date</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Status</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Employee Name</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Work Date</th>
+                                    <th className="py-2 px-4 border border-gray-400 text-left text-sm font-semibold">Hours Worked</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {item.maintenance_details.map((detail, detailIndex) => (
+                                    <tr key={detailIndex} className="hover:bg-gray-100">
+                                      <td className="py-2 px-4 border border-gray-300 text-sm">{detail.maintenance_id}</td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm">{detail.description || 'N/A'}</td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm">{detail.formatted_scheduled_date}</td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm">{detail.status}</td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm">
+                                        {detail.first_name && detail.last_name ? `${detail.first_name} ${detail.last_name}` : '-'}
+                                      </td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm">{detail.formatted_work_date || '-'}</td>
+                                      <td className="py-2 px-4 border border-gray-300 text-sm text-center">{detail.worked_hour || '-'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {/* Summary Row */}
+                      <tr
+                        key={index}
+                        className={type === 'total_rides' ? 'bg-blue-50 font-semibold' : type === 'total_maintenance' ? 'bg-blue-50 font-semibold' : ''}
+                      >
+                        {type === 'total_rides' && (
+                          <>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center" colSpan="4">
+                              Summary for {item.year} {monthNames[item.month - 1]} {item.day} - {item.name}
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              {item.total_tickets?.toLocaleString() || 0}
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center" colSpan="2">
+                              ${item.total_revenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            </td>
+                          </>
+                        )}
                       {(type === 'total_maintenance') && (
                         <>
                           <td className="py-3 !px-6 border !border-gray-500">
@@ -418,30 +548,46 @@ ${group === 'ride' && name ? `Ride: ${name}` : 'All Rides'}
                           </td>
                         </>
                       )}
-                      {type === 'most_popular' && (
-                        <>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.rank_by_tickets || index + 1}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500">
-                            {item.ride_name}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.total_rides?.toLocaleString() || 0}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.total_orders?.toLocaleString() || 0}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.avg_tickets_per_order?.toLocaleString() || '0.00'}
-                          </td>
-                          <td className="py-3 !px-6 border !border-gray-500 text-center">
-                            {item.rank_by_orders || '-'}
-                          </td>
-                        </>
-                      )}
-                    </tr>
+                        {type === 'most_popular' && (
+                          <>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              {item.rank_by_tickets || index + 1}
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500">
+                              {item.ride_name}
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              {item.total_rides?.toLocaleString() || 0}
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              {item.total_orders?.toLocaleString() || 0}
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              {item.avg_tickets_per_order?.toLocaleString() || '0.00'}
+                            </td>
+                            <td className="py-3 !px-6 border !border-gray-500 text-center">
+                              {item.rank_by_orders || '-'}
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    </>
                   ))}
+
+                  {/* Grand Total Summary Row at the end of the report for total_rides */}
+                  {type === 'total_rides' && reportData.length > 0 && (
+                    <tr className="bg-green-100 border-t-4 border-green-600">
+                      <td colSpan="4" className="py-4 !px-6 border !border-gray-500 text-right font-bold text-lg">
+                        GRAND TOTAL:
+                      </td>
+                      <td className="py-4 !px-6 border !border-gray-500 text-center font-bold text-lg">
+                        {reportData.reduce((sum, item) => sum + (item.total_tickets || 0), 0).toLocaleString()}
+                      </td>
+                      <td colSpan="2" className="py-4 !px-6 border !border-gray-500 text-center font-bold text-lg">
+                        ${reportData.reduce((sum, item) => sum + (item.total_revenue || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

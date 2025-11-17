@@ -40,6 +40,11 @@ async function fetchAPI(endpoint, data = null, fetchMethod = "GET", isFormData =
 }
 
 
+// Get placeholder image for rides
+const getRidePlaceholderImage = (rideName = '') => {
+    return 'https://via.placeholder.com/400x250?text=' + encodeURIComponent(rideName || 'Ride Image');
+};
+
 // Get full img url with fallback
 export const getImageUrl = (path, rideName = '') => {
     if (!path) return getRidePlaceholderImage(rideName);
@@ -55,6 +60,14 @@ export const api = {
     },
     addRide: async (formData) => {
         return await fetchAPI('/ride/add', formData, "POST", true);
+    },
+    updateRide: async (data, id) => {
+        // Check if data is FormData (file upload) or JSON object
+        const isFormData = data instanceof FormData;
+        return await fetchAPI(`/ride/${id}`, data, "PUT", isFormData);
+    },
+    deleteRide: async (id) => {
+        return await fetchAPI(`/ride/${id}`, null, "DELETE", false);
     },
     scheduleRideMaint: async (formData) => {
         return await fetchAPI('/ride-maintenance', formData, "POST", false);
@@ -126,8 +139,10 @@ export const api = {
     addStore: async (formData) => {
         return await fetchAPI('/store/add', formData, "POST", true);
     },
-    updateStore: async (formData, id) => {
-        return await fetchAPI(`/store/${id}`, formData, "PUT", false);
+    updateStore: async (data, id) => {
+        // Check if data is FormData (file upload) or JSON object
+        const isFormData = data instanceof FormData;
+        return await fetchAPI(`/store/${id}`, data, "PUT", isFormData);
     },
     deleteStore: async (id) => {
         return await fetchAPI(`/store/${id}`, null, "DELETE", false);
@@ -140,8 +155,8 @@ export const api = {
     getEmployeeMaintenances: async () => {
         return await fetchAPI('/maintenances-employee/id');
     },
-    updateRideMaintenanceStatus: async () => {
-        return await fetchAPI('/api/update-ride-maintenance-status', null, "POST", false);
+    RideStatusCheck: async () => {
+        return await fetchAPI('/api/maintenance/ride-status-check', null, "POST", false);
     },
 
     // ===== MERCHANDISE =====
@@ -194,31 +209,6 @@ export const api = {
         return body.data || [];
     },
 
-
-    createRideOrder: async (payload) => {
-    // payload = { cart, subtotal, tax, total, payment_method }
-        const token = getCustomerToken();
-        if (!token) throw new Error('No authentication token');
-
-        const res = await fetch(`${SERVER_URL}/api/ride-orders`, {
-            method: 'POST',
-            headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error(body.error || 'Failed to create order');
-        }
-
-        const body = await res.json();
-        return body.order || body; // keep compatibility with your current handler
-    },
-
-
     // ===== STORE ORDERS =====
     getStoreOrders: async (range = 'all') => {
         const token = getCustomerToken();
@@ -237,28 +227,6 @@ export const api = {
 
         const body = await res.json();
         return body.data || [];
-    },
-
-    createStoreOrder: async (orderData) => {
-        const token = getCustomerToken();
-        if (!token) throw new Error('No authentication token');
-
-        const res = await fetch(`${SERVER_URL}/api/store-orders`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(orderData),
-        });
-
-        if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error(body.error || 'Failed to create store order');
-        }
-
-        const body = await res.json();
-        return body;
     },
 
     // ===== UNIFIED ORDER (Rides + Store in single transaction with consolidated email) =====
@@ -294,8 +262,13 @@ export const api = {
     getMostRiddenRides: async (year) => {
         return await fetchAPI(`/api/reports/most-ridden?year=${year}`);
     },
-    getAvgMonthlyCustomers: async (year) => {
-        return await fetchAPI(`/api/reports/avg-monthly-customers?year=${year}`);
+    getCustomerReport: async (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.type) queryParams.append('type', params.type);
+        if (params.period) queryParams.append('period', params.period);
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        return await fetchAPI(`/api/reports/customer-report?${queryParams.toString()}`);
     },
     getRideReport: async (params) => {
         const queryParams = new URLSearchParams();

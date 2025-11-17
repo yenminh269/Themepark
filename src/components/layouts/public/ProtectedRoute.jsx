@@ -39,7 +39,6 @@ function ProtectedRoute({ children, type = 'customer', allowedRoles = [] }) {
   // Employee stores: 'employee' (object with job_title)
   const employeeData = localStorage.getItem('employee');
     console.log('ProtectedRoute: Checking employee auth for path:', window.location.pathname);
-  console.log('ProtectedRoute: employeeData:', employeeData);
 
   // Not logged in as employee
   if (!employeeData) {

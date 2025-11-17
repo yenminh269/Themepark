@@ -144,45 +144,6 @@ const AdminDashboard = () => {
           {error}
         </Box>
       )}
-
-      {/* Stats Grid */}
-      <SimpleGrid
-        columns={{ base: 1, md: 2, lg: 3, xl: 5 }}
-        gap="20px"
-        mb="20px"
-      >
-          <StatCard
-            key={0}
-            icon={<Icon as={MdAttachMoney} w="32px" h="32px" color="green.500" />}
-            name='Total Revenue'
-            value={`$${revenue}`}
-          />
-          <StatCard
-            key={1}
-            icon={<Icon as={MdBarChart} w="32px" h="32px" color="red.500" />}
-            name='Average Rides Broken/Maintenance Per Month'
-            value={averageRidesBrokenMaintenance}
-          />
-          <StatCard
-            key={2}
-            icon={<Icon as={MdShoppingCart} w="32px" h="32px" color="purple.500" />}
-            name='Total Store Sales'
-            value={`$${storeSales}`}
-          />
-          <StatCard
-            key={3}
-            icon={<Icon as={MdShoppingCart} w="32px" h="32px" color="blue.500" />}
-            name='Total Ride Ticket Sales'
-            value={`$${rideTicketSales}`}
-          />
-          <StatCard
-            key={4}
-            icon={<Icon as={MdTrendingUp} w="32px" h="32px" color="orange.500" />}
-            name='Average Ride Tickets Per Month'
-            value={avgTicketPerMonth}
-          />
-      </SimpleGrid>
-
       {/* Charts Row */}
       <SimpleGrid columns={{ base: 1, md: 2 }} gap="20px" mb="20px">
         <ChartCard title="Weekly Revenue">
@@ -390,6 +351,44 @@ const AdminDashboard = () => {
           </Flex>
         </Box>
       </Box>
+      {/* Stats Grid */}
+      <SimpleGrid
+        columns={{ base: 1, md: 2, lg: 3, xl: 5 }}
+        gap="20px"
+        mb="20px"
+      >
+          <StatCard
+            key={0}
+            icon={<Icon as={MdAttachMoney} w="32px" h="32px" color="green.500" />}
+            name='Total Revenue'
+            value={`$${revenue}`}
+          />
+          <StatCard
+            key={1}
+            icon={<Icon as={MdBarChart} w="32px" h="32px" color="red.500" />}
+            name='Average Rides Broken/Maintenance Per Month'
+            value={averageRidesBrokenMaintenance}
+          />
+          <StatCard
+            key={2}
+            icon={<Icon as={MdShoppingCart} w="32px" h="32px" color="purple.500" />}
+            name='Total Store Sales'
+            value={`$${storeSales}`}
+          />
+          <StatCard
+            key={3}
+            icon={<Icon as={MdShoppingCart} w="32px" h="32px" color="blue.500" />}
+            name='Total Ride Ticket Sales'
+            value={`$${rideTicketSales}`}
+          />
+          <StatCard
+            key={4}
+            icon={<Icon as={MdTrendingUp} w="32px" h="32px" color="orange.500" />}
+            name='Average Ride Tickets Per Month'
+            value={avgTicketPerMonth}
+          />
+      </SimpleGrid>
+
     </Box>
   );
 };

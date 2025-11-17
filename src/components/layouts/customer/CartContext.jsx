@@ -3,8 +3,7 @@ import React, { createContext, useContext, useState } from "react";
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
-  // Unified cart for both rides and online store items
-  const [cart, setCart] = useState([]); // Contains both rides and store merchandise
+  const [cart, setCart] = useState([]); // Unified cart for both rides and online store items
   const [storeCart, setStoreCart] = useState([]); // Legacy: for in-park only stores
 
   // Unified cart functions (for rides and online-available store items)

@@ -9,31 +9,6 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const router = express.Router();
 
-// Simple email for single order type
-async function sendEmail(email, first_name, total_amount) {
-  try {
-    const msg = {
-      to: email,
-      from: process.env.SENDER_EMAIL,
-      replyTo: "no-reply@velocityvalley.com",
-      subject: "🎢 Transaction Confirmation - Velocity Valley",
-      html: `
-        <h2>Hi ${first_name},</h2>
-        <p>Thank you for your purchase!</p>
-        <p>Your payment of <strong>$${total_amount.toFixed(2)}</strong> has been successfully processed.</p>
-        <p>We can't wait to see you at <strong>Velocity Valley</strong>!</p>
-        <hr/>
-        <p style="font-size:12px;color:gray;">This is an automated email. Please do not reply.</p>
-      `,
-    };
-    await sgMail.send(msg);
-    console.log(`Email sent successfully to ${email}`);
-  } catch (error) {
-    console.error('Error sending email:', error);
-    // Don't throw error - we don't want to fail the order if email fails
-  }
-}
-
 // Consolidated email for mixed orders (rides + store items)
 async function sendConsolidatedEmail(email, first_name, orderDetails) {
   try {
@@ -121,7 +96,7 @@ async function sendConsolidatedEmail(email, first_name, orderDetails) {
           ${itemsHtml}
 
           <div style="background-color: #EEF5FF; padding: 15px; border-radius: 5px; margin-top: 20px;">
-            <h3 style="color: #176B87; margin-top: 0;">Total Amount: $${grandTotal.toFixed(2)}</h3>
+            <h3 style="color: #176B87; margin-top: 0;">Total Amount: $${grandTotal.toFixed(2)} (tax included)</h3>
           </div>
 
           <p style="margin-top: 30px;">We can't wait to see you at <strong>Velocity Valley</strong>!</p>
@@ -132,276 +107,120 @@ async function sendConsolidatedEmail(email, first_name, orderDetails) {
     };
 
     await sgMail.send(msg);
-    console.log(`Consolidated email sent successfully to ${email}`);
   } catch (error) {
     console.error('Error sending consolidated email:', error);
     // Don't throw error - we don't want to fail the order if email fails
   }
 }
-// Legacy endpoint - deprecated, use /api/unified-order instead
-// POST /api/ride-orders - Create ride order (kept for backward compatibility)
-router.post('/ride-orders', requireCustomerAuth, async (req, res) => {
-  try {
-    const { cart, total } = req.body;
-    const customer_id = req.customer_id;
-
-    if (!cart || cart.length === 0) {
-      return res.status(400).json({ error: 'Cart is empty' });
-    }
-
-    // Fetch customer details for email
-    const customerSql = 'SELECT email, first_name FROM customer WHERE customer_id = ?';
-    const customer = await new Promise((resolve, reject) => {
-      db.query(customerSql, [customer_id], (err, results) => {
-        if (err) reject(err);
-        else resolve(results[0]);
-      });
-    });
-
-    // Create the ride_order
-    const orderSql = `
-      INSERT INTO ride_order (customer_id, order_date, total_amount, status)
-      VALUES (?, CURDATE(), ?, 'completed')
-    `;
-
-    const orderResult = await new Promise((resolve, reject) => {
-      db.query(orderSql, [customer_id, total], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
-
-    const order_id = orderResult.insertId;
-
-    // Insert order details for each ride in cart
-    const detailPromises = cart.map((item) => {
-      const detailSql = `
-        INSERT INTO ride_order_detail (order_id, ride_id, number_of_tickets, price_per_ticket, subtotal)
-        VALUES (?, ?, ?, ?, ?)
-      `;
-      const subtotal = item.price * item.quantity;
-
-      return new Promise((resolve, reject) => {
-        db.query(
-          detailSql,
-          [order_id, item.id, item.quantity, item.price, subtotal],
-          (err, result) => {
-            if (err) reject(err);
-            else resolve(result);
-          }
-        );
-      });
-    });
-
-    await Promise.all(detailPromises);
-
-    // Send confirmation email
-    if (customer && customer.email && customer.first_name) {
-      await sendEmail(customer.email, customer.first_name, total);
-    }
-
-    res.json({
-      message: 'Order created successfully',
-      order: {
-        order_id,
-        customer_id,
-        total_amount: total,
-        status: 'completed',
-        order_date: new Date().toISOString().split('T')[0],
-      },
-    });
-  } catch (err) {
-    console.error('Error creating ride order:', err);
-    res.status(500).json({ error: 'Failed to create order', message: err.message });
-  }
-});
 
 // GET /api/ride-orders - Get customer's ride orders
-router.get("/ride-orders", requireCustomerAuth, (req, res) => {
+router.get("/ride-orders", requireCustomerAuth, async (req, res) => {
   const customerId = req.customer_id;
   const range = req.query.range || "all"; // "today", "7d", "month", "all"
 
-  let whereClause = "WHERE customer_id = ?";
+  let whereClause = "WHERE ro.customer_id = ?";
   const params = [customerId];
 
   if (range === "today") {
-    whereClause += " AND DATE(order_date) = CURDATE()";
+    whereClause += " AND DATE(ro.order_date) = CURDATE()";
   } else if (range === "7d") {
-    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+    whereClause += " AND ro.order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
   } else if (range === "month") {
-    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
+    whereClause += " AND ro.order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
   }
   // "all" means no extra date filter
 
   const sql = `
-    SELECT *
-    FROM ride_orders
+    SELECT ro.*
+    FROM ride_order ro
     ${whereClause}
-    ORDER BY order_date DESC
+    ORDER BY ro.order_id DESC
   `;
 
-  db.query(sql, params, (err, rows) => {
+  db.query(sql, params, async (err, orders) => {
     if (err) {
       console.error("Error fetching ride orders:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    return res.json({ data: rows });
+
+    // Fetch order details for each order
+    const ordersWithDetails = await Promise.all(
+      orders.map(async (order) => {
+        const detailsSql = `
+          SELECT rod.*, r.name as ride_name
+          FROM ride_order_detail rod
+          JOIN ride r ON rod.ride_id = r.ride_id
+          WHERE rod.order_id = ?
+        `;
+
+        const items = await new Promise((resolve, reject) => {
+          db.query(detailsSql, [order.order_id], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+          });
+        });
+
+        return { ...order, items };
+      })
+    );
+
+    return res.json({ data: ordersWithDetails });
   });
 });
 
-// Legacy endpoint - deprecated, use /api/unified-order instead
-// POST /api/store-orders - Create store order (kept for backward compatibility)
-router.post('/store-orders', requireCustomerAuth, async (req, res) => {
-  try {
-    const { cart, total, payment_method, store_id } = req.body;
-    const customer_id = req.customer_id;
-
-    if (!cart || cart.length === 0) {
-      return res.status(400).json({ error: 'Cart is empty' });
-    }
-
-    if (!payment_method || !store_id) {
-      return res.status(400).json({ error: 'Payment method and store ID are required' });
-    }
-
-    // Fetch customer details for email
-    const customerSql = 'SELECT email, first_name FROM customer WHERE customer_id = ?';
-    const customer = await new Promise((resolve, reject) => {
-      db.query(customerSql, [customer_id], (err, results) => {
-        if (err) reject(err);
-        else resolve(results[0]);
-      });
-    });
-
-    // Verify all items are available in the selected store
-    for (const item of cart) {
-      const checkSql = `
-        SELECT si.stock_quantity, m.quantity as total_quantity
-        FROM store_inventory si
-        JOIN merchandise m ON si.item_id = m.item_id
-        WHERE si.store_id = ? AND si.item_id = ?
-      `;
-      const inventory = await new Promise((resolve, reject) => {
-        db.query(checkSql, [store_id, item.id], (err, results) => {
-          if (err) reject(err);
-          else resolve(results);
-        });
-      });
-
-      if (inventory.length === 0) {
-        return res.status(400).json({ error: `Item ${item.name} is not available in this store` });
-      }
-
-      if (inventory[0].stock_quantity < item.quantity) {
-        return res.status(400).json({ error: `Insufficient stock for ${item.name}. Available: ${inventory[0].stock_quantity}` });
-      }
-    }
-
-    // Create the store_order
-    const orderSql = `
-      INSERT INTO store_order (store_id, customer_id, order_date, total_amount, status, payment_method)
-      VALUES (?, ?, CURDATE(), ?, 'completed', ?)
-    `;
-
-    const orderResult = await new Promise((resolve, reject) => {
-      db.query(orderSql, [store_id, customer_id, total, payment_method], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
-
-    const store_order_id = orderResult.insertId;
-
-    // Insert order details and update inventory
-    const detailPromises = cart.map((item) => {
-      const detailSql = `
-        INSERT INTO store_order_detail (store_order_id, item_id, quantity, price_per_item, subtotal)
-        VALUES (?, ?, ?, ?, ?)
-      `;
-      const subtotal = item.price * item.quantity;
-
-      return new Promise((resolve, reject) => {
-        db.query(
-          detailSql,
-          [store_order_id, item.id, item.quantity, item.price, subtotal],
-          (err, result) => {
-            if (err) reject(err);
-            else resolve(result);
-          }
-        );
-      });
-    });
-
-    // Update inventory quantities
-    const inventoryPromises = cart.map((item) => {
-      const updateSql = `
-        UPDATE store_inventory
-        SET stock_quantity = stock_quantity - ?
-        WHERE store_id = ? AND item_id = ?
-      `;
-
-      return new Promise((resolve, reject) => {
-        db.query(updateSql, [item.quantity, store_id, item.id], (err, result) => {
-          if (err) reject(err);
-          else resolve(result);
-        });
-      });
-    });
-
-    await Promise.all([...detailPromises, ...inventoryPromises]);
-
-    // Send confirmation email
-    if (customer && customer.email && customer.first_name) {
-      await sendEmail(customer.email, customer.first_name, total);
-    }
-
-    res.json({
-      message: 'Store order created successfully',
-      order: {
-        store_order_id,
-        store_id,
-        customer_id,
-        total_amount: total,
-        payment_method,
-        status: 'completed',
-        order_date: new Date().toISOString().split('T')[0],
-      },
-    });
-  } catch (err) {
-    console.error('Error creating store order:', err);
-    res.status(500).json({ error: 'Failed to create order', message: err.message });
-  }
-});
 
 // GET /api/store-orders - Get customer's store orders
-router.get("/store-orders", requireCustomerAuth, (req, res) => {
+router.get("/store-orders", requireCustomerAuth, async (req, res) => {
   const customerId = req.customer_id;
   const range = req.query.range || "all";
 
-  let whereClause = "WHERE customer_id = ?";
+  let whereClause = "WHERE so.customer_id = ?";
   const params = [customerId];
 
   if (range === "today") {
-    whereClause += " AND DATE(order_date) = CURDATE()";
+    whereClause += " AND DATE(so.order_date) = CURDATE()";
   } else if (range === "7d") {
-    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
+    whereClause += " AND so.order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
   } else if (range === "month") {
-    whereClause += " AND order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
+    whereClause += " AND so.order_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)";
   }
 
   const sql = `
-    SELECT *
-    FROM store_orders
+    SELECT so.*, s.name as store_name
+    FROM store_order so
+    JOIN store s ON so.store_id = s.store_id
     ${whereClause}
-    ORDER BY order_date DESC
+    ORDER BY so.store_order_id DESC
   `;
 
-  db.query(sql, params, (err, rows) => {
+  db.query(sql, params, async (err, orders) => {
     if (err) {
       console.error("Error fetching store orders:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    return res.json({ data: rows });
+
+    // Fetch order details for each order
+    const ordersWithDetails = await Promise.all(
+      orders.map(async (order) => {
+        const detailsSql = `
+          SELECT sod.*, m.name as item_name
+          FROM store_order_detail sod
+          JOIN merchandise m ON sod.item_id = m.item_id
+          WHERE sod.store_order_id = ?
+        `;
+
+        const items = await new Promise((resolve, reject) => {
+          db.query(detailsSql, [order.store_order_id], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+          });
+        });
+
+        return { ...order, items };
+      })
+    );
+
+    return res.json({ data: ordersWithDetails });
   });
 });
 
@@ -469,6 +288,20 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
     // Process store orders if any (grouped by store)
     if (storeCart.length > 0) {
       // Group store items by store_id
+      console.log('storeCart received:', JSON.stringify(storeCart, null, 2));
+
+      // Validate all store items have storeId
+      for (const item of storeCart) {
+        if (!item.storeId) {
+          console.error('Store item missing storeId:', item);
+          return res.status(400).json({ error: `Store item ${item.name || 'unknown'} is missing storeId` });
+        }
+        if (!item.id) {
+          console.error('Store item missing id:', item);
+          return res.status(400).json({ error: `Store item ${item.name || 'unknown'} is missing item id` });
+        }
+      }
+
       const storeGroups = storeCart.reduce((groups, item) => {
         const storeId = item.storeId;
         if (!groups[storeId]) {
@@ -477,9 +310,12 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
         groups[storeId].push(item);
         return groups;
       }, {});
+      console.log('Grouped stores:', Object.keys(storeGroups));
+      console.log('Store groups detail:', JSON.stringify(storeGroups, null, 2));
 
       // Create order for each store
       for (const [storeId, items] of Object.entries(storeGroups)) {
+        console.log(`Creating order for store ${storeId} with ${items.length} items`);
         // Verify inventory
         for (const item of items) {
           const checkSql = `
@@ -522,6 +358,8 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
         const store_order_id = orderResult.insertId;
 
         // Insert order details
+        // Note: Inventory is automatically decreased by the after_store_order_detail_insert trigger
+        console.log(`Inserting ${items.length} details for store_order_id ${store_order_id}`);
         const detailPromises = items.map((item) => {
           const detailSql = `
             INSERT INTO store_order_detail (store_order_id, item_id, quantity, price_per_item, subtotal)
@@ -529,35 +367,33 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
           `;
           const subtotal = item.price * item.quantity;
 
+          console.log(`Inserting detail: store_order_id=${store_order_id}, item_id=${item.id}, quantity=${item.quantity}, price=${item.price}, subtotal=${subtotal}`);
+
           return new Promise((resolve, reject) => {
             db.query(
               detailSql,
               [store_order_id, item.id, item.quantity, item.price, subtotal],
               (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
+                if (err) {
+                  console.error(`Error inserting detail for item ${item.id}:`, err);
+                  reject(err);
+                } else {
+                  console.log(`Detail inserted successfully for item ${item.id}`);
+                  resolve(result);
+                }
               }
             );
           });
         });
 
-        // Update inventory
-        const inventoryPromises = items.map((item) => {
-          const updateSql = `
-            UPDATE store_inventory
-            SET stock_quantity = stock_quantity - ?
-            WHERE store_id = ? AND item_id = ?
-          `;
-
-          return new Promise((resolve, reject) => {
-            db.query(updateSql, [item.quantity, storeId, item.id], (err, result) => {
-              if (err) reject(err);
-              else resolve(result);
-            });
-          });
-        });
-
-        await Promise.all([...detailPromises, ...inventoryPromises]);
+        // No manual inventory update needed - the database trigger handles it automatically
+        try {
+          await Promise.all(detailPromises);
+          console.log(`All details inserted for store ${storeId}, inventory automatically updated by trigger`);
+        } catch (detailError) {
+          console.error(`Error inserting details for store ${storeId}:`, detailError);
+          throw detailError;
+        }
 
         createdOrders.push({
           type: 'store',
@@ -576,7 +412,7 @@ router.post('/unified-order', requireCustomerAuth, async (req, res) => {
         grandTotal: grandTotal,
       });
     }
-
+    console.log('Order created successfully');
     res.json({
       message: 'Order created successfully',
       orders: createdOrders,

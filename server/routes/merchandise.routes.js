@@ -24,7 +24,7 @@ router.post('/merchandise', (req, res) => {
   }
 
   const sql = `
-    INSERT INTO merchandise (name, price, description, type, image_url)
+    INSERT INTO merchandise (name, price, quantity, description, type, image_url)
     VALUES (?, ?, ?, ?, ?, ?)
   `;
 

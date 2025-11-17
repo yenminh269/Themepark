@@ -33,11 +33,11 @@ export default function HomePage() {
                 🎉 Welcome to the Most Exciting Theme Park!
               </div>
               <h1 className="!text-6xl md:!text-7xl !font-black !mb-6 !leading-tight">
-                <span className="!bg-gradient-to-r !from-[#176B87] !via-[#86B6F6] !to-[#B4D4FF] !bg-clip-text !text-transparent">
-                  Adventure Awaits
+                <span className="!text-[#4682A9]">Adventure Awaits
                 </span>
                 <br />
-                <span className="!text-[#176B87]">at Velocity Valley</span>
+                <span className="!text-[#4682A9]">at</span>
+                <span className="!text-#176B87] italic"> Velocity Valley</span>
               </h1>
               <p className="!text-xl !text-gray-700 !mb-8 !max-w-2xl !mx-auto">
                 Experience the thrill of a lifetime with world-class rides, family fun,

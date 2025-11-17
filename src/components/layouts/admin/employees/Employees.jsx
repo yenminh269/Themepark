@@ -5,7 +5,7 @@ import Loading from '../loading/Loading';
 import { Box, IconButton, HStack, ScaleFade, AlertDialog, AlertDialogBody, AlertDialogFooter,
   AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, Button, Text, useDisclosure, useToast
 } from '@chakra-ui/react';
-import { AddIcon, WarningIcon } from '@chakra-ui/icons';
+import { AddIcon, WarningIcon, ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import AddE from './AddE';
 
 function Employees() {
@@ -17,6 +17,7 @@ function Employees() {
   const [addE, showAddE] = useState(false);
   const [showActive, setShowActive] = useState(true); // true = active, false = terminated
   const [visibleSSNs, setVisibleSSNs] = useState(new Set()); // Track which employee SSNs are visible
+  const [visibleEditSSNs, setVisibleEditSSNs] = useState(new Set()); // Track visible SSNs in edit mode
   const addFormRef = useRef(null);
 
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -143,6 +144,7 @@ function Employees() {
   const handleCancel = () => {
     setEditingId(null);
     setEditedData({});
+    setVisibleEditSSNs(new Set());
   };
 
   const handleInputChange = (key, value) => {
@@ -159,6 +161,26 @@ function Employees() {
       }
       return newSet;
     });
+  };
+
+  const toggleEditSSNVisibility = (employeeId) => {
+    setVisibleEditSSNs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(employeeId)) {
+        newSet.delete(employeeId);
+      } else {
+        newSet.add(employeeId);
+      }
+      return newSet;
+    });
+  };
+
+  const formatPhoneNumber = (value) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length === 0) return '';
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
   };
 
   const handleDelete = (id, row) => {
@@ -200,7 +222,7 @@ function Employees() {
     return columnKeys.map((key, index) => {
       if (key === 'employee_id') return empObj[key];
       let inputWidth = '170px';
-      if (key === 'first_name' || key === 'last_name' || key === 'gender') inputWidth = '120px';
+      if (key === 'first_name' || key === 'last_name' || key === 'gender') inputWidth = '100px';
 
       if (key === 'hire_date' || key === 'terminate_date') {
         return (
@@ -209,7 +231,7 @@ function Employees() {
             value={editedData[key]?.slice(0, 10) || ''}
             onChange={(e) => handleInputChange(key, e.target.value)}
             className="border rounded px-3 py-2 text-sm md:text-base"
-            style={{ width: inputWidth }}
+            style={{ width: '150px' }}
           />
         );
       }
@@ -219,7 +241,7 @@ function Employees() {
           <select
             value={editedData[key] || ''}
             onChange={(e) => handleInputChange(key, e.target.value)}
-            className="border rounded px-3 py-2 text-sm md:text-base"
+            className="border rounded px-2 py-2 text-sm md:text-base"
             style={{ width: inputWidth }}
           >
             <option value="Male">Male</option>
@@ -228,14 +250,76 @@ function Employees() {
           </select>
         );
       }
+      
+      if (key === 'job_title') {
+        return  (
+          <select
+            value={editedData[key] || ''}
+            onChange={(e) => handleInputChange(key, e.target.value)}
+            className="border rounded px-2 py-2 text-sm md:text-base"
+            style={{ width: inputWidth }}
+          >
+            <option value="General Manager">General Manager</option>
+            <option value="Store Manager">Store Manager</option>
+            <option value="Sales Employee">Sales Employee</option>
+            <option value="Mechanical Employee">Mechanical Employee</option>
+          </select>
+        );
+      }
+
+      if(key === 'ssn'){
+        const isVisible = visibleEditSSNs.has(editingId);
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type={isVisible ? 'text' : 'password'}
+              value={editedData[key] || ''}
+              onChange={(e) => handleInputChange(key, e.target.value)}
+              className="border rounded px-2 py-2 text-sm md:text-base"
+              pattern="\d{9}"
+              maxLength={9}
+              feedback="SSN must be exactly 9 digits."
+              style={{ width: '100px'}}
+            />
+            <button
+              type="button"
+              onClick={() => toggleEditSSNVisibility(editingId)}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              title={isVisible ? 'Hide SSN' : 'Show SSN'}
+            >
+              {isVisible ? <ViewOffIcon boxSize={4} /> : <ViewIcon boxSize={4} />}
+            </button>
+          </div>
+        );
+      }
+
+      if(key === 'phone'){
+        return (
+          <input
+            type="text"
+            value={editedData[key] || ''}
+            onChange={(e) => handleInputChange(key, formatPhoneNumber(e.target.value))}
+            className="border rounded px-2 py-2 text-sm md:text-base"
+            maxLength={12}
+            style={{ width: '120px' }}
+          />
+        );
+      }
 
       return (
         <input
           type={key === 'email' ? 'email' : 'text'}
           value={editedData[key] || ''}
           onChange={(e) => handleInputChange(key, e.target.value)}
-          className="border rounded px-3 py-2 text-sm md:text-base"
-          style={{ width: inputWidth }}
+          className="border rounded px-2 py-2 text-sm md:text-base"
+          style={key === 'email' ? { width: '240px' } : { width: inputWidth }}
           placeholder={EAttr[index]}
         />
       );
@@ -334,7 +418,7 @@ function Employees() {
       </HStack>
 
       <DataTable
-        title="Employees"
+        title="Manage Employees"
         columns={EAttr}
         data={displayData}
         onEdit={showActive? handleEdit:null}

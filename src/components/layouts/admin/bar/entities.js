@@ -12,14 +12,19 @@ const entities = [
       category: 'REPORT SECTION'
     },
     {
-      name: 'Customer Summary',
-      path: '/admin/customer-summary',
-      icon: MdOutlineSupervisedUserCircle
-    },
-    {
       name: 'Ride Report',
       path: '/admin/ride-report',
       icon: MdOutlineAnalytics
+    },
+    {
+      name: 'Merchandise Report',
+      path: '/admin/merchandise-report',
+      icon: MdReport
+    },
+    {
+      name: 'Customer Summary',
+      path: '/admin/customer-summary',
+      icon: MdOutlineSupervisedUserCircle
     },
     {
       category: 'RIDES SECTION'
@@ -30,7 +35,7 @@ const entities = [
       icon: MdAdd
     },
     {
-      name: 'Ride Lists',
+      name: 'Manage Rides',
       path: '/admin/list/rides',
       icon: MdList
     },
