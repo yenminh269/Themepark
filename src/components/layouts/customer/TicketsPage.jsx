@@ -7,7 +7,7 @@ import { api, getImageUrl } from "../../../services/api";
 import Loading from "../admin/loading/Loading";
 
 export default function TicketsPage() {
-  const { cart, addToCart, removeFromCart, total } = useCart();
+  const { cart, addToCart, removeFromCart, total, RIDE_LIMIT } = useCart();
   const navigate = useNavigate();
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,23 +118,44 @@ export default function TicketsPage() {
                     {ride.description}
                   </p>
                 )}
-                <div className="!flex !gap-2 !items-center">
-                  <button
-                    onClick={() => removeFromCart(ride.id)}
-                    className="!px-3 !py-2 !bg-white !border !border-[#176B87] !text-[#176B87] !rounded-lg hover:!bg-[#EEF5FF] !transition"
-                  >
-                    -
-                  </button>
-                  <span className="!px-3 !font-semibold !text-[#176B87]">
-                    {getQuantity(ride.id)}
-                  </span>
-                  <button
-                    onClick={() => addToCart({ ...ride, type: 'ride' })}
-                    className="!px-3 !py-2 !bg-[#176B87] !text-white !rounded-lg hover:!opacity-90 !transition !border-none"
-                  >
-                    +
-                  </button>
-                </div>
+                {ride.status === 'open' ? (
+                  <div>
+                    <div className="!flex !gap-2 !items-center !mb-2">
+                      <button
+                        onClick={() => removeFromCart(ride.id)}
+                        className="!px-3 !py-2 !bg-white !border !border-[#176B87] !text-[#176B87] !rounded-lg hover:!bg-[#EEF5FF] !transition"
+                      >
+                        -
+                      </button>
+                      <span className="!px-3 !font-semibold !text-[#176B87]">
+                        {getQuantity(ride.id)}
+                      </span>
+                      <button
+                        onClick={() => addToCart({ ...ride, type: 'ride' })}
+                        disabled={getQuantity(ride.id) >= RIDE_LIMIT}
+                        className="!px-3 !py-2 !bg-[#176B87] !text-white !rounded-lg hover:!opacity-90 !transition !border-none disabled:!opacity-50 disabled:!cursor-not-allowed"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <p className="!text-xs !text-gray-500 !text-center">
+                      Limit: {RIDE_LIMIT} per order
+                      {getQuantity(ride.id) >= RIDE_LIMIT && (
+                        <span className="!text-orange-600 !font-semibold !ml-1">
+                          (Limit reached)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="!text-center !py-2">
+                    <p className="!text-sm !font-semibold !text-gray-500">
+                      {ride.status === 'maintenance'
+                        ? 'Currently under maintenance'
+                        : 'Ride is closed'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           ))}

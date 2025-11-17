@@ -6,6 +6,10 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState([]); // Unified cart for both rides and online store items
   const [storeCart, setStoreCart] = useState([]); // Legacy: for in-park only stores
 
+  // Purchase limits
+  const RIDE_LIMIT = 25;
+  const MERCHANDISE_LIMIT = 10;
+
   // Unified cart functions (for rides and online-available store items)
   const addToCart = (item) => {
     setCart((prev) => {
@@ -19,6 +23,12 @@ export function CartProvider({ children }) {
       });
 
       if (existing) {
+        // Check limits before adding
+        const limit = item.type === 'store' ? MERCHANDISE_LIMIT : RIDE_LIMIT;
+        if (existing.quantity >= limit) {
+          return prev; // Don't add if limit reached
+        }
+
         return prev.map((cartItem) =>
           (item.type === 'store' && cartItem.type === 'store' && cartItem.id === item.id && cartItem.storeId === item.storeId) ||
           (item.type !== 'store' && cartItem.type === item.type && cartItem.id === item.id)
@@ -111,6 +121,8 @@ export function CartProvider({ children }) {
         total,
         getRideItems,
         getStoreItems,
+        RIDE_LIMIT,
+        MERCHANDISE_LIMIT,
         // Legacy store cart (for in-park only stores)
         storeCart,
         addToStoreCart,

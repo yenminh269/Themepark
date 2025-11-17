@@ -8,7 +8,7 @@ import { api, getImageUrl } from "../../../services/api";
 export default function StorePage() {
   const { storeId } = useParams();
   const navigate = useNavigate();
-  const { cart, addToCart, removeFromCart, total, storeCart, addToStoreCart, removeFromStoreCart, storeTotal, clearStoreCart } = useCart();
+  const { cart, addToCart, removeFromCart, total, storeCart, addToStoreCart, removeFromStoreCart, storeTotal, clearStoreCart, MERCHANDISE_LIMIT } = useCart();
 
   const [store, setStore] = useState(null);
   const [merchandise, setMerchandise] = useState([]);
@@ -275,29 +275,39 @@ export default function StorePage() {
                     </p>
                   )}
 
-                  <div className="!flex !items-center !justify-between">
-                    <div className="!text-xs !text-gray-500">
-                      Stock: {item.stock_quantity}
+                  <div>
+                    <div className="!flex !items-center !justify-between !mb-2">
+                      <div className="!text-xs !text-gray-500">
+                        Stock: {item.stock_quantity}
+                      </div>
+                      <div className="!flex !gap-2 !items-center">
+                        <button
+                          onClick={() => handleRemoveItem(item.item_id)}
+                          disabled={getQuantity(item.item_id) === 0}
+                          className="!px-3 !py-1 !bg-white !border !border-[#176B87] !text-[#176B87] !rounded-lg hover:!bg-[#EEF5FF] !transition !disabled:opacity-50 !disabled:cursor-not-allowed"
+                        >
+                          -
+                        </button>
+                        <span className="!px-2 !font-semibold !text-[#176B87] !min-w-[20px] !text-center">
+                          {getQuantity(item.item_id)}
+                        </span>
+                        <button
+                          onClick={() => handleAddItem(item)}
+                          disabled={item.stock_quantity === 0 || getQuantity(item.item_id) >= item.stock_quantity || getQuantity(item.item_id) >= MERCHANDISE_LIMIT}
+                          className="!px-3 !py-1 !bg-[#176B87] !text-white !rounded-lg hover:!opacity-90 !transition !disabled:opacity-50 !disabled:cursor-not-allowed"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                    <div className="!flex !gap-2 !items-center">
-                      <button
-                        onClick={() => handleRemoveItem(item.item_id)}
-                        disabled={getQuantity(item.item_id) === 0}
-                        className="!px-3 !py-1 !bg-white !border !border-[#176B87] !text-[#176B87] !rounded-lg hover:!bg-[#EEF5FF] !transition !disabled:opacity-50 !disabled:cursor-not-allowed"
-                      >
-                        -
-                      </button>
-                      <span className="!px-2 !font-semibold !text-[#176B87] !min-w-[20px] !text-center">
-                        {getQuantity(item.item_id)}
-                      </span>
-                      <button
-                        onClick={() => handleAddItem(item)}
-                        disabled={item.stock_quantity === 0 || getQuantity(item.item_id) >= item.stock_quantity}
-                        className="!px-3 !py-1 !bg-[#176B87] !text-white !rounded-lg hover:!opacity-90 !transition !disabled:opacity-50 !disabled:cursor-not-allowed"
-                      >
-                        +
-                      </button>
-                    </div>
+                    <p className="!text-xs !text-gray-500 !text-center">
+                      Limit: {MERCHANDISE_LIMIT} per order
+                      {getQuantity(item.item_id) >= MERCHANDISE_LIMIT && (
+                        <span className="!text-orange-600 !font-semibold !ml-1">
+                          (Limit reached)
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
