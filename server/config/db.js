@@ -20,7 +20,6 @@ const db = mysql.createConnection({
   database: process.env.DB_NAME,
   ssl: {
     rejectUnauthorized: false
-    rejectUnauthorized: false
   }
 }); 
 db.connect((err) => {

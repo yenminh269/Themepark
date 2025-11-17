@@ -22,6 +22,15 @@ const storeStorage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
+const merchandiseStorage = multer.diskStorage({
+  destination: 'uploads/merchandise_photos',
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+export const uploadMerchandise = multer({ storage: merchandiseStorage });
+
 
 export const upload = multer({ storage: rideStorage });
 export const uploadStore = multer({ storage: storeStorage });

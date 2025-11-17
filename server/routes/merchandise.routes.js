@@ -17,18 +17,18 @@ router.get('/merchandise', (req, res) => {
 
 // POST /api/merchandise - Add new merchandise
 router.post('/merchandise', (req, res) => {
-  const { name, price, quantity, description, type } = req.body;
+  const { name, price, quantity, description, type, image_url } = req.body;
 
-  if (!name || !price || !quantity || !description || !type) {
+  if (!name || !price || !description || !type) {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
   const sql = `
-    INSERT INTO merchandise (name, price, quantity, description, type)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO merchandise (name, price, description, type, image_url)
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(sql, [name, price, quantity, description, type], (err, result) => {
+  db.query(sql, [name, price, quantity, description, type, image_url], (err, result) => {
     if (err) {
       console.error('Error adding merchandise:', err);
       return res.status(500).json({ error: 'Failed to add merchandise', message: err.message });
@@ -42,16 +42,16 @@ router.post('/merchandise', (req, res) => {
 
 // PUT /api/merchandise/:id - Update merchandise
 router.put('/merchandise/:id', (req, res) => {
-  const { name, price, quantity, description, type } = req.body;
+  const { name, price, quantity, description, type, image_url } = req.body;
   const itemId = req.params.id;
 
   const sql = `
     UPDATE merchandise
-    SET name = ?, price = ?, quantity = ?, description = ?, type = ?
+    SET name = ?, price = ?, quantity = ?, description = ?, type = ?, image_url = ?
     WHERE item_id = ?
   `;
 
-  db.query(sql, [name, price, quantity, description, type, itemId], (err, result) => {
+  db.query(sql, [name, price, quantity, description, type, image_url, itemId], (err, result) => {
     if (err) {
       console.error('Error updating merchandise:', err);
       return res.status(500).json({ error: 'Failed to update merchandise' });
@@ -126,7 +126,7 @@ router.get('/store-inventory/:storeId', (req, res) => {
   const storeId = req.params.storeId;
   const sql = `
     SELECT si.store_id, si.item_id, si.stock_quantity, si.created_at, si.updated_at,
-           m.name as item_name, m.price, m.description, m.type as item_type, m.quantity as total_quantity, m.image_url
+           m.name as item_name, m.price, m.description, m.type as item_type, m.image_url
     FROM store_inventory si
     JOIN merchandise m ON si.item_id = m.item_id
     WHERE si.store_id = ?
