@@ -94,7 +94,7 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
+    <div className="!min-h-screen !flex !flex-col !bg-[#EEF5FF] !text-slate-800">
       {/* Navbar is now global in App.jsx */}
 
       <main className=" !mb-5 !flex-1 !max-w-4xl !mx-auto !p-6 !mt-6 !bg-white/80 !rounded-xl !shadow">
@@ -117,7 +117,7 @@ export default function CheckoutPage() {
                 <div key={`${item.type}-${item.id}-${index}`} className="!bg-white !rounded-lg !shadow !p-4 !border !border-[#B4D4FF]">
                   <div className="!flex !gap-4">
                     {/* Product Image */}
-                    <div className="!w-20 !h-20 !flex-shrink-0 !rounded-lg !overflow-hidden !bg-gradient-to-br !from-[#176B87] !to-[#86B6F6]">
+                    <div className="!w-20 !h-20 !flex-shrink-0 !rounded-lg !overflow-hidden !bg-[#749BC2]">
                       {item.image_url ? (
                         <img
                           src={item.image_url}

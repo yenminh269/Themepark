@@ -4,7 +4,7 @@ import { useAuth } from "./AuthContext";
 import PageFooter from "./PageFooter";
 import RideGalleryWrapper from "./RideGalleryWrapper";
 import "./Homepage.css";
-
+import bgVideo from "../../../assets/video.mp4";
 export default function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -15,16 +15,24 @@ export default function HomePage() {
   };
 
   return (
-    <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !via-[#B4D4FF] !to-[#86B6F6] !text-slate-800">
+    <div className="!min-h-screen !flex !flex-col !text-slate-800">
       {/* Navbar is now global in App.jsx - removed local navbar */}
 
       {/* Hero Section with Background */}
       <main className="!flex-1 !relative !overflow-hidden">
-        {/* Background Pattern */}
-        <div className="!absolute !inset-0 !opacity-10">
-          <div className="!absolute !top-10 !left-10 !w-72 !h-72 !bg-[#176B87] !rounded-full !blur-3xl"></div>
-          <div className="!absolute !bottom-10 !right-10 !w-96 !h-96 !bg-[#86B6F6] !rounded-full !blur-3xl"></div>
-        </div>
+          <div className="!absolute !inset-0">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="!w-full !h-full !object-cover"
+            >
+              <source src={bgVideo} type="video/mp4" />
+            </video>
+            <div className="!absolute !inset-0 !bg-black/40"></div>
+          </div>
+
 
         <div className="!relative !flex !items-center !justify-center !px-6 !py-10">
           <div className="!max-w-6xl !w-full">
@@ -33,20 +41,20 @@ export default function HomePage() {
                 🎉 Welcome to the Most Exciting Theme Park!
               </div>
               <h1 className="!text-6xl md:!text-7xl !font-black !mb-6 !leading-tight">
-                <span className="!text-[#4682A9]">Adventure Awaits
+                <span className="!text-white !drop-shadow-lg">Adventure Awaits
                 </span>
                 <br />
-                <span className="!text-[#4682A9]">at</span>
-                <span className="!text-#176B87] italic"> Velocity Valley</span>
+                <span className="!text-white !drop-shadow-lg">at</span>
+                <span className="!text-[#91C8E4] italic !drop-shadow-lg"> Velocity Valley</span>
               </h1>
-              <p className="!text-xl !text-gray-700 !mb-8 !max-w-2xl !mx-auto">
+              <p className="!text-xl !text-white !mb-8 !max-w-2xl !mx-auto !drop-shadow-md">
                 Experience the thrill of a lifetime with world-class rides, family fun,
                 and unforgettable memories. Your adventure starts here! 🎡
               </p>
               <div className="!flex !flex-wrap !gap-4 !justify-center">
                 <button
                   onClick={handleGetTickets}
-                  className="!px-8 !py-4 !rounded-xl !text-lg !font-bold !bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !text-white hover:!shadow-2xl hover:!scale-105 !transition-all !border-none !shadow-lg"
+                  className="!px-8 !py-4 !rounded-xl !text-lg !font-bold !bg-[#176B87] !text-white hover:!shadow-2xl hover:!scale-105 !transition-all !border-none !shadow-lg"
                 >
                   🎢 Get Your Tickets Now
                 </button>
@@ -73,7 +81,7 @@ export default function HomePage() {
                     alt="Roller Coaster"
                     className="!w-full !h-full !object-cover group-hover:!scale-110 !transition-transform !duration-500"
                   />
-                  <div className="!absolute !inset-0 !bg-gradient-to-t !from-black/60 !to-transparent !flex !items-end !p-6">
+                  <div className="!absolute !inset-0 !bg-[#176B87]/40 !flex !items-end !p-6">
                     <div>
                       <h3 className="!text-white !text-xl !font-bold !mb-1">Thrilling Coasters</h3>
                       <p className="!text-white/90 !text-sm">Feel the adrenaline rush!</p>
@@ -86,7 +94,7 @@ export default function HomePage() {
                     alt="Family Fun"
                     className="!w-full !h-full !object-cover group-hover:!scale-110 !transition-transform !duration-500"
                   />
-                  <div className="!absolute !inset-0 !bg-gradient-to-t !from-black/60 !to-transparent !flex !items-end !p-6">
+                  <div className="!absolute !inset-0 !bg-[#176B87]/40 !flex !items-end !p-6">
                     <div>
                       <h3 className="!text-white !text-xl !font-bold !mb-1">Family Adventures</h3>
                       <p className="!text-white/90 !text-sm">Fun for all ages!</p>
@@ -99,7 +107,7 @@ export default function HomePage() {
                     alt="Water Rides"
                     className="!w-full !h-full !object-cover group-hover:!scale-110 !transition-transform !duration-500"
                   />
-                  <div className="!absolute !inset-0 !bg-gradient-to-t !from-black/60 !to-transparent !flex !items-end !p-6">
+                  <div className="!absolute !inset-0 !bg-[#176B87]/40 !flex !items-end !p-6">
                     <div>
                       <h3 className="!text-white !text-xl !font-bold !mb-1">Splash Zone</h3>
                       <p className="!text-white/90 !text-sm">Cool off in style!</p>
@@ -138,18 +146,7 @@ export default function HomePage() {
 
           {/* Park Information Section */}
           <div className="!mt-16 !bg-white/80 backdrop-blur-sm !rounded-2xl !p-8 !shadow-xl">
-            {/* Park Location */}
-            <div className="!mb-8">
-              <h3 className="!text-2xl !font-bold !text-[#176B87] !mb-4 !flex !items-center !gap-2">
-                <span>📍</span>
-                <span>Velocity Valley Theme Park</span>
-              </h3>
-              <div className="!text-gray-700 !leading-relaxed !pl-8">
-                <p>1450 Velocity Parkway</p>
-                <p>Aurora Springs, Colorado 80517</p>
-                <p>United States</p>
-              </div>
-            </div>
+      
 
             {/* Park Description */}
             <div className="!mb-8">

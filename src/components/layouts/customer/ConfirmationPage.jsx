@@ -7,7 +7,7 @@ export default function ConfirmationPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="!min-h-screen !flex !flex-col !items-center !justify-center !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
+    <div className="!min-h-screen !flex !flex-col !items-center !justify-center !bg-[#EEF5FF] !text-slate-800">
       {/* Navbar is now global in App.jsx */}
       <div className="!bg-[#FFFCED] !rounded-xl !shadow-lg !p-10 !text-center !max-w-lg">
         <h1 className="!text-3xl !font-bold !text-[#176B87] !mb-4">Thank You!</h1>

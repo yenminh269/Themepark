@@ -41,7 +41,7 @@ export default function Navbar() {
   }, [cartDropdownOpen]);
 
   return (
-    <nav className="!sticky !top-0 !z-50  !border-b !border-[#B4D4FF]/30 ">
+    <nav className="!bg-[#4682A9]">
       <div className="!mx-auto !max-w-7xl !px-6 !py-4">
         <div className="!flex !items-center !justify-between">
           {/* Logo */}
@@ -50,14 +50,14 @@ export default function Navbar() {
               navigate("/");
               setMobileMenuOpen(false);
             }}
-            className="!flex !items-center !gap-2 !text-2xl !font-bold !text-[#176B87] hover:!scale-105 !transition-transform !bg-transparent !border-none"
+            className="!flex !items-center !gap-2 !text-2xl !font-bold !text-[#91C8E4] hover:!scale-105 !transition-transform !bg-transparent !border-none"
           >
             <img
               src="https://cdn-icons-png.flaticon.com/512/14023/14023195.png"
               alt="Velocity icon"
               className="!h-[1em] !w-[1em] object-contain inline-block"
             />
-            <span className="!bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !bg-clip-text !text-transparent">
+            <span className="pt-2 !bg-clip-text !text-[#91C8E4]">
               Velocity Valley
             </span>
           </button>
@@ -70,12 +70,12 @@ export default function Navbar() {
                   navigate("/");
                   setMobileMenuOpen(false);
                 }}
-                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#B4D4FF] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
+                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#91C8E4] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
               >🎡 Home
               </button>
               <button
                 onClick={handleGetTickets}
-                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#B4D4FF] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
+                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#91C8E4] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
               >🎟️ Get Tickets
               </button>
               <button
@@ -83,7 +83,7 @@ export default function Navbar() {
                   navigate("/stores");
                   setMobileMenuOpen(false);
                 }}
-                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#B4D4FF] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
+                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#91C8E4] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
               >🎁 Shop
               </button>
               {user && (
@@ -92,7 +92,7 @@ export default function Navbar() {
                     navigate("/userinfo");
                     setMobileMenuOpen(false);
                   }}
-                  className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#B4D4FF] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
+                  className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#91C8E4] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
                 > My Account
                 </button>
               )}
@@ -182,7 +182,7 @@ export default function Navbar() {
                     )}
                   </div>
                 )}
-                <span className="!text-lg !text-[#4682A9] mt-3">
+                <span className="!text-lg !text-white mt-3">
                   Hi, <strong>{user.first_name || user.email?.split('@')[0]}</strong>
                 </span>
                 <button
@@ -212,7 +212,7 @@ export default function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:!hidden !p-2 !text-[#176B87] hover:!bg-[#91C8E4] !rounded-lg !bg-transparent !border-none"
+            className="lg:!hidden !p-2 !text-[#91C8E4] hover:!bg-[#91C8E4] hover:!text-[#176B87] !rounded-lg !bg-transparent !border-none"
           >
             <svg className="!w-6 !h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {mobileMenuOpen ? (

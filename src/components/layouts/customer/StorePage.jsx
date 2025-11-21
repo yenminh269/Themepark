@@ -118,7 +118,7 @@ export default function StorePage() {
 
   if (loading) {
     return (
-      <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
+      <div className="!min-h-screen !flex !flex-col !bg-[#EEF5FF] !text-slate-800">
         <main className="!flex-1 !flex !items-center !justify-center">
           <p className="!text-lg !text-[#176B87]">Loading store...</p>
         </main>
@@ -129,7 +129,7 @@ export default function StorePage() {
 
   if (error || !store) {
     return (
-      <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
+      <div className="!min-h-screen !flex !flex-col !bg-[#EEF5FF] !text-slate-800">
         <main className="!flex-1 !flex !items-center !justify-center">
           <div className="!text-center">
             <p className="!text-lg !text-red-600 !mb-4">Error: {error || 'Store not found'}</p>
@@ -163,7 +163,7 @@ export default function StorePage() {
           </div>
 
           <div className="!flex !items-center !gap-6">
-            <div className="!w-24 !h-24 !rounded-2xl !overflow-hidden !bg-gradient-to-br !from-[#176B87] !to-[#86B6F6] !flex-shrink-0">
+            <div className="!w-24 !h-24 !rounded-2xl !overflow-hidden !bg-[#749BC2] !flex-shrink-0">
               <img
                 src={getImageUrl(store.photo_path, store.name)}
                 alt={store.name}
@@ -196,7 +196,7 @@ export default function StorePage() {
       <main className="!flex-1 !max-w-6xl !mx-auto !p-6">
         {/* In-Park Only Notice for Food Stores */}
         {!store.available_online && (
-          <div className="!mb-6 !bg-gradient-to-r !from-blue-50 !to-indigo-50 !border-2 !border-blue-300 !rounded-xl !p-6 !shadow-lg">
+          <div className="!mb-6 !bg-[#B4D4FF] !border-2 !border-[#749BC2] !rounded-xl !p-6 !shadow-lg">
             <div className="!flex !items-start !gap-4">
               <div className="!text-4xl">🎢</div>
               <div>
@@ -232,7 +232,7 @@ export default function StorePage() {
                 key={item.item_id}
                 className="!bg-white !rounded-2xl !shadow-lg hover:!shadow-2xl !overflow-hidden !border !border-[#B4D4FF] !transition-all hover:!scale-[1.02] !group"
               >
-                <div className="!relative !w-full !h-48 !overflow-hidden !bg-gradient-to-br !from-[#176B87] !to-[#86B6F6]">
+                <div className="!relative !w-full !h-48 !overflow-hidden !bg-[#749BC2]">
                   {item.image_url ? (
                     <img
                       src={item.image_url}

@@ -311,7 +311,7 @@ export default function UserInfoPage() {
   };
 
   return (
-    <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
+    <div className="!min-h-screen !flex !flex-col !bg-[#EEF5FF] !text-slate-800">
       {/* Navbar is now global in App.jsx */}
 
       {/* Content */}

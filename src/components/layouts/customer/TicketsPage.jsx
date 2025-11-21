@@ -46,7 +46,7 @@ export default function TicketsPage() {
   };
 
   return (
-    <div className="!min-h-screen !flex !flex-col !bg-gradient-to-br !from-[#EEF5FF] !to-[#B4D4FF] !text-slate-800">
+    <div className="!min-h-screen !flex !flex-col !bg-[#EEF5FF] !text-slate-800">
       {/* Navbar is now global in App.jsx */}
 
       {/* Ticket Selection */}
@@ -81,14 +81,14 @@ export default function TicketsPage() {
               key={ride.id}
               className="!bg-white !rounded-2xl !shadow-lg hover:!shadow-2xl !overflow-hidden !border !border-[#B4D4FF] !transition-all hover:!scale-[1.02] !group"
             >
-              <div className="!relative !w-full !h-56 !overflow-hidden !bg-gradient-to-br !from-[#176B87] !to-[#86B6F6]">
+              <div className="!relative !w-full !h-56 !overflow-hidden !bg-[#749BC2]">
                 <img
                   src={getImageUrl(ride.photo_path, ride.name)}
                   alt={ride.name}
                   className="!w-full !h-full !object-cover group-hover:!scale-110 !transition-transform !duration-500"
                 />
-                {/* Overlay gradient for better text contrast */}
-                <div className="!absolute !inset-0 !bg-gradient-to-t !from-black/30 !to-transparent !pointer-events-none"></div>
+                {/* Overlay for better text contrast */}
+                <div className="!absolute !inset-0 !bg-[#176B87]/20 !pointer-events-none"></div>
 
                 {/* Status Badge */}
                 <div className="!absolute !top-3 !right-3 !px-3 !py-1 !bg-white/95 backdrop-blur-sm !rounded-full !text-xs !font-bold !shadow-lg">
