@@ -36,3 +36,132 @@
   background: #6d8479;
 }
 
+/* Sidebar Footer */
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(238, 239, 224, 0.1);
+  background: rgba(75, 89, 69, 0.3);
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(238, 239, 224, 0.1);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.profile-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #91AC8F 0%, #66785F 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #EEEFE0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.profile-title {
+  font-size: 0.85rem;
+  color: #B2C9AD;
+  margin: 2px 0 0 0;
+}
+
+.logout-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(238, 239, 224, 0.1);
+  border: 1px solid rgba(238, 239, 224, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #EEEFE0;
+}
+
+.logout-button:hover {
+  background: rgba(231, 76, 60, 0.2);
+  border-color: #e74c3c;
+  color: #ffcdd2;
+}
+
+/* Logout Confirmation */
+.logout-confirm {
+  width: 100%;
+  padding: 12px;
+  background: #fff3cd;
+  border-radius: 8px;
+}
+
+.logout-text {
+  font-size: 13px;
+  color: #856404;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.logout-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-confirm-logout,
+.btn-cancel-logout {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-confirm-logout {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-confirm-logout:hover {
+  background: #c82333;
+}
+
+.btn-cancel-logout {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-cancel-logout:hover {
+  background: #5a6268;
+}
+

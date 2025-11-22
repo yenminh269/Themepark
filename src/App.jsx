@@ -20,6 +20,8 @@ import ConfirmationPage from './components/layouts/customer/ConfirmationPage.jsx
 import UserInfoPage from './components/layouts/customer/UserInfoPage.jsx';
 import StoresPage from './components/layouts/customer/StoresPage.jsx';
 import StorePage from './components/layouts/customer/StorePage.jsx';
+import ParkHoursPage from './components/layouts/customer/ParkHoursPage.jsx';
+import ParkMapPage from './components/layouts/customer/ParkMapPage.jsx';
 import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
 import EmployeeDashboard from './components/layouts/employee/EmployeeDashboard.jsx';
 import ProtectedRoute from './components/layouts/public/ProtectedRoute.jsx';
@@ -74,6 +76,8 @@ function AppContent() {
       <Routes>
         {/* ===== PUBLIC ROUTES (No Authentication Required) ===== */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/hours" element={<ParkHoursPage />} />
+        <Route path="/map" element={<ParkMapPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/logout" element={<Logout />} />

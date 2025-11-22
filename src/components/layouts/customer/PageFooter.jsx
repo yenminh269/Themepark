@@ -1,4 +1,7 @@
 import './Homepage.css'
+import { FaPhoneAlt } from "react-icons/fa";
+import { MdOutlineEmail } from "react-icons/md";
+import { MdLocationPin } from "react-icons/md";
 
 export default function PageFooter(){
     return (
@@ -9,86 +12,71 @@ export default function PageFooter(){
             {/* About Section */}
             <div>
               <h4 className="!font-bold !mb-4 !text-[#AAE2FF]">Velocity Valley</h4>
-              <div>
-                <p className=" !text-[12pt] !text-white">📍 1450 Velocity Parkway</p>
-                <p className=" !text-[12pt] !text-white">Aurora Springs, CO 80517</p>
-                <p className="!text-[12pt] !text-white">📞 (555) 123-4567</p>
-                <p className="!text-[12pt] !text-white">✉️ info@velocityvalley.com</p>
+              <div className='flex justify-center'>
+                <MdLocationPin className='!mr-3 !text-[22pt]'/>
+               <p className="text-[12pt] text-white">2609 Velocity Parkway</p>
+              </div>
+               <p className="!text-[12pt] text-white">Aurora Springs, CO 80517</p>
+              <div className='flex justify-center'>
+                <FaPhoneAlt className='pt-1 !mr-3 !text-[17pt]'/>
+                <p className="text-[12pt] text-white">(555) 123-4567</p>
+              </div>
+              <div className='flex justify-center'>
+                <MdOutlineEmail className='pt-1 !mr-2 !text-[18pt]'/>
+                <p className="text-[12pt] text-white">info@velocityvalley.com</p>
               </div>
             </div>
 
             {/* Quick Links */}
             <div>
               <h4 className="!font-bold !mb-4 !text-[#AAE2FF]">Quick Links</h4>
-              <ul className="!space-y-2 !text-[12pt]">
-                <li>
-                  <a href="/tickets" className=" hover:!text-white hover:!underline !transition-colors">
-                    🎟️ Buy Tickets
-                  </a>
-                </li>
-                <li>
+              <div className='flex flex-col !space-y-2 !text-[12pt]'>
+                <a href="/tickets" className=" hover:!text-white hover:!underline !transition-colors">
+                    Buy Tickets
+                 </a>
                   <a href="/rides" className="hover:!text-white hover:!underline !transition-colors">
-                    🎢 Our Rides
+                     Our Rides
                   </a>
-                </li>
-                <li>
                   <a href="/events" className="hover:!text-white hover:!underline !transition-colors">
-                    🎉 Events & Shows
+                     Events & Shows
                   </a>
-                </li>
-                <li>
                   <a href="/dining" className=" hover:!text-white hover:!underline !transition-colors">
-                    🍔 Dining Options
+                    Dining Options
                   </a>
-                </li>
-                <li>
                   <a href="/map" className="hover:!text-white hover:!underline !transition-colors">
-                    🗺️ Park Map
+                    Park Map
                   </a>
-                </li>
-                <li>
                   <a href="/season-pass" className="hover:!text-white hover:!underline !transition-colors">
-                    🎫 Season Passes
+                   Season Passes
                   </a>
-                </li>
-              </ul>
+                </div>
             </div>
 
             {/* Visitor Info */}
             <div>
               <h4 className="!font-bold !mb-4 !text-[#AAE2FF]">Visitor Info</h4>
-              <ul className="!space-y-2 !text-[12pt]">
-                <li>
+              <div className='flex flex-col !space-y-2 !text-[12pt]'>
                   <a href="/hours" className="hover:!text-white hover:!underline !transition-colors">
-                    🕐 Park Hours
+                     Park Hours
                   </a>
-                </li>
-                <li>
+               
                   <a href="/parking" className=" hover:!text-white hover:!underline !transition-colors">
-                    🅿️ Parking Information
+                     Parking Information
                   </a>
-                </li>
-                <li>
+              
                   <a href="/accessibility" className=" hover:!text-white hover:!underline !transition-colors">
-                    ♿ Accessibility
+                     Accessibility
                   </a>
-                </li>
-                <li>
                   <a href="/safety" className=" hover:!text-white hover:!underline !transition-colors">
-                    🛡️ Safety Guidelines
+                    Safety Guidelines
                   </a>
-                </li>
-                <li>
                   <a href="/faq" className="hover:!text-white hover:!underline !transition-colors">
-                    ❓ FAQ
+                  FAQ
                   </a>
-                </li>
-                <li>
                   <a href="/groups" className="hover:!text-white hover:!underline !transition-colors">
-                    👥 Group Visits
+                    Group Visits
                   </a>
-                </li>
-              </ul>
+                </div>
             </div>
 
             {/* Follow Us & Parking */}
@@ -162,7 +150,7 @@ export default function PageFooter(){
           {/* Newsletter Signup */}
           <div className="!mt-12 !pt-8 !border-t !border-white/20">
             <div className="!text-center !max-w-2xl !mx-auto">
-              <h3 className="!text-xl !font-bold !mb-3">🎊 Stay Updated with Park News!</h3>
+              <h3 className="!text-xl !font-bold !mb-3">Stay Updated with Park News!</h3>
               <p className="!text-[16px] !text-gray-200 !mb-4">
                 Get exclusive offers, event announcements, and special promotions delivered to your inbox.
               </p>
@@ -172,7 +160,7 @@ export default function PageFooter(){
                   placeholder="Enter your email"
                   className="!flex-1 !px-4 !py-2 !rounded-lg !bg-white/10 !border !border-white/30 !text-white placeholder:!text-gray-300 focus:!outline-none focus:!border-[#86B6F6]"
                 />
-                <button className="!px-6 !py-2 !bg-[#91C8E4] hover:!bg-[#B4D4FF] !text-[#176B87] !font-bold !rounded-lg !transition-colors">
+                <button className="!px-6 !py-2 !bg-[#91C8E4] hover:!bg-[#B4D4FF] !text-[#176B87] !font-bold !rounded-lg ">
                   Subscribe
                 </button>
               </div>
