@@ -1,6 +1,7 @@
 import React from "react";
-import PageFooter from "./PageFooter";
-import "./Homepage.css";
+import PageFooter from "../customer/PageFooter";
+import "../customer/Homepage.css";
+import { TbClockHour11Filled } from "react-icons/tb";
 
 export default function ParkHoursPage() {
   const hours = [
@@ -17,24 +18,29 @@ export default function ParkHoursPage() {
     <div className="!min-h-screen !flex !flex-col !bg-gradient-to-b !from-[#EEF5FF] !to-[#B4D4FF]">
       {/* Main Content */}
       <main className="!flex-1 !relative">
-        <div className="!max-w-4xl !mx-auto !px-6 !py-16">
+        <div className="!max-w-4xl !mx-auto !px-6 !py-6">
           {/* Header Section */}
-          <div className="!text-center !mb-12">
-            <div className="!inline-block !px-6 !py-3 !bg-[#176B87] !rounded-full !text-white !font-semibold !mb-6 !shadow-lg">
+          <div className="!text-center ">
+            <div className="!inline-block !px-6 !py-3 !bg-[#4682A9]  !rounded-full !text-white !font-semibold !mb-6 !shadow-lg">
               Plan Your Visit
             </div>
-            <h1 className="!text-5xl md:!text-6xl !font-black !mb-4 !text-[#176B87]">
-              Park Hours
-            </h1>
-            <p className="!text-xl !text-gray-700 !max-w-2xl !mx-auto">
-              Velocity Valley is open year-round! Check our operating hours below to plan your adventure.
+            <h3 className="!text-4xl md:!text-5xl !font-black !mb-4 !text-[#176B87]">
+               Park Hours
+            </h3>
+            <p className="!text-xl m-0 p-0 !text-gray-700 !max-w-2xl !mx-auto">
+              Velocity Valley is open year-round!
             </p>
+             <p className="!text-xl !text-gray-700 !max-w-2xl !mx-auto">
+               Check our operating hours below to plan your adventure.
+             </p>
+             
           </div>
 
           {/* Hours Display */}
           <div className="!bg-white !rounded-2xl !shadow-2xl !overflow-hidden">
             <div className="!bg-[#176B87] !p-6 !text-center">
-              <h2 className="!text-3xl !font-bold !text-white">Weekly Schedule</h2>
+              <h2 className="!text-3xl flex justify-center !font-bold !text-white"> 
+                <TbClockHour11Filled className=" !mr-2 mt-1" />Weekly Schedule</h2>
             </div>
 
             <div className="!p-8">
@@ -60,27 +66,25 @@ export default function ParkHoursPage() {
                   Important Information
                 </h3>
                 <ul className="!text-gray-700 !space-y-2 !list-disc !list-inside">
-                  <li>Park hours may vary during holidays and special events</li>
-                  <li>Last entry is 1 hour before closing time</li>
-                  <li>Some attractions may close earlier for maintenance</li>
-                  <li>Check our website or call (555) 123-4567 for real-time updates</li>
+                  <li>Park hours are subject to change due to ride schedules, seasonal holidays, and special events.</li>
+                  <li>Last entry is 1 hour before closing time.</li>
+                  <li>Some attractions may close earlier for maintenance.</li>
+                  <li>Check our website or call (555) 123-4567 for real-time updates.</li>
                 </ul>
               </div>
 
               {/* Call to Action */}
               <div className="!mt-8 !text-center">
-                <a
-                  href="/tickets"
+                <a href="/tickets"
                   className="!inline-block !px-8 !py-4 !bg-[#176B87] !text-white !font-bold !text-lg !rounded-xl hover:!bg-[#0f4f66] !shadow-lg hover:!shadow-xl !transition-all hover:!scale-105"
-                >
-                  Get Your Tickets Now!
+                > Get Your Tickets Now!
                 </a>
               </div>
             </div>
           </div>
 
           {/* Seasonal Note */}
-          <div className="!mt-12 !text-center !bg-white !rounded-xl !p-6 !shadow-lg">
+          <div className="!mt-12 !text-center !bg-white !rounded-xl !pt-4 !shadow-lg">
             <p className="!text-lg !text-gray-700">
               <strong className="!text-[#176B87]">Extended Hours:</strong> We stay open later on Friday and Saturday nights so you can enjoy more thrills!
             </p>

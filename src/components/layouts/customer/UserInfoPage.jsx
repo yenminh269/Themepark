@@ -311,13 +311,13 @@ export default function UserInfoPage() {
   };
 
   return (
-    <div className="!min-h-screen !flex !flex-col !bg-[#EEF5FF] !text-slate-800">
+    <div className="!min-h-screen !flex !flex-col !bg-[#AABBD3] !text-slate-800">
       {/* Navbar is now global in App.jsx */}
 
       {/* Content */}
       <main className="!flex !flex-1 !max-w-6xl !mx-auto !w-full !p-6 !gap-6 ">
         {/* Left Sidebar Tabs */}
-        <aside className="!w-1/4 !bg-white/70 !rounded-xl !shadow !p-4 !flex !flex-col !gap-3">
+        <aside className="!w-1/4 !bg-white/55 !rounded-xl !shadow !p-4 !flex !flex-col !gap-3">
           <button
             onClick={() => setActiveTab("info")}
             className={`!py-2 !px-4 !rounded-md !font-semibold ${
@@ -351,7 +351,7 @@ export default function UserInfoPage() {
         </aside>
 
         {/* Right Content */}
-        <section className="!flex-1 !bg-white/70 !rounded-xl !shadow !p-6">
+        <section className="!flex-1 !bg-white/55 !rounded-xl !shadow !p-6">
           {activeTab === "info" ? (
             <>
               {loading && (
@@ -513,6 +513,7 @@ export default function UserInfoPage() {
 
               {ordersLoading ? (
                 <div className="!text-center !py-10">
+                  <Loading />
                   <p className="!text-lg !text-[#176B87]">Loading orders...</p>
                 </div>
               ) : (

@@ -5,6 +5,8 @@ import PageFooter from "./PageFooter";
 import RideGalleryWrapper from "./RideGalleryWrapper";
 import "./Homepage.css";
 import bgVideo from "../../../assets/video.mp4";
+import rideIcon from "../../../assets/ride.gif";
+
 export default function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -62,9 +64,11 @@ export default function HomePage() {
 
             {/* Ride Gallery */}
             <div className="!mb-16 !bg-white/80 backdrop-blur-sm !rounded-2xl !p-8 !shadow-xl">
-              <h2 className="!text-3xl !font-bold !text-center !text-[#176B87] !mb-6">
-                🎢 Our Amazing Rides
+              <h2 className="!text-3xl !font-bold !text-center !text-[#176B87] !mb-6 flex items-center justify-center gap-2">
+                <img src={rideIcon} alt="Ride Icon" className="w-8 h-8" />
+                Our Amazing Rides
               </h2>
+
               <RideGalleryWrapper />
             </div>
 

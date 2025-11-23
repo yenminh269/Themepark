@@ -60,6 +60,19 @@ router.get('/', async (req, res) => {
     });
 });
 
+// GET /except-photo - Get all the stores except photo
+router.get('/except-photo', async (req, res) => {
+  db.query(`SELECT name, type, status, description, open_time, close_time FROM store;`, (err, results) => {
+    if (err) {
+      return res.status(500).json({
+        message: 'Error fetching stores except photo',
+        error: err.message
+      });
+    }
+    res.json({ data: results });
+  });
+});
+
 // GET /:employeeId/stores - Get stores assigned to a specific employee with their shift schedules
 router.get('/:employeeId/stores', async (req, res) => {
     const { employeeId } = req.params;

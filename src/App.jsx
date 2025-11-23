@@ -20,8 +20,14 @@ import ConfirmationPage from './components/layouts/customer/ConfirmationPage.jsx
 import UserInfoPage from './components/layouts/customer/UserInfoPage.jsx';
 import StoresPage from './components/layouts/customer/StoresPage.jsx';
 import StorePage from './components/layouts/customer/StorePage.jsx';
-import ParkHoursPage from './components/layouts/customer/ParkHoursPage.jsx';
-import ParkMapPage from './components/layouts/customer/ParkMapPage.jsx';
+import ParkHoursPage from './components/layouts/public/ParkHoursPage.jsx';
+import ParkMapPage from './components/layouts/public/ParkMapPage.jsx';
+import ParkingPage from './components/layouts/public/ParkingPage.jsx';
+import SafetyPage from './components/layouts/public/SafetyPage.jsx';
+import FaqPage from './components/layouts/public/FaqPage.jsx';
+import AccessibilityPage from './components/layouts/public/AccessibilityPage.jsx';
+import GroupsPage from './components/layouts/public/GroupsPage.jsx';
+import SchedulePage from './components/layouts/customer/SchedulePage.jsx';
 import ManagerPage from './components/layouts/Manager/ManagerPage.jsx';
 import EmployeeDashboard from './components/layouts/employee/EmployeeDashboard.jsx';
 import ProtectedRoute from './components/layouts/public/ProtectedRoute.jsx';
@@ -78,6 +84,11 @@ function AppContent() {
         <Route path="/" element={<HomePage />} />
         <Route path="/hours" element={<ParkHoursPage />} />
         <Route path="/map" element={<ParkMapPage />} />
+        <Route path="/parking" element={<ParkingPage />} />
+        <Route path="/safety" element={<SafetyPage />} />
+        <Route path="/faq" element={<FaqPage />} />
+        <Route path="/accessibility" element={<AccessibilityPage />} />
+        <Route path="/groups" element={<GroupsPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/logout" element={<Logout />} />
@@ -91,6 +102,7 @@ function AppContent() {
 
         {/* Protected customer features */}
         <Route path="/tickets" element={<ProtectedRoute><TicketsPage /></ProtectedRoute>} />
+         <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
         <Route path="/confirmation" element={<ProtectedRoute><ConfirmationPage /></ProtectedRoute>} />
         <Route path="/userinfo" element={<ProtectedRoute><UserInfoPage /></ProtectedRoute>} />

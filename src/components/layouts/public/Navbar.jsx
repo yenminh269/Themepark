@@ -57,12 +57,12 @@ export default function Navbar() {
               alt="Velocity icon"
               className="!h-[1em] !w-[1em] object-contain inline-block"
             />
-            <span className="pt-2 !bg-clip-text !text-[#91C8E4]">
+            <span className="pt-2 !bg-clip-text !text-[#AAE2FF]">
               Velocity Valley
             </span>
           </button>
 
-          {/* Centered Navigation Container with hover effect */}
+          {/* Centered Navigation Container*/}
           <div className="!hidden lg:!flex !absolute !left-1/2 !-translate-x-1/2 !transition-all hover:!scale-105 !border-[3px] !border-[rgba(30,30,30,0.60)] !rounded-xl !p-1 !bg-white">
             <div className="!flex !items-center !gap-4 !overflow-x-auto !whitespace-nowrap ">
               <button
@@ -71,12 +71,12 @@ export default function Navbar() {
                   setMobileMenuOpen(false);
                 }}
                 className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#91C8E4] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
-              >🎡 Home
+              >Home
               </button>
               <button
                 onClick={handleGetTickets}
                 className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#91C8E4] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
-              >🎟️ Get Tickets
+              >Get Tickets
               </button>
               <button
                 onClick={() => {
@@ -84,7 +84,14 @@ export default function Navbar() {
                   setMobileMenuOpen(false);
                 }}
                 className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#91C8E4] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
-              >🎁 Shop
+              >Shop
+              </button>
+              <button onClick={() => {
+                  navigate("/schedule");
+                  setMobileMenuOpen(false);
+                }}
+                className="!py-2 !px-4 !text-[#4682A9] !cursor-pointer !flex !justify-center !font-bold hover:!bg-[#91C8E4] !transition-[background] !duration-300 !ease-in-out !rounded-[20px] !bg-transparent !border-none !shrink-0"
+              > Calendar
               </button>
               {user && (
                 <button
@@ -226,30 +233,38 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:!hidden flex  !mt-4 !pb-4 !space-y-2 !border-t !border-gray-200 !pt-4">
+          <div className="lg:!hidden flex mt-2 pt-2 !space-y-2 !border-t !border-gray-200 ">
             <button
               onClick={() => {
                 navigate("/");
                 setMobileMenuOpen(false);
               }}
-              className="!block !w-full  !px-4 !py-2 !text-gray-700 hover:!bg-[#91C8E4] !rounded-lg !bg-transparent !border-none"
-            > 🎡 Home 
+              className="!block !w-full !text-lg !text-[#B4D4FF] hover:underline !rounded-lg  "
+            > Home 
             </button>
             <button
             onClick={() => {
             handleGetTickets();
             setMobileMenuOpen(false);
             }}
-            className="!block !w-full  !px-4 !py-2 !text-gray-700 hover:!bg-[#91C8E4] !rounded-lg !bg-transparent !border-none"
-            >🎟️ Get Tickets
+            className="!block !w-full !text-lg  !text-[#B4D4FF] hover:underline !rounded-lg "
+            >Get Tickets
             </button>
             <button
               onClick={() => {
                 navigate("/stores");
                 setMobileMenuOpen(false);
               }}
-              className="!block !w-full !px-4 !py-2 !text-gray-700 hover:!bg-[#91C8E4] !rounded-lg !bg-transparent !border-none"
-            >🎁 Shop
+              className="!block !w-full !text-lg !text-[#B4D4FF] hover:underline !rounded-lg"
+            >Shop
+            </button>
+            <button
+              onClick={() => {
+                navigate("/schedule");
+                setMobileMenuOpen(false);
+              }}
+              className="!block !w-full !text-lg !text-[#B4D4FF] hover:underline !rounded-lg"
+            >Calendar
             </button>
             {user ? (
               <>
@@ -258,28 +273,27 @@ export default function Navbar() {
                     navigate("/userinfo");
                     setMobileMenuOpen(false);
                   }}
-                  className="!block !w-full !text-left !px-4 !py-2 !text-gray-700 hover:!bg-[#EEF5FF] !rounded-lg !bg-transparent !border-none"
-                >
-                  My Account
+                  className="!block !w-full !text-left !px-4 !py-2 !text-gray-450 hover:!bg-[#62B0E3] !rounded-lg !bg-transparent !border-none"
+                > My Account
                 </button>
+                
                 <button
                   onClick={handleSignOut}
-                  className="!block !w-full !text-left !px-4 !py-2 !text-red-600 hover:!bg-red-50 !rounded-lg !bg-transparent !border-none"
-                >
-                  Sign Out
+                  className="!pt-0 !block !w-full !text-left !px-4 !py-2 !text-red-700 hover:!bg-[#C99B9B] !rounded-lg !bg-transparent !border-none"
+                > Sign Out
                 </button>
               </>
             ) : (
               <>
                 <Link
                   to="/login"
-                 className="!text-sm !mb-0 !py-3 !px-4 !rounded-[20px] !bg-[#4682A9] !font-bold !text-white !border-2 !border-white hover:!opacity-90 !transition !no-underline"
+                 className="!text-sm !mb-0 !py-3 !px-4 !mr-1 !rounded-[20px] !font-bold !text-[#EEF5FF] !border-2 !border-[#EEF5FF]"
                onClick={() => setMobileMenuOpen(false)}
                 >Log In
                 </Link>
                 <Link
                   to="/signup"
-                  className="!text-sm !py-3  !px-4 !rounded-[20px] !bg-[#4682A9] !font-bold !text-white !border-2 !border-white hover:!opacity-90 !transition !no-underline"
+                  className="!text-sm !py-3  !px-4 !rounded-[20px] !font-bold !text-[#EEF5FF] !border-2 !border-[#EEF5FF]"
                onClick={() => setMobileMenuOpen(false)}
                 >
                   Sign Up

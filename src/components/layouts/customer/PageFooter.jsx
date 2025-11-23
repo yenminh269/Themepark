@@ -37,8 +37,8 @@ export default function PageFooter(){
                   <a href="/rides" className="hover:!text-white hover:!underline !transition-colors">
                      Our Rides
                   </a>
-                  <a href="/events" className="hover:!text-white hover:!underline !transition-colors">
-                     Events & Shows
+                  <a href="/schedule" className="hover:!text-white hover:!underline !transition-colors">
+                     Events Calendar
                   </a>
                   <a href="/dining" className=" hover:!text-white hover:!underline !transition-colors">
                     Dining Options
@@ -51,6 +51,8 @@ export default function PageFooter(){
                   </a>
                 </div>
             </div>
+
+            
 
             {/* Visitor Info */}
             <div>
@@ -129,21 +131,6 @@ export default function PageFooter(){
                 </a>
               </div>
 
-              <div className="!bg-white/10 !rounded-lg !p-4 !mt-4">
-                <h4 className="!font-semibold !mb-2 !flex !items-center !gap-2">
-                  🅿️Parking
-                </h4>
-                <p className="!text-xs !text-gray-200 !leading-relaxed">
-                  Free parking available! Over 5,000 spots including preferred parking,
-                  accessible spaces, and electric vehicle charging stations.
-                </p>
-                <a
-                  href="/parking"
-                  className="!text-xs !text-[#86B6F6] hover:!text-white !underline !mt-2 !inline-block"
-                >
-                  View Parking Details →
-                </a>
-              </div>
             </div>
           </div>
 

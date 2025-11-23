@@ -58,6 +58,9 @@ export const api = {
     getAllRides: async () => {
         return await fetchAPI('/rides');
     },
+    getAllRidesExceptPhoto: async () => {
+        return await fetchAPI('/rides/except-photo');
+    },
     addRide: async (formData) => {
         return await fetchAPI('/ride/add', formData, "POST", true);
     },
@@ -77,6 +80,9 @@ export const api = {
     },
     getRidesNames: async () => {
         return await fetchAPI('/rides/names');
+    },
+    getRideMaintenanceSchedules: async () => {
+        return await fetchAPI('/rides/maintenance-schedules');
     },
 
 
@@ -132,6 +138,9 @@ export const api = {
     // ===== STORES =====
     getAllStores: async () => {
         return await fetchAPI('/stores');
+    },
+    getAllStoresExceptPhoto: async () => {
+        return await fetchAPI('/stores/except-photo');
     },
     getEmployeeStores: async (employeeId) => {
         return await fetchAPI(`/employee/${employeeId}/stores`);

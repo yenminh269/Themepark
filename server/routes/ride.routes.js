@@ -55,6 +55,18 @@ router.get('/', async (req, res) => {
     res.status(201).json({ data: results });
   });
 });
+// Get all the rides except photo
+router.get('/except-photo', async (req, res) => {
+  db.query(`SELECT ride_id, name, capacity, description, open_time, close_time, status FROM ride;`, (err, results) => {
+    if (err) {
+      return res.status(500).json({
+        message: 'Error fetching rides except photo',
+        error: err.message
+      });
+    }
+    res.status(200).json({ data: results });
+  });
+});
 
 // Get all ride names
 router.get('/names', async (req, res) => {
@@ -216,6 +228,42 @@ router.delete('/:id', (req, res) => {
       rideId: id
     });
   });
+});
+
+// Get maintenance schedules for all rides with maintenance status
+router.get('/maintenance-schedules', async (req, res) => {
+  const sql = `
+    SELECT
+      r.ride_id,
+      r.name,
+      m.scheduled_date,
+      m.status as maintenance_status
+    FROM ride r
+    INNER JOIN maintenance m ON r.ride_id = m.ride_id
+    WHERE r.status = 'maintenance'
+    AND m.status IN ('scheduled', 'in_progress')
+  `;
+
+  try {
+    const results = await new Promise((resolve, reject) => {
+      db.query(sql, (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+
+    res.json({
+      success: true,
+      data: results
+    });
+  } catch (err) {
+    console.error('Error fetching maintenance schedules:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching maintenance schedules',
+      error: err.message
+    });
+  }
 });
 
 export default router;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import PageFooter from "./PageFooter";
-import "./Homepage.css";
+import PageFooter from "../customer/PageFooter";
+import "../customer/HomePage"
 import { api } from "../../../services/api";
 import Loading from "../admin/loading/Loading";
 
@@ -105,7 +105,7 @@ export default function ParkMapPage() {
               >
                 <div className="!font-semibold !text-[#176B87]">{ride.name}</div>
                 <div className="!text-xs !text-gray-600">
-                  {ride.open_time} - {ride.close_time}
+                  {ride.open_time.slice(0, 5)} - {ride.close_time.slice(0, 5)}
                 </div>
               </button>
             ))}
@@ -139,19 +139,19 @@ export default function ParkMapPage() {
   return (
     <div className="!min-h-screen !flex !flex-col !bg-gradient-to-b !from-[#EEF5FF] !to-[#B4D4FF]">
       <main className="!flex-1 !relative">
-        <div className="!max-w-6xl !mx-auto !px-6 !py-16">
+        <div className="!max-w-6xl !mx-auto !px-6 !py-6">
           {/* Header */}
           <div className="!text-center !mb-12">
-            <div className="!inline-block !px-6 !py-3 !bg-[#176B87] !rounded-full !text-white !font-semibold !mb-6 !shadow-lg">
+            <div className="!inline-block !px-6 !py-3 !bg-[#4682A9] !rounded-full !text-white !font-semibold !mb-6 !shadow-lg">
               Explore the Park
             </div>
-            <h1 className="!text-5xl md:!text-6xl !font-black !mb-4 !text-[#176B87]">
+            <h3 className="!text-4xl md:!text-5xl !font-black !mb-4 !text-[#176B87]">
               Park Map
-            </h1>
-            <p className="!text-xl !text-gray-700 !max-w-2xl !mx-auto !mb-8">
+            </h3>
+            <p className="!text-xl !text-gray-700 !max-w-2xl !mx-auto">
               Navigate through Velocity Valley's five thrilling zones. Click on any attraction to learn more!
             </p>
-            <div className="!text-2xl !mb-4">[ NORTH ] ↑</div>
+            <div className="!text-4xl !text-[#176B87]">[ NORTH ] ↑</div>
           </div>
 
           {/* ASCII-style Map Layout */}
@@ -204,7 +204,7 @@ export default function ParkMapPage() {
           </div>
 
           {/* Legend */}
-          <div className="!mt-12 !bg-white !rounded-xl !p-6 !shadow-lg">
+          <div className="!mt-12 !bg-white !rounded-xl !p-5 !shadow-lg">
             <h3 className="!text-xl !font-bold !text-[#176B87] !mb-4">Map Legend</h3>
             <div className="!grid md:!grid-cols-2 !gap-4 !text-sm">
               <div className="!flex !items-center !gap-2">
@@ -216,7 +216,7 @@ export default function ParkMapPage() {
                 <span>Merchandise Stores</span>
               </div>
               <div className="!flex !items-center !gap-2">
-                <span className="!text-2xl">🍔</span>
+                <span className="!text-2xl">🍧</span>
                 <span>Food & Beverage</span>
               </div>
               <div className="!flex !items-center !gap-2">
@@ -258,12 +258,12 @@ export default function ParkMapPage() {
                 </div>
                 <div>
                   <span className="!font-bold !text-[#176B87]">Operating Hours: </span>
-                  <span className="!text-gray-700">{selectedItem.open_time} - {selectedItem.close_time}</span>
+                  <span className="!text-gray-700">{selectedItem.open_time.slice(0, 5)} - {selectedItem.close_time.slice(0, 5)}</span>
                 </div>
                 <div>
                   <span className="!font-bold !text-[#176B87]">Status: </span>
-                  <span className={selectedItem.status === 'open' ? '!text-green-600' : '!text-red-600'}>
-                    {selectedItem.status === 'open' ? '✅ Open' : '🔒 Closed'}
+                  <span className={selectedItem.status === 'open' ? '!text-green-600' : selectedItem.status === 'closed' ? '!text-red-600' : '!text-yellow-600'}>
+                    {selectedItem.status === 'open' ? '✅ Open' : selectedItem.status === 'maintenance' ? '⚠️ Maintenance' : '🔒 Closed'}
                   </span>
                 </div>
                 <div>

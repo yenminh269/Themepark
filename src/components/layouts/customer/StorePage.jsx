@@ -171,14 +171,13 @@ export default function StorePage() {
               />
             </div>
             <div>
-              <h1 className="!text-3xl !font-bold !text-[#176B87] !mb-2">
+              <h1 className="!text-3xl !font-bold !text-[#176B87] ">
                 {store.name}
               </h1>
-              <p className="!text-gray-600 !mb-2">{store.description}</p>
+              <p className="!text-gray-600 ">{store.description}</p>
               <div className="!flex !items-center !gap-4 !text-sm !text-gray-500">
-                <span className="!capitalize">{store.type.replace('_', ' ')}</span>
-                <span>🕐 {store.open_time} - {store.close_time}</span>
-                <span className={`!px-2 !py-1 !rounded-full !text-xs !font-bold ${
+                <span className="pt-2 !capitalize">{store.type.replace('_', ' ')}</span>
+                <span className={`!px-2 !py-1 !rounded-full  !font-bold ${
                   store.status === 'open' ? '!bg-green-100 !text-green-700' :
                   store.status === 'maintenance' ? '!bg-orange-100 !text-orange-700' :
                   '!bg-red-100 !text-red-700'
@@ -186,6 +185,7 @@ export default function StorePage() {
                   {store.status === 'open' ? '✅ Open' :
                    store.status === 'maintenance' ? '🔧 Maintenance' : '🔒 Closed'}
                 </span>
+                <span className="pt-2">🕐 {store.open_time.slice(0,5)} - {store.close_time.slice(0,5)}</span>
               </div>
             </div>
           </div>
@@ -196,9 +196,9 @@ export default function StorePage() {
       <main className="!flex-1 !max-w-6xl !mx-auto !p-6">
         {/* In-Park Only Notice for Food Stores */}
         {!store.available_online && (
-          <div className="!mb-6 !bg-[#B4D4FF] !border-2 !border-[#749BC2] !rounded-xl !p-6 !shadow-lg">
+          <div className="!mb-6 !bg-[#B4D4FF] !border-2 !border-[#749BC2] !rounded-xl !p-4 !shadow-lg">
             <div className="!flex !items-start !gap-4">
-              <div className="!text-4xl">🎢</div>
+              <div className="!text-4xl">🎪</div>
               <div>
                 <h3 className="!text-xl !font-bold !text-blue-900 !mb-2">In-Park Purchase Only</h3>
                 <p className="!text-blue-800 !mb-2">
@@ -206,7 +206,7 @@ export default function StorePage() {
                   Browse our delicious items here, then visit us at the park to place your order!
                 </p>
                 <p className="!text-sm !text-blue-700">
-                  💡 Tip: Save this menu to quickly order when you arrive at the park
+                  💡 Tip: Save this menu to quickly order when you arrive at the park.
                 </p>
               </div>
             </div>
@@ -258,7 +258,7 @@ export default function StorePage() {
                 </div>
 
                 <div className="!p-4">
-                  <div className="!flex !items-start !justify-between !mb-2">
+                  <div className="!flex !items-start !justify-between">
                     <h3 className="!text-lg !font-bold !text-[#176B87] !leading-tight">
                       {item.item_name}
                     </h3>
@@ -267,19 +267,19 @@ export default function StorePage() {
                     </span>
                   </div>
 
-                  <p className="!text-xs !text-gray-500 !mb-2 !capitalize">
+                  <p className="!text-sm !text-gray-600 !mb-2 !capitalize">
                     {item.item_type}
                   </p>
 
                   {item.description && (
-                    <p className="!text-sm !text-gray-600 !mb-3 !line-clamp-2 !leading-relaxed">
+                    <p className="!text-md text-center !text-gray-600 !mb-3 !line-clamp-2 !leading-relaxed">
                       {item.description}
                     </p>
                   )}
 
                   <div>
                     <div className="!flex !items-center !justify-between !mb-2">
-                      <div className="!text-xs !text-gray-500">
+                      <div className="!text-sm !text-gray-500">
                         Stock: {item.stock_quantity}
                       </div>
                       <div className="!flex !gap-2 !items-center">
@@ -302,7 +302,7 @@ export default function StorePage() {
                         </button>
                       </div>
                     </div>
-                    <p className="!text-xs !text-gray-500 !text-center">
+                    <p className="!text-sm !text-gray-500 !text-center">
                       Limit: {MERCHANDISE_LIMIT} per order
                       {getQuantity(item.item_id) >= MERCHANDISE_LIMIT && (
                         <span className="!text-orange-600 !font-semibold !ml-1">

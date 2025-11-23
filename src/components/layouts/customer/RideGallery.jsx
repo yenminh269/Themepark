@@ -65,7 +65,7 @@ export default function RideGallery() {
             />
             <ImageListItemBar
               title={ride.name}
-              subtitle={`Open: ${ride.open_time} - Close: ${ride.close_time}`}
+              subtitle={`Open: ${ride.open_time.slice(0, 5)} - Close: ${ride.close_time.slice(0, 5)}`}
               actionIcon={
                 <IconButton
                   sx={{ color: 'rgba(255, 255, 255, 0.7)' }}

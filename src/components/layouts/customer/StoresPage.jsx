@@ -116,7 +116,7 @@ export default function StoresPage() {
                   <div className="!text-sm !text-gray-500 !mb-4 !space-y-2">
                     <div className="!flex !items-center !gap-2">
                       <span>🕐</span>
-                      <span>{store.open_time} - {store.close_time}</span>
+                      <span>{store.open_time.slice(0,5)} - {store.close_time.slice(0,5)}</span>
                     </div>
 
                     {/* Online/In-Park Badge */}
