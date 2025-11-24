@@ -53,6 +53,21 @@ function SignUp() {
       return;
     }
 
+    // Validate email domain - cannot use @velocityvalley.com
+    const emailValue = form.elements.email.value;
+    if (emailValue.toLowerCase().endsWith('@velocityvalley.com')) {
+      toast({
+        title: 'Invalid Email Domain',
+        description: 'Email addresses with @velocityvalley.com domain are reserved. Please use a different domain email address.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top',
+      });
+      setValidated(true);
+      return;
+    }
+
     if (form.checkValidity() === false) {
       setValidated(true);
       return;
@@ -96,7 +111,7 @@ function SignUp() {
       const customer = response.data;
 
       // Auto-login: store customer info and token
-      localStorage.setItem('themepark_user', JSON.stringify(customer));
+      localStorage.setItem('customer_info', JSON.stringify(customer));
 
       // Notify AuthContext
       try {

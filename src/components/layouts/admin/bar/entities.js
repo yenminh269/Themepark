@@ -1,12 +1,17 @@
 import {MdOutlineSupervisedUserCircle, MdDashboard, MdAdd, MdList, MdBuild, MdOutlineAnalytics,
   MdPeople, MdOutlineLogout, MdOutlineReviews, MdCloud ,
-  MdOutlineStorefront, MdReport, MdAccountCircle  } from "react-icons/md"
+  MdOutlineStorefront, MdReport, MdAccountCircle, MdLocationOn, MdTrendingUp  } from "react-icons/md"
 
 const entities = [
     {
       name: 'Main Dashboard',
       path: '/admin',
       icon: MdDashboard
+    },
+    {
+      name: 'Zone Management',
+      path: '/admin/zone-assign',
+      icon: MdLocationOn
     },
     {
       category: 'REPORT SECTION'
@@ -50,6 +55,11 @@ const entities = [
       icon: MdBuild
     },
     {
+      name: 'Ride Expansion History',
+      path: '/admin/ride-expansion',
+      icon: MdTrendingUp
+    },
+    {
       category: 'STORES'
     },
     {
@@ -80,7 +90,7 @@ const entities = [
     },
     {
       name: 'Log Out',
-      path: '/logout',
+      path: '/admin/logout',
       icon: MdOutlineLogout
     }
   ];

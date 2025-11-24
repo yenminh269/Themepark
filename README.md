@@ -11,7 +11,7 @@ A full-stack web application for managing theme park operations, built with Reac
 
 ### Database Setup
 
-1. **Install MySQL** (if not already installed):
+1. **Install MySQL Workbench** (if not already installed):
    - Download from https://dev.mysql.com/downloads/mysql/
    - Or use XAMPP/WAMP for Windows
 
@@ -22,7 +22,7 @@ A full-stack web application for managing theme park operations, built with Reac
    DB_PORT=3306
    DB_USER=root
    DB_PASSWORD=your_mysql_password
-   DB_NAME=themepark
+   DB_NAME=your_database_name
    ```
 
 3. **Set up the Database**:
@@ -31,8 +31,8 @@ A full-stack web application for managing theme park operations, built with Reac
    node setup-db.js
    ```
    This will:
-   - Create the `themepark` database
-   - Import the schema from `src.sql`
+   - Create the `your_database_name` database
+   - Import the schema and data from `src.sql`
    - Add sample employee data
 
 ### Running the Application

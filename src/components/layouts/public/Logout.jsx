@@ -6,14 +6,12 @@ export default function Logout() {
 
   useEffect(() => {
     // Clear all authentication data from localStorage
-    localStorage.removeItem('employee');
+    localStorage.removeItem('customer_info');
     localStorage.removeItem('employee_info');
-    localStorage.removeItem('manager_department');
-    localStorage.removeItem('customer_token');
-    localStorage.removeItem('themepark_user');
+    localStorage.removeItem('user_token');
 
     // Optionally clear everything
-    // localStorage.clear();
+    localStorage.clear();
 
     console.log('User logged out - all auth data cleared');
 

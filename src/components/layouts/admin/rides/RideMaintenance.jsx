@@ -250,25 +250,24 @@ function RideMaintenance() {
 }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
         {/* Header Section */}
     <div className="flex justify-between items-center mb-2">
-      <h1 className="text-2xl font-bold text-[#4682A9]">Ride Maintenance Management</h1>
+      <h2 className="text-2xl font-bold !text-[#4B5945]" >Ride Maintenance Management</h2>
       {!showForm && (
         <button
           onClick={handleAddMaintenance}
-          className="btn-custom text-[#819A91] rounded hover:bg-[#3a6b8a] transition-colors"
-        >
-          + Schedule New Maintenance
+          className="btn-custom !bg-[#66785F] rounded"
+        >+ Schedule New Maintenance
         </button>
       )}
     </div>
       {/* Main Content Layout */}
-      <div className="flex flex-wrap gap-4">
+    <div className="flex flex-wrap gap-4">
         {/* Left Side - Tables */}
-        <div className="flex flex-col gap-4 flex-1 min-w-[400px]">
+      <div className="flex flex-col gap-4 flex-1 min-w-[400px]">
           {/* Maintenance Schedule Table - Now at the top */}
-          <div className="bg-white rounded-lg shadow-md p-4">
+        <div className="bg-white rounded-lg shadow-md p-4">
             <h3 className="text-xl font-semibold mb-3 text-[#4682A9]">
               Scheduled Maintenance ({maintenanceSchedules.length})
             </h3>
@@ -327,7 +326,7 @@ function RideMaintenance() {
                   <div className="text-center mt-5">
                     <button
                       onClick={() => setShowAllMaintenance(!showAllMaintenance)}
-                      className="!px-6 !py-3 !bg-[#4682A9] !text-white !rounded-lg font-bold transition border-none"
+                      className="!px-6 !py-3 !bg-[#819A91] !text-white !rounded-lg font-bold border-none"
                     >
                       {showAllMaintenance ? 'Show Less' : `Show More (${maintenanceSchedules.length - 7} more)`}
                     </button>
@@ -351,7 +350,7 @@ function RideMaintenance() {
               <div className="text-center mt-5">
                 <button
                   onClick={() => setShowAllRides(!showAllRides)}
-                  className="px-6 py-3 bg-[#4682A9] text-white rounded-lg font-bold hover:bg-[#3a6b8a] transition border-none"
+                 className="!px-6 !py-3 !bg-[#819A91] !text-white !rounded-lg font-bold border-none"
                 >
                   {showAllRides ? 'Show Less' : `Show More (${rides.length - 7} more)`}
                 </button>
@@ -373,8 +372,7 @@ function RideMaintenance() {
               <div className="text-center mt-5">
                 <button
                   onClick={() => setShowAllEmployees(!showAllEmployees)}
-                  className="px-6 py-3 bg-[#4682A9] text-white rounded-lg font-bold hover:bg-[#3a6b8a] transition border-none"
-                >
+                 className="!px-6 !py-3 !bg-[#819A91] !text-white !rounded-lg font-bold border-none" >
                   {showAllEmployees ? 'Show Less' : `Show More (${emp.length - 7} more)`}
                 </button>
               </div>

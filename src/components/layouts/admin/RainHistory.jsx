@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../../services/api';
+import Loading from './loading/Loading';
 
 export default function RainHistory() {
   const [rainOuts, setRainOuts] = useState([]);
@@ -30,6 +31,7 @@ export default function RainHistory() {
   if (loading) {
     return (
       <div className="!flex !items-center !justify-center !min-h-screen">
+        <Loading />
         <div className="!text-xl !text-gray-600">Loading...</div>
       </div>
     );
@@ -46,7 +48,7 @@ export default function RainHistory() {
       {/* Rain Out Records */}
       <div className="!max-w-6xl !mx-auto">
         <div className="!bg-white !rounded-2xl !shadow-xl !p-8">
-          <h2 className="!text-2xl !font-bold !text-gray-800 !mb-6">Rain Out History</h2>
+          <h2 className="!text-2xl !font-bold !text-[#3A6F43] !mb-6">Rain Out History</h2>
 
           {rainOuts.length === 0 ? (
             <div className="!text-center !py-12 !text-gray-500">
@@ -88,7 +90,7 @@ export default function RainHistory() {
                               })()}
                             </h3>
                             <span
-                              className={`!inline-block !px-3 !py-1 !rounded-full !text-sm !font-bold !mt-1 ${
+                              className={`!inline-block !px-3 !py-1 !rounded-full !text-md !font-bold !mt-1 ${
                                 rainOut.status === 'active'
                                   ? '!bg-red-600 !text-white'
                                   : '!bg-green-600 !text-white'
@@ -106,14 +108,14 @@ export default function RainHistory() {
                         )}
 
                         {/* Display employee information */}
-                        <div className="!ml-11 !mt-2">
+                        <div className="!ml-11">
                           {rainOut.activate_emp_first_name && (
-                            <p className="!text-sm !text-gray-600 !my-1">
+                            <p className="!text-md !text-gray-600 ">
                               <strong>Activated by:</strong> {rainOut.activate_emp_first_name} {rainOut.activate_emp_last_name}
                             </p>
                           )}
                           {rainOut.status === 'cleared' && rainOut.clear_emp_first_name && (
-                            <p className="!text-sm !text-gray-600 !my-1">
+                            <p className="!text-md !text-gray-600">
                               <strong>Cleared by:</strong> {rainOut.clear_emp_first_name} {rainOut.clear_emp_last_name}
                               <strong> At:</strong> {(() => {
                                 const date = new Date(rainOut.resolved_at);

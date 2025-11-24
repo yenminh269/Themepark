@@ -16,6 +16,9 @@ import CustomerSummary from "./reports/CustomerSum.jsx";
 import RideReport from "./reports/RideReport.jsx";
 import MerchandiseReport from "./reports/Merchandise.jsx";
 import AdminProfile from "./profile/AdminProfile.jsx";
+import AdminLogout from "./AdminLogout.jsx";
+import ZoneAssign from "./zone/ZoneAssign.jsx";
+import RideExpansion from "./rides/RideExpansion.jsx";
 import './AdminMain.css'
 
 function AdminMain() {
@@ -122,10 +125,15 @@ function AdminMain() {
             <Route path="ride-maintenance" element={<RideMaintenance />} />
             {/* Rain Out Management */}
             <Route path="rain-out" element={<RainHistory />} />
+            {/* Ride Expansion History */}
+            <Route path="ride-expansion" element={<RideExpansion />} />
+            {/* Zone Management */}
+            <Route path="zone-assign" element={<ZoneAssign />} />
             {/* Employee Section */}
             <Route path="/employees" element={<Employees />} />
             {/* Profile Section */}
             <Route path="/profile" element={<AdminProfile />} />
+            <Route path="/logout" element={<AdminLogout />} />
           </Routes>
         </Box>
       </Box>

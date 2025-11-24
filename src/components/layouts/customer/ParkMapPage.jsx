@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from "react";
-import PageFooter from "../customer/PageFooter";
-import "../customer/HomePage"
+import  { useState, useEffect } from "react";
+import PageFooter from "./PageFooter";
+import "./HomePage"
 import { api } from "../../../services/api";
 import Loading from "../admin/loading/Loading";
 
 export default function ParkMapPage() {
-  const [rides, setRides] = useState([]);
-  const [stores, setStores] = useState([]);
+  const [zones, setZones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
 
@@ -14,12 +13,8 @@ export default function ParkMapPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [ridesData, storesData] = await Promise.all([
-          api.getAllRides(),
-          api.getAllStores()
-        ]);
-        setRides(ridesData);
-        setStores(storesData);
+        const zoneData = await api.getZoneDetails();
+        setZones(zoneData);
       } catch (err) {
         console.error('Failed to load park data:', err);
       } finally {
@@ -29,44 +24,12 @@ export default function ParkMapPage() {
     fetchData();
   }, []);
 
-  // Organize rides and stores by zone
-  const zones = {
-    aeroHeights: {
-      name: "AERO HEIGHTS",
-      subtitle: "Aviation Zone",
-      emoji: "✈️",
-      rides: rides.slice(0, 3), // First 3 rides
-      stores: []
-    },
-    quantumLoop: {
-      name: "QUANTUM LOOP DISTRICT",
-      subtitle: "Futuristic Neon Zone",
-      emoji: "⚡",
-      rides: rides.slice(3, 6), // Next 3 rides
-      stores: stores.filter(s => s.type === 'food_and_beverage').slice(0, 1)
-    },
-    mainHub: {
-      name: "MAIN HUB",
-      subtitle: "Central Plaza",
-      emoji: "🎡",
-      rides: rides.slice(6, 7), // 1 ride
-      stores: stores.filter(s => s.type === 'merchandise').slice(0, 2)
-    },
-    driftStreet: {
-      name: "DRIFT STREET PLAZA",
-      subtitle: "Motorsport District",
-      emoji: "🏎️",
-      rides: rides.slice(7, 9), // 2 rides
-      stores: stores.filter(s => s.type === 'food_and_beverage').slice(1, 2)
-    },
-    rapidsRidge: {
-      name: "RAPIDS RIDGE",
-      subtitle: "Mountain + Water Zone",
-      emoji: "🌊",
-      rides: rides.slice(9, 12), // Last 3 rides
-      stores: stores.filter(s => s.type === 'food_and_beverage').slice(2, 3)
-    }
-  };
+  // Map zones with their configuration
+  const zonesWithConfig = zones.map(zone => ({
+    ...zone,
+    emoji: "✈️",
+    subtitle: "Velocity Valley Zone"
+  }));
 
   const handleItemClick = (item, type) => {
     setSelectedItem({ ...item, itemType: type });
@@ -84,57 +47,68 @@ export default function ParkMapPage() {
     );
   }
 
-  const ZoneCard = ({ zone, zoneKey }) => (
-    <div className="!bg-white !rounded-xl !shadow-lg !p-6 !border-2 !border-[#176B87] hover:!shadow-2xl !transition-all">
-      <div className="!text-center !mb-4">
-        <div className="!text-4xl !mb-2">{zone.emoji}</div>
-        <h3 className="!text-2xl !font-black !text-[#176B87] !mb-1">{zone.name}</h3>
-        <p className="!text-sm !text-gray-600 !italic">({zone.subtitle})</p>
+  const ZoneCard = ({ zone }) => {
+    if (!zone) return null;
+
+    return (
+      <div className="!bg-white !rounded-xl !shadow-lg !p-6 !border-2 !border-[#176B87] hover:!shadow-2xl !transition-all">
+        <div className="!text-center !mb-4">
+          <div className="!text-4xl !mb-2">{zone.emoji}</div>
+          <h3 className="!text-2xl !font-black !text-[#176B87] !mb-1">{zone.zone_name}</h3>
+          <p className="!text-sm !text-gray-600 !italic">({zone.subtitle})</p>
+        </div>
+
+        {/* Rides Section */}
+        {zone.rides && zone.rides.length > 0 && (
+          <div className="!mb-4">
+            <h4 className="!text-sm !font-bold !text-[#176B87] !mb-2 !uppercase">🎡 Rides</h4>
+            <div className="!space-y-2">
+              {zone.rides.map((ride) => (
+                <button
+                  key={ride.ride_id}
+                  onClick={() => handleItemClick(ride, 'ride')}
+                  className="!w-full !text-left !px-3 !py-2 !bg-[#EEF5FF] hover:!bg-[#B4D4FF] !rounded-lg !text-sm !transition-colors !border-none !cursor-pointer"
+                >
+                  <div className="!font-semibold !text-[#176B87]">{ride.name}</div>
+                  <div className="!text-xs !text-gray-600">
+                    {ride.open_time?.slice(0, 5)} - {ride.close_time?.slice(0, 5)}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stores Section */}
+        {zone.stores && zone.stores.length > 0 && (
+          <div>
+            <h4 className="!text-sm !font-bold !text-[#176B87] !mb-2 !uppercase">🏪 Stores</h4>
+            <div className="!space-y-2">
+              {zone.stores.map((store) => (
+                <button
+                  key={store.store_id}
+                  onClick={() => handleItemClick(store, 'store')}
+                  className="!w-full !text-left !px-3 !py-2 !bg-[#91C8E4]/20 hover:!bg-[#91C8E4]/40 !rounded-lg !text-sm !transition-colors !border-none !cursor-pointer"
+                >
+                  <div className="!font-semibold !text-[#176B87]">{store.name}</div>
+                  <div className="!text-xs !text-gray-600 !capitalize">
+                    {store.type?.replace('_', ' ')}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state if no rides or stores */}
+        {(!zone.rides || zone.rides.length === 0) && (!zone.stores || zone.stores.length === 0) && (
+          <div className="!text-center !text-gray-500 !italic !py-4">
+            No attractions assigned yet
+          </div>
+        )}
       </div>
-
-      {/* Rides Section */}
-      {zone.rides.length > 0 && (
-        <div className="!mb-4">
-          <h4 className="!text-sm !font-bold !text-[#176B87] !mb-2 !uppercase">🎢 Rides</h4>
-          <div className="!space-y-2">
-            {zone.rides.map((ride) => (
-              <button
-                key={ride.ride_id}
-                onClick={() => handleItemClick(ride, 'ride')}
-                className="!w-full !text-left !px-3 !py-2 !bg-[#EEF5FF] hover:!bg-[#B4D4FF] !rounded-lg !text-sm !transition-colors !border-none !cursor-pointer"
-              >
-                <div className="!font-semibold !text-[#176B87]">{ride.name}</div>
-                <div className="!text-xs !text-gray-600">
-                  {ride.open_time.slice(0, 5)} - {ride.close_time.slice(0, 5)}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Stores Section */}
-      {zone.stores.length > 0 && (
-        <div>
-          <h4 className="!text-sm !font-bold !text-[#176B87] !mb-2 !uppercase">🏪 Stores</h4>
-          <div className="!space-y-2">
-            {zone.stores.map((store) => (
-              <button
-                key={store.store_id}
-                onClick={() => handleItemClick(store, 'store')}
-                className="!w-full !text-left !px-3 !py-2 !bg-[#91C8E4]/20 hover:!bg-[#91C8E4]/40 !rounded-lg !text-sm !transition-colors !border-none !cursor-pointer"
-              >
-                <div className="!font-semibold !text-[#176B87]">{store.name}</div>
-                <div className="!text-xs !text-gray-600 !capitalize">
-                  {store.type.replace('_', ' ')}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="!min-h-screen !flex !flex-col !bg-gradient-to-b !from-[#EEF5FF] !to-[#B4D4FF]">
@@ -156,51 +130,34 @@ export default function ParkMapPage() {
 
           {/* ASCII-style Map Layout */}
           <div className="!space-y-8">
-            {/* Aero Heights - North */}
-            <div className="!flex !justify-center">
-              <div className="!w-full md:!w-2/3">
-                <ZoneCard zone={zones.aeroHeights} zoneKey="aeroHeights" />
-                <div className="!text-center !text-4xl !text-[#176B87] !my-4">↓</div>
+            {zonesWithConfig.length === 0 ? (
+              <div className="!text-center !text-gray-600 !py-12">
+                <p className="!text-xl">No zones configured yet. Please check back later!</p>
               </div>
-            </div>
-
-            {/* Quantum Loop - Mid-North */}
-            <div className="!flex !justify-center">
-              <div className="!w-full">
-                <ZoneCard zone={zones.quantumLoop} zoneKey="quantumLoop" />
-                <div className="!text-center !text-4xl !text-[#176B87] !my-4">↓</div>
-              </div>
-            </div>
-
-            {/* Main Hub - Center */}
-            <div className="!flex !justify-center">
-              <div className="!w-full md:!w-3/4 !bg-[#91C8E4]/30 !rounded-2xl !p-2">
-                <ZoneCard zone={zones.mainHub} zoneKey="mainHub" />
-              </div>
-              <div className="!text-center !text-4xl !text-[#176B87] !my-4 !hidden md:!block">↓</div>
-            </div>
-
-            <div className="!text-center !text-4xl !text-[#176B87] !my-4 md:!hidden">↓</div>
-
-            {/* Drift Street - Mid-South */}
-            <div className="!flex !justify-center">
-              <div className="!w-full">
-                <ZoneCard zone={zones.driftStreet} zoneKey="driftStreet" />
-                <div className="!text-center !text-4xl !text-[#176B87] !my-4">↓</div>
-              </div>
-            </div>
-
-            {/* Rapids Ridge - South */}
-            <div className="!flex !justify-center">
-              <div className="!w-full md:!w-2/3">
-                <ZoneCard zone={zones.rapidsRidge} zoneKey="rapidsRidge" />
-              </div>
-            </div>
+            ) : (
+              zonesWithConfig.map((zone, index) => (
+                <div key={zone.zone_id}>
+                  <div className="!flex !justify-center">
+                    <div className={`!w-full ${
+                      zone.zone_name === 'MAIN HUB' ? 'md:!w-3/4 !bg-[#91C8E4]/30 !rounded-2xl !p-2' :
+                      (index === 0 || index === zonesWithConfig.length - 1) ? 'md:!w-2/3' : ''
+                    }`}>
+                      <ZoneCard zone={zone} />
+                    </div>
+                  </div>
+                  {index < zonesWithConfig.length - 1 && (
+                    <div className="!text-center !text-4xl !text-[#176B87] !my-4">↓</div>
+                  )}
+                </div>
+              ))
+            )}
 
             {/* Exit */}
-            <div className="!text-center !text-2xl !text-[#176B87] !mt-8">
-              ↓<br />[ SOUTH EXIT / PARK GATES ]
-            </div>
+            {zonesWithConfig.length > 0 && (
+              <div className="!text-center !text-2xl !text-[#176B87] !mt-8">
+                ↓<br />[ SOUTH EXIT / PARK GATES ]
+              </div>
+            )}
           </div>
 
           {/* Legend */}

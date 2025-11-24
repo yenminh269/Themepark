@@ -11,6 +11,9 @@ import {
   changeCustomerPassword,
   api,
 } from "../../../services/api";
+import { RiInformationLine } from "react-icons/ri";
+import { GrHistory } from "react-icons/gr";
+import { MdOutlineSecurity } from "react-icons/md";
 
 export default function UserInfoPage() {
   const { user, signout } = useAuth();
@@ -176,6 +179,9 @@ export default function UserInfoPage() {
 
       // Refresh the data
       setCustomerData(updatedCustomer);
+
+      // Update AuthContext with latest customer info
+      window.dispatchEvent(new CustomEvent('themepark:auth', { detail: updatedCustomer }));
     } catch (err) {
       console.error("Error saving customer data:", err);
       // If authentication error, sign out
@@ -317,7 +323,7 @@ export default function UserInfoPage() {
       {/* Content */}
       <main className="!flex !flex-1 !max-w-6xl !mx-auto !w-full !p-6 !gap-6 ">
         {/* Left Sidebar Tabs */}
-        <aside className="!w-1/4 !bg-white/55 !rounded-xl !shadow !p-4 !flex !flex-col !gap-3">
+        <aside className="!w-1/4 !bg-white/65 !rounded-xl !shadow !p-4 !flex !flex-col !gap-3">
           <button
             onClick={() => setActiveTab("info")}
             className={`!py-2 !px-4 !rounded-md !font-semibold ${
@@ -351,7 +357,7 @@ export default function UserInfoPage() {
         </aside>
 
         {/* Right Content */}
-        <section className="!flex-1 !bg-white/55 !rounded-xl !shadow !p-6">
+        <section className="!flex-1 !bg-white/65 !rounded-xl !shadow !p-6">
           {activeTab === "info" ? (
             <>
               {loading && (
@@ -369,8 +375,8 @@ export default function UserInfoPage() {
 
               {!loading && !error && (
                 <form onSubmit={handleSave} className="!space-y-4">
-                  <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-4">
-                    👤Personal Information
+                  <h2 className="!text-2xl flex  !font-bold !text-[#176B87] !mb-4">
+                    <RiInformationLine className="!mr-2 mt-1" />Update Personal Information
                   </h2>
 
                   <div className="!grid !grid-cols-1 md:!grid-cols-2 !gap-4">
@@ -466,8 +472,8 @@ export default function UserInfoPage() {
           ) : activeTab === "orders" ? (
             <div>
               <div className="!mb-6">
-                <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-4">
-                  📦 Order History
+                <h2 className="flex !text-2xl !font-bold !text-[#176B87] !mb-4">
+                  <GrHistory className="!mr-2 mt-1"/> Order History
                 </h2>
 
                 {/* Filters */}
@@ -555,7 +561,7 @@ export default function UserInfoPage() {
                   {rideOrders.length > 0 && (orderTypeFilter === "all" || orderTypeFilter === "rides") && (
                     <div>
                       <h3 className="!text-xl !font-bold !text-[#176B87] !mb-4">
-                        🎢 Ride Tickets
+                        🎟️ Ride Tickets
                       </h3>
                       <div className="!space-y-4">
                         {rideOrders.map((order) => (
@@ -643,7 +649,7 @@ export default function UserInfoPage() {
                   {storeOrders.length > 0 && (orderTypeFilter === "all" || orderTypeFilter === "stores") && (
                     <div>
                       <h3 className="!text-xl !font-bold !text-[#176B87] !mb-4">
-                        🛍️ Store Purchases
+                      🍧 Store Purchases
                       </h3>
                       <div className="!space-y-4">
                         {storeOrders.map((order) => (
@@ -736,8 +742,8 @@ export default function UserInfoPage() {
             </div>
           ) : activeTab === "password" ? (
             <div>
-              <h2 className="!text-2xl !font-bold !text-[#176B87] !mb-6">
-                🛡️ Change Password
+              <h2 className="!text-2xl flex !font-bold !text-[#176B87] !mb-6">
+                <MdOutlineSecurity className="!mr-2 mt-1" />  Change Password
               </h2>
               <form
                 onSubmit={handlePasswordChange}

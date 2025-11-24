@@ -98,21 +98,11 @@ const AdminProfile = () => {
     setIsChangingPassword(true);
 
     try {
-      // First verify current password by attempting login with email
-      if (!employee.email) {
-        throw new Error('Email not found in employee data');
-      }
-
-      await api.employeeLogin({
-        email: employee.email,
-        password: passwordData.currentPassword
-      });
-
-      // If login successful, change password
-      await api.changeEmployeePassword({
-        employee_id: employee.employee_id,
-        new_password: passwordData.newPassword
-      });
+      // Use the verified password change endpoint
+      await api.changeEmployeePasswordVerified(
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
 
       toast({
         title: 'Success!',
@@ -132,14 +122,9 @@ const AdminProfile = () => {
     } catch (error) {
       console.error('Error changing password:', error);
 
-      // Check if error is from login verification (current password incorrect)
-      const errorMessage = error.message || 'Failed to change password';
-
       toast({
         title: 'Error',
-        description: errorMessage.includes('Invalid') || errorMessage.includes('password')
-          ? 'Current password is incorrect'
-          : errorMessage,
+        description: error.message || 'Failed to change password',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -186,59 +171,39 @@ const AdminProfile = () => {
             
             <CardBody>
               <VStack align="stretch">
-                <Box>
-                  <Text fontSize="sm" color="gray.600">
+                <p className='!text-[#4B5945]'>
                     <strong>Employee ID: </strong> {employee.employee_id}
-                  </Text>
-                </Box>
-               <Box>
-                  <HStack>
-                    <MdPerson color="#4B5945" />
-                    <Text mt={6} fontSize="sm" color="gray.600" >
-                      <strong>Full Name:</strong> {employee.first_name} {employee.last_name}
-                    </Text>
-                  </HStack>
-                </Box>
-                <Box>
-                  <HStack>
-                    <MdWork color="#4B5945" />
-                    <Text mt={6} fontSize="sm" color="gray.600" >
-                      <strong>Job Title:</strong> {employee.job_title}
-                    </Text>
-                  </HStack>
-                </Box>
-                <Box>
-                  <HStack>
-                    <MdEmail color="#4B5945" />
-                    <Text mt={6} fontSize="sm" color="gray.600" >
-                      <strong>Email:</strong> {employee.email || 'Not provided'}
-                    </Text>
-                  </HStack>
-                </Box>
-                <Box>
-                  <HStack>
-                    <MdPhone color="#4B5945" />
-                    <Text mt={6} fontSize="sm" color="gray.600" >
-                      <strong>Phone:</strong> {employee.phone || 'Not provided'}
-                    </Text>
-                  </HStack>
-                </Box>
-                <Box>
-                  <Text fontSize="sm" color="gray.600" >
-                    <strong>Gender:</strong> {employee.gender || 'Not provided'}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontSize="sm" color="gray.600" >
-                    <strong>Hire Date:</strong> {employee.hire_date
+                </p>
+                 <p className='flex !text-[#4B5945]'>
+                   <MdPerson className='!mr-2 mt-1' color="#4B5945" />
+                   <strong>Full Name: </strong> 
+                   <div className='!ml-2'>{employee.first_name} {employee.last_name}</div>
+                </p>
+                <p className='flex !text-[#4B5945]'>
+                  <MdWork  className='!mr-2 mt-1' color="#4B5945" />
+                  <strong>Job Title:</strong><div className='!ml-2'>{employee.job_title}</div>
+                </p>
+                <p className='flex !text-[#4B5945]'>
+                  <MdEmail className='!mr-2 mt-1' color="#4B5945" />
+                  <strong>Email:</strong><div className='!ml-2'>{employee.email || 'Not provided'}</div>
+
+                </p>
+                <p className='flex !text-[#4B5945]'>
+                  <MdPhone className='!mr-2 mt-1' color="#4B5945" />
+                  <strong>Phone:</strong> <div className='!ml-2'>{employee.phone || 'Not provided'}</div>
+                </p>
+                 <p className='flex !text-[#4B5945]'>
+                  <strong>Gender:</strong> <div className='!ml-2'>{employee.gender || 'Not provided'}</div>
+                </p>
+                <p className='flex !text-[#4B5945]'>
+                  <strong>Hire Date:</strong> <div className='!ml-2'>{employee.hire_date
                       ? new Date(employee.hire_date).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric'
                         })
-                      : 'Not provided'}
-                  </Text>
-                </Box>
+                      : 'Not provided'}</div>
+                </p>
               </VStack>
             </CardBody>
           </Card>

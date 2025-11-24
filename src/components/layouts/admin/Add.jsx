@@ -185,7 +185,7 @@ function Add({ store = false }) {
   if (loading) return <Loading isLoading={loading} />;
 
   if (itemAdded) return (
-    <div className="flex flex-col justify-center items-center min-h-screen -mt-5">
+    <div className="flex flex-col justify-center items-center ">
       <p className="mb-1 flex items-center gap-2 text-lg font-semibold">
         New {isStore ? 'store' : 'ride'} added successfully!
         <IconButton icon={<CheckIcon />} size="md" bg="#1aa7eeff" borderRadius="full" isDisabled/>

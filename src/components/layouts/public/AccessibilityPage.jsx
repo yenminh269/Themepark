@@ -1,7 +1,5 @@
-import React from "react";
 import "../customer/Homepage.css";
 import accessibilityGuidePDF from "../../../assets/accessibility-guide.pdf";
-
 
 export default function AccessibilityPage() {
   const accessibilityServices = [

@@ -49,7 +49,7 @@ router.post('/add', uploadStore.single('photo'), (req, res) => {
 
 // GET / - Get all the stores
 router.get('/', async (req, res) => {
-    db.query(`SELECT * FROM store;`, (err, results) =>{
+    db.query(`SELECT * FROM store WHERE deleted_at is NULL;`, (err, results) =>{
         if(err){
             return res.status(500).json({
             message: 'Error fetching stores',
@@ -151,18 +151,38 @@ router.put('/:id', uploadStore.single('file'), async (req, res) => {
 // DELETE /:id - Soft delete a store
 router.delete('/:id', async (req, res) => {
   const id = req.params.id;
-  const sql = ` UPDATE store
-  SET deleted_at = NOW()
-  WHERE store_id = ?;
-`;
-  db.query(sql, [id], (err, result) => {
+
+  // First, check if there's any inventory remaining in the store
+  const checkInventorySql = `SELECT SUM(stock_quantity) as total_stock FROM store_inventory WHERE store_id = ?`;
+
+  db.query(checkInventorySql, [id], (err, results) => {
     if (err) {
       return res.status(500).json({
-        message: 'Error deleting store',
+        message: 'Error checking store inventory',
         error: err.message
       });
     }
-    res.json({ message: "Store marked as deleted successfully", data: result});
+
+    const totalStock = results[0]?.total_stock || 0;
+
+    // If there's inventory remaining, prevent deletion
+    if (totalStock > 0) {
+      return res.status(400).json({
+        message: `This store has ${totalStock} items in stock. Please sell or remove all inventory before deleting the store.`
+      });
+    }
+
+    // If no inventory, proceed with soft delete
+    const deleteSql = `UPDATE store SET deleted_at = NOW() WHERE store_id = ?`;
+    db.query(deleteSql, [id], (err, result) => {
+      if (err) {
+        return res.status(500).json({
+          message: 'Error deleting store',
+          error: err.message
+        });
+      }
+      res.json({ message: "Store marked as deleted successfully", data: result });
+    });
   });
 });
 

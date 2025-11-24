@@ -1,5 +1,5 @@
 import { Box, SimpleGrid, Card, CardBody, CardFooter, Image, Text, Button, HStack, useDisclosure, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, useToast } from '@chakra-ui/react';
-import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
+import { DeleteIcon, EditIcon, RepeatIcon } from '@chakra-ui/icons';
 import { api, getImageUrl } from '../../../../services/api';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Loading from '../loading/Loading';
@@ -7,25 +7,35 @@ import Loading from '../loading/Loading';
 function RideLists() {
   const [loading, setLoading] = useState(true);
   const [rides, setRides] = useState([]);
+  const [deletedCount, setDeletedCount] = useState(0);
   const [searchText, setSearchText] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editedData, setEditedData] = useState({});
   const [photoFile, setPhotoFile] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'open', 'closed', 'maintenance', 'approve_expand', 'reject_expand', 'pending_expand_request'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'open', 'closed', 'maintenance', 'approve_expand', 'reject_expand', 'pending_expand_request', 'deleted'
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = useRef();
   const toast = useToast();
 
   useEffect(() => {
     fetchRides();
-  }, []);
+  }, [statusFilter]);
 
   const fetchRides = async () => {
     try {
       setLoading(true);
-      const response = await api.getAllRides();
+      // Fetch deleted rides if filter is set to 'deleted', otherwise fetch all active rides
+      const response = statusFilter === 'deleted'
+        ? await api.getDeletedRides()
+        : await api.getAllRides();
       setRides(response);
+
+      // Fetch deleted count only when not viewing deleted rides
+      if (statusFilter !== 'deleted') {
+        const deletedResponse = await api.getDeletedRides();
+        setDeletedCount(deletedResponse.length);
+      }
     } catch (err) {
       console.error('Failed to load rides:', err);
       toast({
@@ -43,9 +53,10 @@ function RideLists() {
   const filteredData = useMemo(() => {
     // First filter by status
     let filtered = rides;
-    if (statusFilter !== 'all') {
+    if (statusFilter !== 'all' && statusFilter !== 'deleted') {
       filtered = rides.filter(ride => ride.status?.toLowerCase() === statusFilter.toLowerCase());
     }
+    // If statusFilter is 'deleted', rides are already filtered by the API call
 
     // Then apply search filter
     if (!searchText) return filtered;
@@ -211,6 +222,17 @@ function RideLists() {
   };
 
   const handleDeleteClick = (ride) => {
+    // Check if ride is under maintenance before opening delete dialog
+    if (ride.status === 'maintenance') {
+      toast({
+        title: 'Cannot Delete',
+        description: 'Cannot delete ride. This ride is currently under maintenance.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
     setDeleteTarget(ride);
     onOpen();
   };
@@ -233,7 +255,7 @@ function RideLists() {
       console.error('Failed to delete ride:', err);
       toast({
         title: 'Error',
-        description: 'Failed to delete ride.',
+        description: err.message,
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -244,12 +266,37 @@ function RideLists() {
     }
   };
 
+  const handleRevokeDeletion = async (rideId, rideName) => {
+    try {
+      setLoading(true);
+      await api.revokeRideDeletion(rideId);
+      await fetchRides();
+      toast({
+        title: 'Success',
+        description: `${rideName} has been restored successfully. Check the 'Open' filter`,
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      });
+    } catch (err) {
+      console.error('Failed to revoke deletion:', err);
+      toast({
+        title: 'Error',
+        description: err.message,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <Loading isLoading={loading} />;
 
   return (
     <Box position="relative">
       <h2 className="text-2xl font-bold mb-4 !text-[#4B5945]" >Manage Rides</h2>
-
       {/* Status Filter Buttons */}
       <HStack spacing={2} mb={4} flexWrap="wrap">
         <Button
@@ -327,6 +374,17 @@ function RideLists() {
           onClick={() => setStatusFilter('pending_expand_request')}
         >
           Pending Expand ({rides.filter(r => r.status === 'pending_expand_request').length})
+        </Button>
+
+        <Button
+          size="sm"
+          bg={statusFilter === 'deleted' ? "#343a40" : "transparent"}
+          color={statusFilter === 'deleted' ? "white" : "black"}
+          border={statusFilter === 'deleted' ? "none" : "1px solid black"}
+          _hover={{ bg: statusFilter === 'deleted' ? "#23272b" : "gray.200" }}
+          onClick={() => setStatusFilter('deleted')}
+        >
+          Deleted ({statusFilter === 'deleted' ? rides.length : deletedCount})
         </Button>
       </HStack>
 
@@ -532,9 +590,24 @@ function RideLists() {
                 ) : (
                   // View Mode
                   <>
-                    <Text fontSize="xl" fontWeight="bold" mb={2} color="#3A6F43">
-                      {ride.name}
-                    </Text>
+                    <HStack justify="space-between" mb={2}>
+                      <Text fontSize="xl" fontWeight="bold" color="#3A6F43">
+                        {ride.name}
+                      </Text>
+                      {statusFilter === 'deleted' && (
+                        <Box
+                          px={2}
+                          py={1}
+                          borderRadius="4px"
+                          bg="#FED7D7"
+                          color="#742A2A"
+                          fontSize="xs"
+                          fontWeight="bold"
+                        >
+                          DELETED
+                        </Box>
+                      )}
+                    </HStack>
                     <Text fontSize="sm" color="gray.600" mb={3} noOfLines={3}>
                       {ride.description}
                     </Text>
@@ -580,7 +653,18 @@ function RideLists() {
 
               {/* Card Footer - Actions */}
               <CardFooter gap={2} pt={0}>
-                {editingId === ride.ride_id ? (
+                {statusFilter === 'deleted' ? (
+                  // Revoke button for deleted rides
+                  <Button
+                    flex={1}
+                    size="sm"
+                    leftIcon={<RepeatIcon className='mt-2' />}
+                    colorScheme="green"
+                    variant="solid"
+                    onClick={() => handleRevokeDeletion(ride.ride_id, ride.name)}
+                  >Restore
+                  </Button>
+                ) : editingId === ride.ride_id ? (
                   // Save/Cancel buttons
                   <>
                     <Button

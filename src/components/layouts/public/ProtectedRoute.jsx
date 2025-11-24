@@ -1,6 +1,4 @@
-import React from 'react';
 import { Navigate } from 'react-router-dom';
-
 /*
  * Protects routes based on authentication type and user role
  * Matches localStorage keys set by Login.jsx
@@ -11,34 +9,31 @@ import { Navigate } from 'react-router-dom';
  * 
  * localStorage Structure:
  * ========================
+ * * - 'user_token': JWT token stored by api.setCustomerToken()
  * CUSTOMER:
- * - 'customer_token': JWT token stored by api.setCustomerToken()
- * - 'themepark_user': Customer object {customer_id, email, first_name, last_name, ...}
- * 
+ * - 'customer_info': Customer object {customer_id, email, first_name, last_name, ...}
  * EMPLOYEE:
- * - 'employee': Employee object {employee_id, email, first_name, last_name, job_title, ...}
- * - 'employee_token': (Optional) Token if implemented
+ * - 'employee_info': Employee object {employee_id, email, first_name, last_name, job_title, ...}
  */
 function ProtectedRoute({ children, type = 'customer', allowedRoles = [] }) {
   // Check customer authentication
   if (type === 'customer') {
     // Customer stores: 'customer_token' and 'themepark_user'
-    const customerData = localStorage.getItem('themepark_user');
-    const customerToken = localStorage.getItem('customer_token');
+    const customerData = localStorage.getItem('customer_info');
+    const userToken = localStorage.getItem('user_token');
 
     // Not logged in as customer
-    if (!customerToken || !customerData) {
+    if (!userToken || !customerData) {
       return <Navigate to="/login" replace />;
     }
-
     return children;
   }
 
   // Check employee authentication
   if (type === 'employee') {
-  // Employee stores: 'employee' (object with job_title)
-  const employeeData = localStorage.getItem('employee');
-    console.log('ProtectedRoute: Checking employee auth for path:', window.location.pathname);
+  // Employee stores: 'employee_info' (object with job_title)
+  const employeeData = localStorage.getItem('employee_info');
+    //console.log('ProtectedRoute: Checking employee auth for path:', window.location.pathname);
 
   // Not logged in as employee
   if (!employeeData) {
@@ -57,7 +52,6 @@ function ProtectedRoute({ children, type = 'customer', allowedRoles = [] }) {
 
     // Check if employee needs to change password (first-time login)
     if (employee.password_changed === false || employee.password_changed === 0) {
-      console.log('ProtectedRoute: Employee needs to change password, redirecting');
       if (window.location.pathname !== '/change-password') {
         return <Navigate to="/change-password" replace />;
       }
@@ -80,7 +74,9 @@ function ProtectedRoute({ children, type = 'customer', allowedRoles = [] }) {
         return <Navigate to="/admin" replace />;
       } else if (jobTitle === 'Sales Employee') {
         return <Navigate to="/sales" replace />;
-      } else {
+      }  else if (jobTitle === 'Store Manager') {
+        return <Navigate to="/manager" replace />;
+      }else {
           return <Navigate to="/" replace />;
         }
     }

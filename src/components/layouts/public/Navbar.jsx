@@ -41,7 +41,7 @@ export default function Navbar() {
   }, [cartDropdownOpen]);
 
   return (
-    <nav className="!bg-[#4682A9]">
+    <nav className="!bg-[#4682A9] !static">
       <div className="!mx-auto !max-w-7xl !px-6 !py-4">
         <div className="!flex !items-center !justify-between">
           {/* Logo */}

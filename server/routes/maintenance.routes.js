@@ -183,39 +183,6 @@ router.get('/:employeeId', async (req, res) => {
   }
 });
 
-// POST /update-status - Update ride statuses based on today's maintenance schedules
-router.post('/ride-status-check', async (req, res) => {
-  const sql = `
-    UPDATE ride
-    SET status = 'maintenance'
-    WHERE ride_id IN (
-      SELECT ride_id FROM maintenance WHERE scheduled_date = CURDATE() AND
-      status = 'scheduled')`;
-  try {
-    const result = await new Promise((resolve, reject) => {
-      db.query(sql, (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
-
-    res.json({
-      success: true,
-      message: 'Ride statuses updated successfully',
-      data: {
-        affectedRows: result.affectedRows
-      }
-    });
-  } catch (err) {
-    console.error('Error updating ride statuses:', err);
-    return res.status(500).json({
-      success: false,
-      message: 'Error updating ride statuses',
-      error: err.message
-    });
-  }
-});
-
 // PUT /:id - Update maintenance status
 router.put('/:id', async (req, res) => {
   const { id } = req.params;

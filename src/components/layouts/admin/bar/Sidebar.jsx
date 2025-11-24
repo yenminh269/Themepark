@@ -1,27 +1,13 @@
 import { Box, Flex, Text, VStack, HStack, Icon, IconButton } from '@chakra-ui/react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { HamburgerIcon, CloseIcon } from '@chakra-ui/icons';
-import { MdLogout, MdCheck, MdClose } from 'react-icons/md';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import entities from './entities'
 
 const Sidebar = ({ isOpen = true, onToggle, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [managerInfo, setManagerInfo] = useState(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  useEffect(() => {
-    const employeeData = localStorage.getItem('employee_info');
-    if (employeeData) {
-      try {
-        const parsed = JSON.parse(employeeData);
-        setManagerInfo(parsed);
-      } catch (error) {
-        console.error('Error parsing employee data:', error);
-      }
-    }
-  }, []);
 
   const handleLogoutClick = () => {
     if (showLogoutConfirm) {
@@ -168,44 +154,6 @@ const Sidebar = ({ isOpen = true, onToggle, onClose }) => {
           <Box flex="1" overflowY="hidden">
             <SidebarContent />
           </Box>
-
-          {/* Sidebar Footer */}
-          {managerInfo && (
-            <Box className="sidebar-footer">
-              <Box className="sidebar-profile">
-                <Box className="profile-avatar">
-                  {managerInfo.first_name?.[0]}{managerInfo.last_name?.[0]}
-                </Box>
-                <Box className="profile-info">
-                  <Text className="profile-name">
-                    {managerInfo.first_name} {managerInfo.last_name}
-                  </Text>
-                  <Text className="profile-title">{managerInfo.job_title}</Text>
-                </Box>
-              </Box>
-
-              {!showLogoutConfirm ? (
-                <button className="logout-button" onClick={handleLogoutClick}>
-                  <MdLogout size={20} />
-                  <span>Logout</span>
-                </button>
-              ) : (
-                <Box className="logout-confirm">
-                  <Text className="logout-text">Sure you want to logout?</Text>
-                  <Box className="logout-actions">
-                    <button className="btn-confirm-logout" onClick={handleLogoutClick}>
-                      <MdCheck size={18} />
-                      Yes
-                    </button>
-                    <button className="btn-cancel-logout" onClick={() => setShowLogoutConfirm(false)}>
-                      <MdClose size={18} />
-                      Cancel
-                    </button>
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          )}
         </Flex>
       )}
     </>

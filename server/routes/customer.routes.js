@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import db from '../config/db.js';
-import { makeToken, requireCustomerAuth } from '../middleware/auth.js';
+import { makeToken, makeEmployeeToken, requireCustomerAuth } from '../middleware/auth.js';
 import GoogleStrategy from 'passport-google-oauth2';
 import session from 'express-session';
 import passport from 'passport';
@@ -199,8 +199,8 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-// LOGIN ROUTE
-router.post("/login", (req, res) => {
+// LOGIN ROUTE - checks both customer and employee tables
+router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -209,54 +209,122 @@ router.post("/login", (req, res) => {
       .json({ error: "Email and password are required" });
   }
 
-  const sql = `
-    SELECT customer_id, first_name, last_name, gender, email, password, dob, phone
-    FROM customer
-    WHERE email = ?
-    LIMIT 1
-  `;
+  try {
+    // First, check the customer table
+    const customerSql = `
+      SELECT customer_id, first_name, last_name, gender, email, password, dob, phone
+      FROM customer
+      WHERE email = ?
+      LIMIT 1
+    `;
 
-  db.query(sql, [email], async (err, rows) => {
-    if (err) {
-      console.error("LOGIN query error:", err);
-      return res.status(500).json({ error: "Database error" });
+    const customerRows = await new Promise((resolve, reject) => {
+      db.query(customerSql, [email], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+
+    if (customerRows.length > 0) {
+      // Found in customer table
+      const userRow = customerRows[0];
+
+      // compare with hashed password we stored
+      const match = await bcrypt.compare(password, userRow.password);
+      if (!match) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const customerForToken = {
+        customer_id: userRow.customer_id,
+        email: userRow.email,
+      };
+
+      const token = makeToken(customerForToken);
+
+      // don't send the hashed password back
+      const safeCustomer = {
+        customer_id: userRow.customer_id,
+        first_name: userRow.first_name,
+        last_name: userRow.last_name,
+        gender: userRow.gender,
+        email: userRow.email,
+        dob: userRow.dob,
+        phone: userRow.phone,
+        is_employee: false
+      };
+
+      return res.json({
+        token,
+        customer: safeCustomer,
+        data: safeCustomer
+      });
     }
 
-    if (rows.length === 0) {
+    // If not found in customer table, check employee table
+    const employeeSql = `
+      SELECT employee_id, email, password, first_name, last_name, job_title, phone, hire_date, gender, password_changed
+      FROM employee
+      WHERE email = ? AND deleted_at IS NULL AND terminate_date IS NULL
+      LIMIT 1
+    `;
+
+    const employeeRows = await new Promise((resolve, reject) => {
+      db.query(employeeSql, [email], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+
+    if (employeeRows.length === 0) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    const userRow = rows[0];
+    const employee = employeeRows[0];
 
-    // compare with hashed password we stored
-    const match = await bcrypt.compare(password, userRow.password);
-    if (!match) {
+    // Check password - employee might have plain text or hashed password
+    let isPasswordValid = false;
+    if (password === employee.password) {
+      isPasswordValid = true;
+    } else {
+      try {
+        isPasswordValid = await bcrypt.compare(password, employee.password);
+      } catch {
+        isPasswordValid = false;
+      }
+    }
+
+    if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    const customerForToken = {
-      customer_id: userRow.customer_id,
-      email: userRow.email,
+    // Return employee data with is_employee flag and token
+    const employeeData = {
+      employee_id: employee.employee_id,
+      email: employee.email,
+      first_name: employee.first_name,
+      last_name: employee.last_name,
+      job_title: employee.job_title,
+      phone: employee.phone,
+      hire_date: employee.hire_date,
+      gender: employee.gender,
+      password_changed: employee.password_changed,
+      is_employee: true
     };
 
-    const token = makeToken(customerForToken);
-
-    // don't send the hashed password back
-    const safeCustomer = {
-      customer_id: userRow.customer_id,
-      first_name: userRow.first_name,
-      last_name: userRow.last_name,
-      gender: userRow.gender,
-      email: userRow.email,
-      dob: userRow.dob,
-      phone: userRow.phone,
-    };
+    // Generate employee token
+    const token = makeEmployeeToken(employee);
 
     return res.json({
+      message: 'Login successful',
       token,
-      customer: safeCustomer,
+      data: employeeData
     });
-  });
+
+  } catch (err) {
+    console.error("LOGIN error:", err);
+    return res.status(500).json({ error: "Database error" });
+  }
 });
 
 // GOOGLE OAUTH ROUTES

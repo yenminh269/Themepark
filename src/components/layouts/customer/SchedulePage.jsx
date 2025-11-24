@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import PageFooter from "./PageFooter";
 import "../customer/Homepage.css";
 import { api } from "../../../services/api";
@@ -6,6 +6,7 @@ import { FaChevronLeft, FaChevronRight, FaCalendarAlt } from "react-icons/fa";
 import {  MdStore } from "react-icons/md";
 import { TbRollercoaster } from "react-icons/tb";
 import { GrHostMaintenance } from "react-icons/gr";
+import Loading from "../admin/loading/Loading";
 
 export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -290,6 +291,7 @@ export default function SchedulePage() {
     return (
       <div className="!min-h-screen !flex !flex-col !bg-gradient-to-b !from-[#EEF5FF] !to-[#B4D4FF]">
         <main className="!flex-1 !flex !items-center !justify-center">
+          <Loading />
           <p className="!text-lg !text-[#176B87]">Loading schedule...</p>
         </main>
         <PageFooter />

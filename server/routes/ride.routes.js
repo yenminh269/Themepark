@@ -45,7 +45,7 @@ router.post('/add', upload.single('photo'), (req, res) => {
 
 // Get all the rides
 router.get('/', async (req, res) => {
-  db.query(`SELECT * FROM ride;`, (err, results) => {
+  db.query(`SELECT * FROM ride WHERE deleted_at IS NULL;`, (err, results) => {
     if (err) {
       return res.status(500).json({
         message: 'Error fetching rides',
@@ -55,9 +55,23 @@ router.get('/', async (req, res) => {
     res.status(201).json({ data: results });
   });
 });
+
+// Get all deleted rides
+router.get('/deleted', async (req, res) => {
+  db.query(`SELECT * FROM ride WHERE deleted_at IS NOT NULL;`, (err, results) => {
+    if (err) {
+      return res.status(500).json({
+        message: 'Error fetching deleted rides',
+        error: err.message
+      })
+    }
+    res.status(200).json({ data: results });
+  });
+});
+
 // Get all the rides except photo
 router.get('/except-photo', async (req, res) => {
-  db.query(`SELECT ride_id, name, capacity, description, open_time, close_time, status FROM ride;`, (err, results) => {
+  db.query(`SELECT ride_id, name, capacity, description, open_time, close_time, status FROM ride WHERE deleted_at IS NULL;`, (err, results) => {
     if (err) {
       return res.status(500).json({
         message: 'Error fetching rides except photo',
@@ -70,7 +84,7 @@ router.get('/except-photo', async (req, res) => {
 
 // Get all ride names
 router.get('/names', async (req, res) => {
-  db.query(`SELECT name FROM ride;`, (err, results) => {
+  db.query(`SELECT name FROM ride WHERE deleted_at IS NULL;`, (err, results) => {
     if (err) {
       return res.status(500).json({
         message: 'Error fetching ride names',
@@ -210,22 +224,62 @@ router.put('/:id', upload.single('file'), (req, res) => {
 router.delete('/:id', (req, res) => {
   const { id } = req.params;
 
-  const sql = `DELETE FROM ride WHERE ride_id = ?`;
+  // First check if the ride has maintenance status
+  // Ensuring that even if the frontend check is bypassed, the backend will still prevent deletion of rides under maintenance.
+  const checkRideStatusSql = `SELECT status FROM ride WHERE ride_id = ?`;
 
-  db.query(sql, [id], (err, result) => {
+  db.query(checkRideStatusSql, [id], (err, results) => {
     if (err) {
-      console.error("Error deleting ride:", err);
+      console.error("Error checking ride status:", err);
       return res.status(500).json({
-        message: 'Error deleting ride',
+        message: 'Error checking ride status',
         error: err.message
       });
     }
-    if (result.affectedRows === 0) {
+
+    if (results.length === 0) {
       return res.status(404).json({ message: 'Ride not found' });
     }
-    res.status(200).json({
-      message: 'Ride deleted successfully',
-      rideId: id
+
+    // If the ride has maintenance status, prevent deletion
+    if (results[0].status === 'maintenance') {
+      return res.status(400).json({
+        message: 'Cannot delete ride. This ride is currently under maintenance.'
+      });
+    }
+
+    // First delete from zone_ride_assignment if exists
+    const deleteZoneAssignmentSql = `DELETE FROM zone_ride_assignment WHERE ride_id = ?`;
+
+    db.query(deleteZoneAssignmentSql, [id], (err) => {
+      if (err) {
+        console.error("Error deleting zone assignment:", err);
+        return res.status(500).json({
+          message: 'Error deleting zone assignment',
+          error: err.message
+        });
+      }
+
+      // Proceed with soft delete of the ride
+      const softDeleteSql = `
+        UPDATE ride
+        SET status = 'closed', deleted_at = NOW()
+        WHERE ride_id = ?
+      `;
+
+      db.query(softDeleteSql, [id], (err, result) => {
+        if (err) {
+          console.error("Error deleting ride:", err);
+          return res.status(500).json({
+            message: 'Error deleting ride',
+            error: err.message
+          });
+        }
+        res.status(200).json({
+          message: 'Ride deleted successfully',
+          rideId: id
+        });
+      });
     });
   });
 });
@@ -241,7 +295,7 @@ router.get('/maintenance-schedules', async (req, res) => {
     FROM ride r
     INNER JOIN maintenance m ON r.ride_id = m.ride_id
     WHERE r.status = 'maintenance'
-    AND m.status IN ('scheduled', 'in_progress')
+    AND m.status IN ('scheduled')
   `;
 
   try {
@@ -264,6 +318,65 @@ router.get('/maintenance-schedules', async (req, res) => {
       error: err.message
     });
   }
+});
+
+// Get ride expansion history
+router.get('/expansion-history', async (req, res) => {
+  const sql = `
+    SELECT r.name, reh.expand_date
+    FROM ride_expansion_history as reh
+    LEFT JOIN ride as r ON r.ride_id = reh.ride_id
+    ORDER BY reh.expand_date DESC
+  `;
+
+  try {
+    const results = await new Promise((resolve, reject) => {
+      db.query(sql, (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
+
+    res.json({
+      success: true,
+      data: results
+    });
+  } catch (err) {
+    console.error('Error fetching ride expansion history:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching ride expansion history',
+      error: err.message
+    });
+  }
+});
+
+// Revoke deletion (restore a deleted ride)
+router.patch('/:id/revoke-deletion', (req, res) => {
+  const { id } = req.params;
+
+  const sql = `
+    UPDATE ride
+    SET deleted_at = NULL, status = 'open'
+    WHERE ride_id = ?
+  `;
+
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error("Error revoking ride deletion:", err);
+      return res.status(500).json({
+        message: 'Error revoking ride deletion',
+        error: err.message
+      });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Ride not found' });
+    }
+    res.status(200).json({
+      message: 'Ride deletion revoked successfully',
+      rideId: id
+    });
+  });
 });
 
 export default router;

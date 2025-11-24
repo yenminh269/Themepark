@@ -2,14 +2,13 @@ import {  useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import Form from 'react-bootstrap/Form';
 import { toast } from 'react-toastify';
-
+import rideIcon from '../../../assets/ride.gif';
 import './Login.css';
 import InputLogin from '../../input/InputLogin';
 import { api, SERVER_URL } from '../../../services/api';
 import carnivalImg from '../../../assets/carnival.jpg';
 
 function Login(){
-    const [isE,setIsE] = useState(false);
     const [validated, setValidated] = useState(false);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -49,14 +48,6 @@ function Login(){
                     // ignore if running in environments without CustomEvent
                 }
 
-                // Update ride statuses based on today's maintenance
-                try {
-                    api.RideStatusCheck();
-                } catch (error) {
-                    console.error('Failed to update ride maintenance status:', error);
-                    // Don't block login if this fails
-                }
-
                 // Check if profile is incomplete (Google OAuth default values)
                 const isIncompleteProfile =
                     customer.phone === '0' ||
@@ -80,10 +71,6 @@ function Login(){
     }, [searchParams, navigate]);
 
     const handleGoogleSignIn = async () => {
-        if (isE) {
-            toast.error('Google Sign In is only available for customers');
-            return;
-        }
         setLoading(true);
         try {
             // Redirect to Google OAuth endpoint
@@ -114,22 +101,23 @@ function Login(){
                 password: form.elements.password.value
             };
 
-            if(isE) {
-                // Employee login with database check
-                // api.employeeLogin returns the employee data directly (fetchAPI extracts .data)
-                const employeeData = await api.employeeLogin(formData);
+            // Use unified customerLogin endpoint that checks both customer and employee tables
+            const response = await api.customerLogin(formData);
 
-                // Update ride statuses based on today's maintenance
-                try {
-                    await api.RideStatusCheck();
-                } catch (error) {
-                    console.error('Failed to update ride maintenance status:', error);
-                    // Don't block login if this fails
-                }
+            // Check if the user is an employee or customer
+            if (response.data.is_employee) {
+                // Employee login
+                const employeeData = response.data;
 
                 // Store employee info in localStorage
-                localStorage.setItem('employee', JSON.stringify(employeeData));
                 localStorage.setItem('employee_info', JSON.stringify(employeeData));
+
+                // Check if employee needs to change password (first-time login)
+                if (!employeeData.password_changed) {
+                    toast.info('Please change your temporary password');
+                    navigate('/change-password');
+                    return;
+                }
 
                 // Redirect based on job title
                 const jobTitle = employeeData.job_title;
@@ -138,8 +126,6 @@ function Login(){
                     toast.success(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/admin');
                 } else if (jobTitle === 'Store Manager') {
-                    // Set department for Store Manager
-                    localStorage.setItem('manager_department', 'giftshop');
                     toast.success(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/manager');
                 } else if (jobTitle === 'Mechanical Employee') {
@@ -149,27 +135,16 @@ function Login(){
                     toast.success(`Welcome back, ${employeeData.first_name}!`);
                     navigate('/sales');
                 } else {
-                    // Unknown job title
                     toast.error('Unknown employee role');
                     navigate('/');
                 }
             } else {
                 // Customer login
-                const response = await api.customerLogin(formData);
-
-                // api.customerLogin returns { data: customer }
                 const customer = response.data;
 
-                // Update ride statuses based on today's maintenance
-                try {
-                    await api.RideStatusCheck();
-                } catch (error) {
-                    console.error('Failed to update ride maintenance status:', error);
-                    // Don't block login if this fails
-                }
-
                 // Store customer info in localStorage using the key AuthContext expects
-                localStorage.setItem('themepark_user', JSON.stringify(customer));
+                localStorage.setItem('customer_info', JSON.stringify(customer));
+
                 // Notify AuthContext (and other listeners) so UI updates immediately
                 try {
                     window.dispatchEvent(new CustomEvent('themepark:auth', { detail: customer }));
@@ -190,22 +165,17 @@ function Login(){
     };
 
     return(
-    <div className="!min-h-screen !bg-[#B4D4FF] !flex !items-center !justify-center !p-5">
-        {/* Background Image */}
-        <div className="!absolute !inset-0 ">
-            
-        </div>
-
-        <div className="!relative !z-10 !w-full !max-w-8xl !grid md:!grid-cols-2 !gap-5 !items-center">
+    <div className="!min-h-screen !bg-[#B4D4FF] !p-5">
+         <div className="!relative !z-10 !w-full !max-w-8xl !grid md:!grid-cols-2 !gap-5 !items-start">
             {/* Left Side - Image & Info */}
             <div className="md:!block">
-                <div className="!bg-white/90 backdrop-blur-md !rounded-3xl !p-8 ">
+                <div className="!bg-white/85 backdrop-blur-md !rounded-3xl !p-6">
                     <div className="!mb-4">
-                        <h1 className="!text-4xl !font-black !text-[#176B87] ">
-                            🎢 Welcome Back!
+                        <h1 className="flex justify-start !text-4xl !font-black !text-[#176B87] ">
+                        <img src={rideIcon} alt="Ride Icon" className="w-8 h-8 !mr-2" /> Welcome Back!
                         </h1>
                         <p className="!text-gray-700 !text-lg">
-                            Log in to access your tickets, view order history, and plan your next adventure at VelocityValley!
+                        Log in to view your tickets, explore merchandise, check ride times, browse the Velocity Valley map, and get ready for your next adventure! 
                         </p>
                     </div>
                     <img
@@ -216,7 +186,7 @@ function Login(){
 
                     <div className="!mt-6 !grid !grid-cols-3 !gap-4 !text-center">
                         <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
-                            <div className="!text-2xl !font-black !text-[#176B87]">50+</div>
+                            <div className="!text-2xl !font-black !text-[#176B87]">20+</div>
                             <div className="!text-sm !text-gray-600">Rides</div>
                         </div>
                         <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
@@ -224,7 +194,7 @@ function Login(){
                             <div className="!text-sm !text-gray-600">Visitors</div>
                         </div>
                         <div className="!bg-[#EEF5FF] !rounded-xl !p-4">
-                            <div className="!text-2xl !font-black !text-[#176B87]">⭐ 4.9</div>
+                            <div className="!text-2xl !font-black !text-[#176B87]">4.9</div>
                             <div className="!text-sm !text-gray-600">Rating</div>
                         </div>
                     </div>
@@ -232,7 +202,7 @@ function Login(){
             </div>
 
             {/* Right Side - Login Form */}
-            <div className="!bg-white/95 !rounded-3xl !p-7">
+            <div className="!bg-white/85 !rounded-3xl !p-6">
                 <Form noValidate validated={validated} onSubmit={handleSubmit}>
                     <div className='!flex !flex-col !gap-3'>
                         <div className="!text-center md:!text-left">
@@ -250,23 +220,13 @@ function Login(){
                             <InputLogin size="15" type="password" label="Password" feedback="Password is required." name="password" />
                         </div>
 
-                        <div className="!flex !items-center !gap-2 !bg-[#EEF5FF] !p-4 !rounded-xl">
-                            <input
-                                type="checkbox"
-                                className="!w-4 !h-4 accent-[#176B87]"
-                                checked={isE}
-                                onChange={(e) => setIsE(e.target.checked)}
-                            />
-                            <label className="!text-gray-700 !font-medium">Log in as employee</label>
-                        </div>
-
                         <div className="!pt-2">
                             <button
                                 type="submit"
                                 disabled={loading}
                                 className="!w-full !py-4 !bg-[#4682A9] !text-white !text-lg !font-bold !rounded-xl hover:!shadow-2xl hover:!scale-[1.02] !transition-all disabled:!cursor-not-allowed !border-none"
                             >
-                                {loading ? '🔄 Logging In...' : '🎢 Log In'}
+                                {loading ? '🔄 Logging In...' : '🎠 Log In'}
                             </button>
                         </div>
 
@@ -280,7 +240,7 @@ function Login(){
                             <button
                                 type="button"
                                 onClick={handleGoogleSignIn}
-                                disabled={loading || isE}
+                                disabled={loading}
                                 className="!w-full !py-4 !bg-white !text-gray-700 !text-lg !font-bold !rounded-xl !border-2 !border-gray-300 hover:!shadow-xl hover:!scale-[1.02] !transition-all disabled:!opacity-50 disabled:!cursor-not-allowed !flex !items-center !justify-center !gap-3"
                             >
                                 <svg className="!w-6 !h-6" viewBox="0 0 24 24">

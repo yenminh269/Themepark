@@ -1,4 +1,3 @@
-import React from "react";
 import PageFooter from "../customer/PageFooter";
 import "../customer/Homepage.css";
 import { TbClockHour11Filled } from "react-icons/tb";

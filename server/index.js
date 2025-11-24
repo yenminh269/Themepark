@@ -16,12 +16,13 @@ import scheduleRoutes from './routes/schedule.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import managerRoutes from './routes/manager.routes.js';
 import reportsRoutes from './routes/reports.routes.js';
+import zoneRoutes from './routes/zone.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 
 // ===== CORS Configuration =====
 const allowedOrigins = [
@@ -43,7 +44,7 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -70,6 +71,7 @@ app.use('/api', scheduleRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/zone', zoneRoutes);
 
 // ===== Health Check Endpoint =====
 app.get('/', (_req, res) => {

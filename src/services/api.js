@@ -61,6 +61,9 @@ export const api = {
     getAllRidesExceptPhoto: async () => {
         return await fetchAPI('/rides/except-photo');
     },
+    getDeletedRides: async () => {
+        return await fetchAPI('/rides/deleted');
+    },
     addRide: async (formData) => {
         return await fetchAPI('/ride/add', formData, "POST", true);
     },
@@ -71,6 +74,9 @@ export const api = {
     },
     deleteRide: async (id) => {
         return await fetchAPI(`/ride/${id}`, null, "DELETE", false);
+    },
+    revokeRideDeletion: async (id) => {
+        return await fetchAPI(`/ride/${id}/revoke-deletion`, null, "PATCH", false);
     },
     scheduleRideMaint: async (formData) => {
         return await fetchAPI('/ride-maintenance', formData, "POST", false);
@@ -83,6 +89,9 @@ export const api = {
     },
     getRideMaintenanceSchedules: async () => {
         return await fetchAPI('/rides/maintenance-schedules');
+    },
+    getRideExpansionHistory: async () => {
+        return await fetchAPI('/rides/expansion-history');
     },
 
 
@@ -128,11 +137,82 @@ export const api = {
     deleteEmployee: async (id) => {
         return await fetchAPI(`/employees/${id}`, null, "DELETE", false);
     },
-    employeeLogin: async (formData) => {
-        return await fetchAPI('/employee/login', formData, "POST", false);
+    revokeEmployeeTermination: async (id) => {
+        return await fetchAPI(`/employees/${id}/revoke-termination`, null, "PATCH", false);
     },
-    changeEmployeePassword: async (formData) => {
-        return await fetchAPI('/employees/change-password', formData, "POST", false);
+    permanentDeleteEmployee: async (id) => {
+        return await fetchAPI(`/employees/${id}/permanent`, null, "DELETE", false);
+    },
+    resetEmployeePassword: async (id) => {
+        // Don't use fetchAPI here because we need the full response with temporaryPassword
+        const response = await fetch(`${SERVER_URL}/employees/${id}/reset-password`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to reset password');
+        }
+
+        return await response.json(); // Returns full response including temporaryPassword
+    },
+    changeEmployeePassword: async (newPassword) => {
+        const token = getCustomerToken(); // Uses same token storage for employees
+        if (!token) throw new Error('No authentication token');
+
+        const res = await fetch(`${SERVER_URL}/employees/change-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ new_password: newPassword }),
+        });
+
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.message || 'Failed to change password');
+        }
+
+        const body = await res.json();
+
+        // Update token with new employee data
+        if (body.token) {
+            setCustomerToken(body.token);
+        }
+
+        return body;
+    },
+    changeEmployeePasswordVerified: async (currentPassword, newPassword) => {
+        const token = getCustomerToken(); // Uses same token storage for employees
+        if (!token) throw new Error('No authentication token');
+
+        const res = await fetch(`${SERVER_URL}/employees/change-password-verified`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword
+            }),
+        });
+
+        if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            throw new Error(body.message || 'Failed to change password');
+        }
+
+        const body = await res.json();
+
+        // Update token with new employee data
+        if (body.token) {
+            setCustomerToken(body.token);
+        }
+
+        return body;
     },
 
     // ===== STORES =====
@@ -163,9 +243,6 @@ export const api = {
     },
     getEmployeeMaintenances: async () => {
         return await fetchAPI('/maintenances-employee/id');
-    },
-    RideStatusCheck: async () => {
-        return await fetchAPI('/api/maintenance/ride-status-check', null, "POST", false);
     },
     updateMaintenance: async (id, data) => {
         return await fetchAPI(`/maintenances/${id}`, data, "PUT", false);
@@ -314,14 +391,14 @@ export const api = {
 
 function setCustomerToken(token) {
     if (token) {
-        localStorage.setItem('customer_token', token);
+        localStorage.setItem('user_token', token);
     } else {
-        localStorage.removeItem('customer_token');
+        localStorage.removeItem('user_token');
     }
 }
 
 function getCustomerToken() {
-    return localStorage.getItem('customer_token');
+    return localStorage.getItem('user_token');
 }
 
 // CREATE ACCOUNT (SIGNUP)
@@ -376,8 +453,15 @@ export async function loginCustomer({ email, password }) {
     }
 
     const body = await res.json();
-    setCustomerToken(body.token);
-    return body.customer;
+    // Handle both customer and employee responses
+    // Customer response: { token, customer, data }
+    // Employee response: { message, token, data }
+    if (body.data) {
+        // Employee login - set token and return employee data
+        setCustomerToken(body.token);
+        return body.data;
+    }
+    return null;
 }
 
 // RESTORE SESSION / WHO AM I
@@ -533,6 +617,36 @@ try {
 
     api.updateRainOut = async (id, rainOutData) => {
         return await fetchAPI(`/api/rain-outs/${id}`, rainOutData, "PUT", false);
+    };
+
+    // ===== ZONE MANAGEMENT =====
+    api.getAllZones = async () => {
+        return await fetchAPI('/api/zone');
+    };
+
+    api.createZone = async (zoneData) => {
+        return await fetchAPI('/api/zone', zoneData, "POST", false);
+    };
+
+    api.deleteZone = async (zoneId) => {
+        return await fetchAPI(`/api/zone/${zoneId}`, null, "DELETE", false);
+    };
+
+    api.getAllZoneAssignments = async () => {
+        return await fetchAPI('/api/zone/assignments');
+    };
+
+    api.assignToZone = async (assignmentData) => {
+        return await fetchAPI('/api/zone/assign', assignmentData, "POST", false);
+    };
+
+    api.removeZoneAssignment = async (zoneId, itemId, assignmentType) => {
+        const type = assignmentType === 'Ride' ? 'ride' : 'store';
+        return await fetchAPI(`/api/zone/assign/${type}/${zoneId}/${itemId}`, null, "DELETE", false);
+    };
+
+    api.getZoneDetails = async () => {
+        return await fetchAPI('/api/zone/details');
     };
 
 } catch (e) {

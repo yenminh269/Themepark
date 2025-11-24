@@ -137,13 +137,14 @@ const AdminDashboard = () => {
   if(loading) return <Loading />
 
   return (
-    <Box pt={{ base: '20px', md: '40px' }}>
+    <Box>
       {/* Error Message */}
       {error && (
         <Box bg="red.100" color="red.700" p="4" borderRadius="md" mb="20px">
           {error}
         </Box>
       )}
+      <h2 className="text-2xl font-bold mb-4 !text-[#4B5945]" >Dashboard</h2>
       {/* Charts Row */}
       <SimpleGrid columns={{ base: 1, md: 2 }} gap="20px" mb="20px">
         <ChartCard title="Weekly Revenue">

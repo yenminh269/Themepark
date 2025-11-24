@@ -1,18 +1,23 @@
-import { Box, SimpleGrid, Card, CardBody, CardFooter, Image, Text, Button, HStack, useDisclosure, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, useToast } from '@chakra-ui/react';
+import { Box, SimpleGrid, Card, CardBody, CardFooter, Image, Text, Button, HStack, useDisclosure, AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader, AlertDialogContent, AlertDialogOverlay, useToast, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react';
 import { DeleteIcon, EditIcon } from '@chakra-ui/icons';
 import { api, getImageUrl } from '../../../../services/api';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Loading from '../loading/Loading';
+import { PiShoppingBagOpen } from "react-icons/pi";
 
 function StoreLists() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] =  useState(true);
   const [stores, setStores] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editedData, setEditedData] = useState({});
   const [photoFile, setPhotoFile] = useState(null);
+  const [viewingStore, setViewingStore] = useState(null);
+  const [storeInventory, setStoreInventory] = useState([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isInventoryOpen, onOpen: onInventoryOpen, onClose: onInventoryClose } = useDisclosure();
   const cancelRef = useRef();
   const toast = useToast();
 
@@ -180,10 +185,9 @@ function StoreLists() {
         isClosable: true,
       });
     } catch (err) {
-      console.error('Failed to delete store:', err);
       toast({
         title: 'Error',
-        description: 'Failed to delete store.',
+        description: err.message,
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -192,6 +196,34 @@ function StoreLists() {
       setLoading(false);
       setDeleteTarget(null);
     }
+  };
+
+  const handleViewItems = async (store) => {
+    try {
+      setInventoryLoading(true);
+      setViewingStore(store);
+      onInventoryOpen();
+      const inventory = await api.getStoreInventory(store.store_id);
+      setStoreInventory(inventory);
+    } catch (err) {
+      console.error('Failed to load inventory:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to load store inventory.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      onInventoryClose();
+    } finally {
+      setInventoryLoading(false);
+    }
+  };
+
+  const handleInventoryClose = () => {
+    onInventoryClose();
+    setViewingStore(null);
+    setStoreInventory([]);
   };
 
   if (loading) return <Loading isLoading={loading} />;
@@ -421,8 +453,18 @@ function StoreLists() {
                     </Button>
                   </>
                 ) : (
-                  // Edit/Delete buttons
+                  // Edit/Delete/View Items buttons
                   <>
+                    <Button
+                      flex={1}
+                      size="sm"
+                      leftIcon={<PiShoppingBagOpen className='mt-2' />}
+                      colorScheme="green"
+                      variant="outline"
+                      onClick={() => handleViewItems(store)}
+                    >
+                       Items
+                    </Button>
                     <Button
                       flex={1}
                       size="sm"
@@ -488,6 +530,53 @@ function StoreLists() {
           </AlertDialogContent>
         </AlertDialogOverlay>
       </AlertDialog>
+
+      {/* Store Inventory Modal */}
+      <Modal isOpen={isInventoryOpen} onClose={handleInventoryClose} size="xl" isCentered>
+        <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
+        <ModalContent mx={4}>
+          <ModalHeader color="#3A6F43" fontSize="xl" fontWeight="bold">
+            {viewingStore?.name} - Inventory
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {inventoryLoading ? (
+              <Box textAlign="center" py={10}>
+                <Text>Loading inventory...</Text>
+              </Box>
+            ) : storeInventory.length > 0 ? (
+              <Box overflowX="auto">
+                <Table variant="simple" size="sm">
+                  <Thead>
+                    <Tr>
+                      <Th>Item Name</Th>
+                      <Th>Category</Th>
+                      <Th isNumeric>Price</Th>
+                      <Th isNumeric>Stock</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {storeInventory.map((item, index) => (
+                      <Tr key={index}>
+                        <Td fontWeight="500">{item.item_name}</Td>
+                        <Td>{item.item_type}</Td>
+                        <Td isNumeric>${parseFloat(item.price).toFixed(2)}</Td>
+                        <Td isNumeric>{item.stock_quantity}</Td>
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
+            ) : (
+              <Box textAlign="center" py={10}>
+                <Text fontSize="md" color="gray.500">
+                  No items found in this store's inventory.
+                </Text>
+              </Box>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }

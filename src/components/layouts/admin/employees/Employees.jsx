@@ -25,8 +25,19 @@ function Employees() {
   const cancelRef = useRef();
   const toast = useToast();
 
-  const allEAttr = ['Emp_Id', 'First Name', 'Last Name', 'Gender', 'Email', 'Job Title', 'Phone', 'SSN', 'Hire Date', 'Terminate Date'];
-  const allColumnKeys = ['employee_id', 'first_name', 'last_name', 'gender', 'email', 'job_title', 'phone', 'ssn', 'hire_date', 'terminate_date'];
+  // For permanent delete confirmation
+  const { isOpen: isOpenPermanent, onOpen: onOpenPermanent, onClose: onClosePermanent } = useDisclosure();
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState(null);
+  const cancelPermanentRef = useRef();
+
+  // For reset password modal
+  const { isOpen: isOpenResetPassword, onOpen: onOpenResetPassword, onClose: onCloseResetPassword } = useDisclosure();
+  const [resetPasswordTarget, setResetPasswordTarget] = useState(null);
+  const [newTempPassword, setNewTempPassword] = useState(null);
+  const cancelResetPasswordRef = useRef();
+
+  const allEAttr = ['Emp_Id', 'First Name', 'Last Name', 'Gender', 'Email', 'Job Title', 'Phone', 'SSN', 'Salary', 'Hire Date', 'Terminate Date'];
+  const allColumnKeys = ['employee_id', 'first_name', 'last_name', 'gender', 'email', 'job_title', 'phone', 'ssn', 'salary', 'hire_date', 'terminate_date'];
 
   // Dynamic columns based on active/terminated filter
   const EAttr = useMemo(() => {
@@ -197,8 +208,8 @@ function Employees() {
       await api.deleteEmployee(deleteTarget.id);
       await fetchEmployees();
       toast({
-        title: 'Employee deleted',
-        description: `${deleteTarget.name} has been removed successfully.`,
+        title: 'Employee terminated',
+        description: `${deleteTarget.name} has been terminated successfully.`,
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -207,7 +218,100 @@ function Employees() {
     } catch (err) {
       toast({
         title: 'Error',
-        description: 'Failed to delete employee.',
+        description: 'Failed to terminate employee.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRevokeTermination = async (id, row) => {
+    try {
+      setLoading(true);
+      await api.revokeEmployeeTermination(id);
+      await fetchEmployees();
+      toast({
+        title: 'Termination revoked',
+        description: `${row[1]} ${row[2]} has been reinstated successfully.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to revoke termination.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePermanentDelete = (id, row) => {
+    setPermanentDeleteTarget({ id, name: `${row[1]} ${row[2]}` });
+    onOpenPermanent();
+  };
+
+  const confirmPermanentDelete = async () => {
+    if (!permanentDeleteTarget) return;
+    onClosePermanent();
+    const targetName = permanentDeleteTarget.name;
+    setPermanentDeleteTarget(null);
+    try {
+      setLoading(true);
+      await api.permanentDeleteEmployee(permanentDeleteTarget.id);
+      await fetchEmployees();
+      toast({
+        title: 'Employee deleted permanently',
+        description: `${targetName} has been permanently deleted.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to permanently delete employee.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (id, row) => {
+    try {
+      setLoading(true);
+      const result = await api.resetEmployeePassword(id);
+      setNewTempPassword(result.temporaryPassword);
+      setResetPasswordTarget({ id, name: `${row[1]} ${row[2]}`, email: row[4] });
+      onOpenResetPassword();
+
+      toast({
+        title: 'Password Reset',
+        description: `Password has been reset for ${row[1]} ${row[2]}`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to reset password.',
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -313,6 +417,20 @@ function Employees() {
         );
       }
 
+      if(key === 'salary'){
+        return (
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={editedData[key] || ''}
+            onChange={(e) => handleInputChange(key, e.target.value)}
+            className="border rounded  py-2 text-sm md:text-base"
+            style={{ width: '80px' }}
+          />
+        );
+      }
+
       return (
         <input
           type={key === 'email' ? 'email' : 'text'}
@@ -354,6 +472,13 @@ function Employees() {
           </span>
         );
       }
+
+      // Format salary as currency
+      if (key === 'salary') {
+        const salary = parseFloat(empObj[key]);
+        return !isNaN(salary) ? `$${salary.toFixed(2)}` : '$0.00';
+      }
+
       return empObj[key] ?? '';
     });
   });
@@ -370,7 +495,7 @@ function Employees() {
         className="border rounded px-3 py-1 w-full"
       />
 
-      <HStack justify="space-between" mt={4}>
+      <HStack justify="space-between" mt={4} mb={3}>
         {/* Toggle button for active/terminated filter */}
         <HStack spacing={2}>
           <Button
@@ -394,7 +519,7 @@ function Employees() {
             onClick={() => setShowActive(false)}
             variant="solid"
           >
-            Terminated ({emp.filter(e => e.terminate_date !== null && e.terminate_date !== '').length})
+            Terminated ({emp.filter(e => e.terminate_date !== null).length})
         </Button>
 
         </HStack>
@@ -426,6 +551,9 @@ function Employees() {
         onSave={editingId ? handleSave : null}
         onCancel={editingId ? handleCancel : null}
         editingId={editingId}
+        onRevoke={!showActive ? handleRevokeTermination : null}
+        onPermanentDelete={!showActive ? handlePermanentDelete : null}
+        onResetPassword={!showActive ? handleResetPassword : null}
       />
 
       {addE && (
@@ -447,21 +575,132 @@ function Employees() {
           <AlertDialogContent mx={4}>
             <AlertDialogHeader fontSize="lg" fontWeight="bold" display="flex" alignItems="center" gap={2}>
               <WarningIcon color="red.500" boxSize={5} />
-              Delete Employee
+              Terminate Employee
             </AlertDialogHeader>
             <AlertDialogBody>
               <Text>
-                Are you sure you want to delete{' '}
+                Are you sure you want to terminate{' '}
                 <Text as="span" fontWeight="bold" color="red.600">
                   {deleteTarget?.name}
                 </Text>
                 ?
               </Text>
-              <Text mt={2} fontSize="sm" color="gray.600">This action cannot be undone.</Text>
+              <Text mt={2} fontSize="sm" color="gray.600">This will set their termination date to today.</Text>
             </AlertDialogBody>
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onClose} variant="ghost">Cancel</Button>
-              <Button colorScheme="red" onClick={confirmDelete} ml={3} _hover={{ bg: 'red.600' }}>Delete</Button>
+              <Button colorScheme="red" onClick={confirmDelete} ml={3} _hover={{ bg: 'red.600' }}>Terminate</Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+
+      <AlertDialog
+        isOpen={isOpenPermanent}
+        leastDestructiveRef={cancelPermanentRef}
+        onClose={onClosePermanent}
+        isCentered
+        motionPreset="slideInBottom"
+      >
+        <AlertDialogOverlay bg="blackAlpha.300" backdropFilter="blur(10px)">
+          <AlertDialogContent mx={4}>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold" display="flex" alignItems="center" gap={2}>
+              <WarningIcon color="red.500" boxSize={5} />
+              Delete Employee Permanently
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              <Text>
+                Are you sure you want to permanently delete{' '}
+                <Text as="span" fontWeight="bold" color="red.600">
+                  {permanentDeleteTarget?.name}
+                </Text>
+                ?
+              </Text>
+              <Text mt={2} fontSize="sm" color="red.600" fontWeight="semibold">
+                This action cannot be undone. All employee data will be permanently removed.
+              </Text>
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelPermanentRef} onClick={onClosePermanent} variant="ghost">Cancel</Button>
+              <Button colorScheme="red" onClick={confirmPermanentDelete} ml={3} _hover={{ bg: 'red.700' }}>
+                Delete Forever
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+
+      <AlertDialog
+        isOpen={isOpenResetPassword}
+        leastDestructiveRef={cancelResetPasswordRef}
+        onClose={() => {
+          onCloseResetPassword();
+          setResetPasswordTarget(null);
+          setNewTempPassword(null);
+        }}
+        isCentered
+        motionPreset="slideInBottom"
+      >
+        <AlertDialogOverlay bg="blackAlpha.300" backdropFilter="blur(10px)">
+          <AlertDialogContent mx={4}>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold" display="flex" alignItems="center" gap={2}>
+              🔑 Password Reset Successfully
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              <Text mb={3}>
+                The password for{' '}
+                <Text as="span" fontWeight="bold" color="blue.600">
+                  {resetPasswordTarget?.name}
+                </Text>
+                {' '}has been reset.
+              </Text>
+
+              <Box bg="orange.50" p={4} borderRadius="md" border="2px solid" borderColor="orange.300" mb={3}>
+                <Text fontSize="sm" fontWeight="bold" color="orange.800" mb={2}>
+                  ⚠️ Temporary Password (shown only once):
+                </Text>
+                <Text
+                  bg="white"
+                  p={3}
+                  borderRadius="md"
+                  fontFamily="monospace"
+                  fontSize="lg"
+                  fontWeight="bold"
+                  className='!text-black'
+                  border="1px solid"
+                  borderColor="orange.200"
+                  textAlign="center"
+                  userSelect="all"
+                >
+                  {newTempPassword}
+                </Text>
+                <Text fontSize="xs" color="orange.700" mt={2}>
+                  Click the password above to copy it. Share this with the employee securely.
+                </Text>
+              </Box>
+
+              <Box bg="blue.50" p={3} borderRadius="md" border="1px solid" borderColor="blue.200">
+                <Text fontSize="sm" color="blue.800">
+                  <strong>📧 Email:</strong> {resetPasswordTarget?.email || 'N/A'}
+                </Text>
+                <Text fontSize="sm" color="blue.800" mt={1}>
+                  <strong>Note: </strong> The employee will be required to change this password on their first login.
+                </Text>
+              </Box>
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button
+                ref={cancelResetPasswordRef}
+                onClick={() => {
+                  onCloseResetPassword();
+                  setResetPasswordTarget(null);
+                  setNewTempPassword(null);
+                }}
+                colorScheme="blue"
+                _hover={{ bg: 'blue.600' }}
+              >
+                Close
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialogOverlay>

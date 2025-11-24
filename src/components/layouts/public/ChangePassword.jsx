@@ -41,7 +41,7 @@ function ChangePassword() {
 
         try {
             // Get employee data from localStorage
-            const employeeData = JSON.parse(localStorage.getItem('employee'));
+            const employeeData = JSON.parse(localStorage.getItem('employee_info'));
 
             if (!employeeData || !employeeData.employee_id) {
                 toast.error('Session expired. Please log in again.');
@@ -49,22 +49,34 @@ function ChangePassword() {
                 return;
             }
 
-            // Call API to change password
-            await api.changeEmployeePassword({
-                employee_id: employeeData.employee_id,
-                new_password: newPassword
-            });
+            // Call API to change password (now uses token authentication)
+            const response = await api.changeEmployeePassword(newPassword);
 
-            toast.success('Password changed successfully! Please log in with your new password.');
+            // Update employee info in localStorage with new data
+            if (response.data) {
+                localStorage.setItem('employee_info', JSON.stringify(response.data));
+            }
 
-            // Clear localStorage and redirect to login
-            localStorage.removeItem('employee');
-            localStorage.removeItem('employee_info');
-            navigate('/login');
+            toast.success('Password changed successfully!');
+
+            // Redirect to appropriate dashboard based on job title
+            const jobTitle = response.data?.job_title || employeeData.job_title;
+
+            if (jobTitle === 'General Manager') {
+                navigate('/admin');
+            } else if (jobTitle === 'Store Manager') {
+                navigate('/manager');
+            } else if (jobTitle === 'Mechanical Employee') {
+                navigate('/maintenance');
+            } else if (jobTitle === 'Sales Employee') {
+                navigate('/sales');
+            } else {
+                navigate('/');
+            }
 
         } catch (error) {
             console.error('Change password error:', error);
-            toast.error(error.response?.data?.message || 'Failed to change password. Please try again.');
+            toast.error(error.message || 'Failed to change password. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -119,7 +131,7 @@ function ChangePassword() {
                             </div>
 
                             <div className="!text-center !text-sm !text-gray-500">
-                                After changing your password, you will be logged out and need to log in again with your new password.
+                                After changing your password, you will be redirected to your dashboard.
                             </div>
                         </div>
                     </Form>

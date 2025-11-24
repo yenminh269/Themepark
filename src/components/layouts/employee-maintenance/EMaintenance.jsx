@@ -3,6 +3,8 @@ import "./EMaintenance.css";
 import { api, SERVER_URL } from "../../../services/api";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@chakra-ui/react";
+import { RiLockPasswordFill } from "react-icons/ri";
+import { RiInformationFill } from "react-icons/ri";
 
 export default function EMaintenance() {
 const navigate = useNavigate();
@@ -14,6 +16,20 @@ const [searchQuery, setSearchQuery] = useState("");
 const [searchField, setSearchField] = useState("description");
 const [employee, setEmployee] = useState(null);
 const [showEmployeeInfo, setShowEmployeeInfo] = useState(false);
+
+// Password change state
+const [showPasswordTab, setShowPasswordTab] = useState(false);
+const [isChangingPassword, setIsChangingPassword] = useState(false);
+const [passwordData, setPasswordData] = useState({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+});
+const [showPasswords, setShowPasswords] = useState({
+  current: false,
+  new: false,
+  confirm: false
+});
 
 // Rain Out Management State
 const [rainOuts, setRainOuts] = useState([]);
@@ -43,7 +59,7 @@ const rowsPerPage = 6;
 
 // Load employee from localStorage
 useEffect(() => {
-  const storedEmployee = localStorage.getItem("employee");
+  const storedEmployee = localStorage.getItem("employee_info");
   if (storedEmployee) {
     const parsedEmployee = JSON.parse(storedEmployee);
     setEmployee(parsedEmployee);
@@ -54,8 +70,109 @@ useEffect(() => {
 }, [navigate]);
 
 const handleLogout = () => {
-  localStorage.removeItem("employee");
+  localStorage.removeItem("employee_info");
   navigate("/login");
+};
+
+// Toggle password visibility
+const togglePasswordVisibility = (field) => {
+  setShowPasswords(prev => ({
+    ...prev,
+    [field]: !prev[field]
+  }));
+};
+
+// Handle password change
+const handlePasswordChange = async (e) => {
+  e.preventDefault();
+
+  // Validation
+  if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+    toast({
+      title: 'Missing fields',
+      description: 'Please fill in all password fields',
+      status: 'warning',
+      duration: 3000,
+      isClosable: true,
+      position: 'top-right'
+    });
+    return;
+  }
+
+  if (passwordData.newPassword !== passwordData.confirmPassword) {
+    toast({
+      title: 'Password mismatch',
+      description: 'New password and confirmation do not match',
+      status: 'error',
+      duration: 3000,
+      isClosable: true,
+      position: 'top-right'
+    });
+    return;
+  }
+
+  if (passwordData.newPassword.length < 8) {
+    toast({
+      title: 'Weak password',
+      description: 'Password must be at least 8 characters long',
+      status: 'error',
+      duration: 3000,
+      isClosable: true,
+      position: 'top-right'
+    });
+    return;
+  }
+
+  if (passwordData.currentPassword === passwordData.newPassword) {
+    toast({
+      title: 'Same password',
+      description: 'New password must be different from current password',
+      status: 'error',
+      duration: 3000,
+      isClosable: true,
+      position: 'top-right'
+    });
+    return;
+  }
+
+  setIsChangingPassword(true);
+
+  try {
+    // Use the verified password change endpoint
+    await api.changeEmployeePasswordVerified(
+      passwordData.currentPassword,
+      passwordData.newPassword
+    );
+
+    toast({
+      title: 'Success!',
+      description: 'Password changed successfully',
+      status: 'success',
+      duration: 5000,
+      isClosable: true,
+      position: 'top-right'
+    });
+
+    // Clear form
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
+
+    toast({
+      title: 'Error',
+      description: error.message || 'Failed to change password',
+      status: 'error',
+      duration: 5000,
+      isClosable: true,
+      position: 'top-right'
+    });
+  } finally {
+    setIsChangingPassword(false);
+  }
 };
 
 // Fetch maintenance tasks for this specific employee
@@ -573,92 +690,296 @@ currentPage * rowsPerPage
               backgroundColor: 'white',
               borderRadius: '16px',
               padding: '18px',
-              maxWidth: '400px',
+              maxWidth: '500px',
               width: '100%',
               margin: '0 16px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              maxHeight: '90vh',
+              overflow: 'auto'
             }}>
-              <h2 style={{fontSize: '24px', fontWeight: 'bold', color: '#3e4b2b', marginBottom: '24px'}}>
-                Employee Information
+              <h2 style={{fontSize: '24px', fontWeight: 'bold', color: '#607245ff', marginBottom: '20px'}}>
+                My Profile
               </h2>
 
-              <div>
-                <div>
-                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                    Employee ID
-                  </label>
-                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                    {employee.employee_id}
-                  </p>
-                </div>
-
-                <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
-                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                    Name
-                  </label>
-                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                    {employee.first_name} {employee.last_name}
-                  </p>
-                </div>
-
-                <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
-                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                    Job Title
-                  </label>
-                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                    {employee.job_title}
-                  </p>
-                </div>
-
-                <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
-                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                    Email
-                  </label>
-                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                    {employee.email || 'Not provided'}
-                  </p>
-                </div>
-
-                <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
-                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                    Phone
-                  </label>
-                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                    {employee.phone || 'Not provided'}
-                  </p>
-                </div>
-
-                <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
-                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                    Gender
-                  </label>
-                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                    {employee.gender || 'Not provided'}
-                  </p>
-                </div>
-
-                <div style={{marginBottom: '15px'}}>
-                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                    Hire Date
-                  </label>
-                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                    {employee.hire_date
-                      ? new Date(employee.hire_date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })
-                      : 'Not provided'}
-                  </p>
-                </div>
+              {/* Tabs */}
+              <div style={{display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e0e0e0'}}>
+                <button
+                  onClick={() => setShowPasswordTab(false)}
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    borderBottom: !showPasswordTab ? '3px solid #3e4b2b' : '3px solid transparent',
+                    color: !showPasswordTab ? '#3e4b2b' : '#666',
+                    fontWeight: !showPasswordTab ? 'bold' : 'normal',
+                    cursor: 'pointer',
+                    fontSize: '15px', display: 'flex', alignItems: 'center'
+                  }}
+                ><RiInformationFill className="!mr-2" /> Information
+                </button>
+                <button
+                  onClick={() => setShowPasswordTab(true)}
+                  style={{
+                    padding: '10px 20px',
+                    border: 'none',
+                    borderBottom: showPasswordTab ? '3px solid #3e4b2b' : '3px solid transparent',
+                    color: showPasswordTab ? '#3e4b2b' : '#666',
+                    fontWeight: showPasswordTab ? 'bold' : 'normal',
+                    cursor: 'pointer',
+                    fontSize: '15px', display: 'flex', alignItems: 'center'
+                  }}
+                ><RiLockPasswordFill className="!mr-2" />Change Password
+                </button>
               </div>
 
+              {/* Information Tab */}
+              {!showPasswordTab && (
+                <div>
+                  <div style={{marginBottom: '15px'}}>
+                    <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                      Employee ID
+                    </label>
+                    <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                      {employee.employee_id}
+                    </p>
+                  </div>
+
+                  <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
+                    <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                      Name
+                    </label>
+                    <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                      {employee.first_name} {employee.last_name}
+                    </p>
+                  </div>
+
+                  <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
+                    <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                      Job Title
+                    </label>
+                    <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                      {employee.job_title}
+                    </p>
+                  </div>
+
+                  <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
+                    <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                      Email
+                    </label>
+                    <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                      {employee.email || 'Not provided'}
+                    </p>
+                  </div>
+
+                  <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
+                    <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                      Phone
+                    </label>
+                    <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                      {employee.phone || 'Not provided'}
+                    </p>
+                  </div>
+
+                  <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
+                    <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                      Gender
+                    </label>
+                    <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                      {employee.gender || 'Not provided'}
+                    </p>
+                  </div>
+
+                  <div style={{marginBottom: '15px'}}>
+                    <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                      Hire Date
+                    </label>
+                    <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                      {employee.hire_date
+                        ? new Date(employee.hire_date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
+                        : 'Not provided'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Password Change Tab */}
+              {showPasswordTab && (
+                <form onSubmit={handlePasswordChange}>
+                  <div style={{marginBottom: '16px'}}>
+                    <label style={{display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#555', marginBottom: '8px'}}>
+                      Current Password
+                    </label>
+                    <div style={{position: 'relative'}}>
+                      <input
+                        type={showPasswords.current ? 'text' : 'password'}
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                        placeholder="Enter current password"
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          paddingRight: '45px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('current')}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '18px'
+                        }}
+                      >
+                        {showPasswords.current ? '👁️' : '👁️‍🗨️'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{marginBottom: '16px'}}>
+                    <label style={{display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#555', marginBottom: '8px'}}>
+                      New Password
+                    </label>
+                    <div style={{position: 'relative'}}>
+                      <input
+                        type={showPasswords.new ? 'text' : 'password'}
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                        placeholder="Enter new password (min 8 characters)"
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          paddingRight: '45px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('new')}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '18px'
+                        }}
+                      >
+                        {showPasswords.new ? '👁️' : '👁️‍🗨️'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{marginBottom: '16px'}}>
+                    <label style={{display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#555', marginBottom: '8px'}}>
+                      Confirm New Password
+                    </label>
+                    <div style={{position: 'relative'}}>
+                      <input
+                        type={showPasswords.confirm ? 'text' : 'password'}
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        placeholder="Re-type new password"
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          paddingRight: '45px',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('confirm')}
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '18px'
+                        }}
+                      >
+                        {showPasswords.confirm ? '👁️' : '👁️‍🗨️'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    backgroundColor: '#e8f4f8',
+                    border: '1px solid #b8daeb',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    marginBottom: '20px'
+                  }}>
+                    <p style={{fontSize: '13px', color: '#31708f', margin: 0}}>
+                      <strong>Password requirements:</strong><br />
+                      • Minimum 8 characters<br />
+                      • Must be different from current password
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      backgroundColor: isChangingPassword ? '#aaa' : '#3e4b2b',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 'bold',
+                      cursor: isChangingPassword ? 'not-allowed' : 'pointer',
+                      fontSize: '16px',
+                      marginBottom: '10px'
+                    }}
+                  >
+                    {isChangingPassword ? 'Changing Password...' : 'Change Password'}
+                  </button>
+                </form>
+              )}
+
               <button
-                onClick={() => setShowEmployeeInfo(false)}
+                onClick={() => {
+                  setShowEmployeeInfo(false);
+                  setShowPasswordTab(false);
+                  setPasswordData({
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                  });
+                }}
                 style={{
                   width: '100%',
                   padding: '12px',
-                  backgroundColor: '#3e4b2b',
+                  backgroundColor: '#6c757d',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',

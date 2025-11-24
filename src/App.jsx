@@ -21,7 +21,7 @@ import UserInfoPage from './components/layouts/customer/UserInfoPage.jsx';
 import StoresPage from './components/layouts/customer/StoresPage.jsx';
 import StorePage from './components/layouts/customer/StorePage.jsx';
 import ParkHoursPage from './components/layouts/public/ParkHoursPage.jsx';
-import ParkMapPage from './components/layouts/public/ParkMapPage.jsx';
+import ParkMapPage from './components/layouts/customer/ParkMapPage.jsx';
 import ParkingPage from './components/layouts/public/ParkingPage.jsx';
 import SafetyPage from './components/layouts/public/SafetyPage.jsx';
 import FaqPage from './components/layouts/public/FaqPage.jsx';
@@ -52,7 +52,7 @@ function AppContent() {
     }
 
     // Check if user is logged in
-    const userDataStr = localStorage.getItem('themepark_user');
+    const userDataStr = localStorage.getItem('customer_info');
     if (!userDataStr) {
       return; // Not logged in, skip check
     }
@@ -83,26 +83,22 @@ function AppContent() {
         {/* ===== PUBLIC ROUTES (No Authentication Required) ===== */}
         <Route path="/" element={<HomePage />} />
         <Route path="/hours" element={<ParkHoursPage />} />
-        <Route path="/map" element={<ParkMapPage />} />
         <Route path="/parking" element={<ParkingPage />} />
         <Route path="/safety" element={<SafetyPage />} />
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/accessibility" element={<AccessibilityPage />} />
         <Route path="/groups" element={<GroupsPage />} />
+        <Route path="/stores" element={<StoresPage />} />
+        <Route path="/store/:storeId" element={<StorePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/logout" element={<Logout />} />
-        <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
 
         {/* ===== CUSTOMER ROUTES (Require Customer Authentication) ===== */}
-        {/* Store browsing (public) */}
-        <Route path="/stores" element={<StoresPage />} />
-        <Route path="/store/:storeId" element={<StorePage />} />
-
-        {/* Protected customer features */}
         <Route path="/tickets" element={<ProtectedRoute><TicketsPage /></ProtectedRoute>} />
-         <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
+        <Route path="/map" element={<ProtectedRoute><ParkMapPage /></ProtectedRoute>} />
+        <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
         <Route path="/confirmation" element={<ProtectedRoute><ConfirmationPage /></ProtectedRoute>} />
         <Route path="/userinfo" element={<ProtectedRoute><UserInfoPage /></ProtectedRoute>} />
@@ -110,27 +106,20 @@ function AppContent() {
         <Route path="/store-checkout" element={<Navigate to="/checkout" replace />} />
 
         {/* ===== EMPLOYEE ROUTES (Require Employee Authentication) ===== */}
+        <Route path="/change-password" element={<ProtectedRoute type="employee"><ChangePassword /></ProtectedRoute>} />
         <Route path="/sales" element={<ProtectedRoute type="employee" allowedRoles={['Sales Employee']}><EmployeeDashboard /></ProtectedRoute>} />
         <Route path="/maintenance" element={<ProtectedRoute type="employee" allowedRoles={['Mechanical Employee']}><EMaintenance /></ProtectedRoute>} />
-        <Route path="/manager" element={<ProtectedRoute type="employee" allowedRoles={['Store Manager', 'General Manager']}><ManagerPage /></ProtectedRoute>} />
-
-        {/* ===== General Manager ROUTES (Protected by AdminMain component internally) ===== */}
+        <Route path="/manager" element={<ProtectedRoute type="employee" allowedRoles={['Store Manager']}><ManagerPage /></ProtectedRoute>} />
         <Route path="/admin/*" element={<ProtectedRoute type="employee" allowedRoles={['General Manager']}><AdminMain /></ProtectedRoute>} />
 
         {/* ===== CATCH-ALL ===== */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      <ToastContainer
-            position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="colored"
+      <ToastContainer position="top-right"
+          autoClose={3000} hideProgressBar={false}
+          newestOnTop={false} closeOnClick
+          rtl={false} pauseOnFocusLoss
+          draggable pauseOnHover theme="colored"
           />
 </>
 );

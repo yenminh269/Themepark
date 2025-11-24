@@ -34,20 +34,17 @@ export default function PageFooter(){
                 <a href="/tickets" className=" hover:!text-white hover:!underline !transition-colors">
                     Buy Tickets
                  </a>
-                  <a href="/rides" className="hover:!text-white hover:!underline !transition-colors">
-                     Our Rides
+                  <a href="/stores" className="hover:!text-white hover:!underline !transition-colors">
+                     Our Stores
                   </a>
                   <a href="/schedule" className="hover:!text-white hover:!underline !transition-colors">
                      Events Calendar
                   </a>
-                  <a href="/dining" className=" hover:!text-white hover:!underline !transition-colors">
-                    Dining Options
+                   <a href="/parking" className=" hover:!text-white hover:!underline !transition-colors">
+                     Parking Information
                   </a>
                   <a href="/map" className="hover:!text-white hover:!underline !transition-colors">
-                    Park Map
-                  </a>
-                  <a href="/season-pass" className="hover:!text-white hover:!underline !transition-colors">
-                   Season Passes
+                    Velocity Valley Map
                   </a>
                 </div>
             </div>
@@ -61,11 +58,6 @@ export default function PageFooter(){
                   <a href="/hours" className="hover:!text-white hover:!underline !transition-colors">
                      Park Hours
                   </a>
-               
-                  <a href="/parking" className=" hover:!text-white hover:!underline !transition-colors">
-                     Parking Information
-                  </a>
-              
                   <a href="/accessibility" className=" hover:!text-white hover:!underline !transition-colors">
                      Accessibility
                   </a>

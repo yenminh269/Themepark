@@ -7,6 +7,7 @@ import Select from 'react-select';
 import CustomButton from '../../../button/CustomButton';
 import Loading from "../loading/Loading";
 import { api } from '../../../../services/api';
+import { CgCloseR } from "react-icons/cg";
 
 export default function AddE({onClose}){
     const genderOption = [
@@ -28,6 +29,7 @@ export default function AddE({onClose}){
     const [ephone, setPhone] = useState('');
     const[essn, setSSN] = useState('');
     const[hireDate, setHireDate] = useState('');
+    const[salary, setSalary] = useState('');
     const [loading, setLoading] = useState(false);
     const [showCredentials, setShowCredentials] = useState(false);
     const [newEmployeeCredentials, setNewEmployeeCredentials] = useState(null);
@@ -35,8 +37,14 @@ export default function AddE({onClose}){
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!firstName || !lastName || !jobTitle || !egender || !ephone || !essn || !hireDate) {
+        if (!firstName || !lastName || !jobTitle || !egender || !ephone || !essn || !hireDate || !salary) {
             alert("Please fill out all fields to hire a new employee!");
+            return;
+        }
+
+        const parsedSalary = parseFloat(salary);
+        if (isNaN(parsedSalary) || parsedSalary < 0) {
+            alert("Please enter a valid salary amount!");
             return;
         }
 
@@ -48,6 +56,7 @@ export default function AddE({onClose}){
             phone: ephone,
             ssn: essn,
             hire_date: hireDate,
+            salary: parsedSalary,
         };
 
         try {
@@ -74,8 +83,11 @@ export default function AddE({onClose}){
             setGender("");
             setSSN("");
             setHireDate("");
+            setSalary("");
         } catch (err) {
-            console.error("Failed to submit the new employee. Please make sure the backend server is running.");
+            console.error("Failed to submit the new employee:", err);
+            const errorMessage = err.response?.data?.error || err.message || "Please make sure the backend server is running.";
+            alert(`Failed to add employee: ${errorMessage}`);
         } finally {
             setLoading(false);
         }
@@ -85,10 +97,10 @@ export default function AddE({onClose}){
     
     return(
     <div className="mt-2 flex justify-center items-start w-full">
-        <Form onSubmit={handleSubmit}  style={{ boxShadow: '-8px -8px 12px rgba(0,0,0,0.25)' }}
+        <Form onSubmit={handleSubmit}  style={{ boxShadow: '-2px -1px 8px 5px  rgba(0,0,0,0.25)' }}
             className="flex flex-col p-4 rounded  w-full max-w-6xl">
             <div className="flex justify-end items-center mb-2">
-            <button type="button" onClick={() => onClose(false)}>X</button>
+            <button type="button" onClick={() => onClose(false)}><CgCloseR className="!text-lg"/></button>
             </div>
 
             <div className="flex gap-4 mb-3">
@@ -171,8 +183,22 @@ export default function AddE({onClose}){
             </div>
 
             <div className="flex-1">
+                <Input
+                required
+                type="number"
+                step="0.01"
+                min="0"
+                label="Salary"
+                className="custom-input"
+                labelClassName="custom-form-label"
+                value={salary}
+                onChange={(e) => setSalary(e.target.value)}
+                />
+            </div>
+
+            <div className="flex-1">
                 <FormControl isRequired>
-                <FormLabel color="#4B5945" fontWeight="500">Gender</FormLabel>
+                <FormLabel className="!mb-1"color="#4B5945" fontWeight="500">Gender</FormLabel>
                 <Select
                     options={genderOption}
                     placeholder="Select gender"
