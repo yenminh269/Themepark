@@ -145,8 +145,8 @@ The application implements a role-based access control system with distinct user
 
 ### 3) Semantic Constraints (Database Triggers)
 
-#### Trigger 1: Automatic Ride Expansion (15% Business Rule)
-**Purpose:** Automatically trigger ride expansion when sales quota is reached
+#### Trigger 1: Ride Expansion (15% Business Rule)
+**Purpose:** Trigger ride expansion when sales quota is reached
 
 **Event:** After insert on `ride_order_detail` table
 
@@ -333,9 +333,8 @@ Create a `.env` file in the `server` directory:
 
 ### Database Setup
 
-1. **Import the SQL Schema:**
+1. **Import the SQL Schema and Data:**
    - Open MySQL Workbench
-   - Create a new database: `CREATE DATABASE velocity_valley;`
    - Import the SQL dump file (provided separately)
    - Ensure all tables, triggers, and stored procedures are created
 
@@ -417,14 +416,12 @@ Themepark-Management-System/
 - Password reset via email with temporary passwords
 
 ### Email Notifications
-- Automated email confirmation for ticket purchases
-- Automated email confirmation for merchandise orders
+- Automated email confirmation for ticket purchases and merchandise orders
 - Password reset emails with temporary passwords
 - SendGrid integration for reliable email delivery
 
 ### Real-time Updates
 - Live inventory tracking across multiple stores
-- Automatic ride status updates based on weather
 - Real-time maintenance task assignment and completion
 - Dynamic ride expansion based on sales performance
 
@@ -466,12 +463,12 @@ Themepark-Management-System/
 ### Backend Won't Start
 - Verify MySQL server is running
 - Check database credentials in `server/.env`
-- Ensure database `velocity_valley` exists
+- Ensure database `themepark` exists
 - Check for port conflicts on port 3001
 
 ### Frontend Won't Connect to Backend
 - Verify backend is running on `http://localhost:3001`
-- Check `VITE_API_URL` in root `.env` file
+- Ensure CORS is configured correctly in `server/.env`
 - Clear browser cache and reload
 
 ### Database Connection Errors
@@ -483,6 +480,7 @@ Themepark-Management-System/
 - Verify SendGrid API key is valid
 - Check `SENDGRID_FROM_EMAIL` is verified in SendGrid
 - Review SendGrid account limits and quotas
+- Check `Spam` folder in your email inbox
 
 ---
 
