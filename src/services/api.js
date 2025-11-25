@@ -157,33 +157,6 @@ export const api = {
 
         return await response.json(); // Returns full response including temporaryPassword
     },
-    changeEmployeePassword: async (newPassword) => {
-        const token = getCustomerToken(); // Uses same token storage for employees
-        if (!token) throw new Error('No authentication token');
-
-        const res = await fetch(`${SERVER_URL}/employees/change-password`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ new_password: newPassword }),
-        });
-
-        if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            throw new Error(body.message || 'Failed to change password');
-        }
-
-        const body = await res.json();
-
-        // Update token with new employee data
-        if (body.token) {
-            setCustomerToken(body.token);
-        }
-
-        return body;
-    },
     changeEmployeePasswordVerified: async (currentPassword, newPassword) => {
         const token = getCustomerToken(); // Uses same token storage for employees
         if (!token) throw new Error('No authentication token');
@@ -647,6 +620,16 @@ try {
 
     api.getZoneDetails = async () => {
         return await fetchAPI('/api/zone/details');
+    };
+
+    // ===== PASSWORD RESET =====
+    api.forgotPassword = async (email) => {
+        return await fetchAPI('/api/password/forgot-password', { email }, "POST", false);
+    };
+
+    // ===== EMPLOYEE SCHEDULE =====
+    api.getEmployeeSchedule = async (employeeId) => {
+        return await fetchAPI(`/api/employee/${employeeId}/schedule`);
     };
 
 } catch (e) {

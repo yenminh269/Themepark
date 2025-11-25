@@ -21,6 +21,7 @@ function ChangePassword() {
             return;
         }
 
+        const currentPassword = form.elements.currentPassword.value;
         const newPassword = form.elements.newPassword.value;
         const confirmPassword = form.elements.confirmPassword.value;
 
@@ -33,6 +34,12 @@ function ChangePassword() {
         // Check password strength (at least 8 characters)
         if (newPassword.length < 8) {
             toast.error('Password must be at least 8 characters long!');
+            return;
+        }
+
+        // Check if new password is same as current
+        if (currentPassword === newPassword) {
+            toast.error('New password must be different from current password!');
             return;
         }
 
@@ -49,8 +56,8 @@ function ChangePassword() {
                 return;
             }
 
-            // Call API to change password (now uses token authentication)
-            const response = await api.changeEmployeePassword(newPassword);
+            // Call API to change password with current password verification
+            const response = await api.changeEmployeePasswordVerified(currentPassword, newPassword);
 
             // Update employee info in localStorage with new data
             if (response.data) {
@@ -89,12 +96,26 @@ function ChangePassword() {
                     <div className="!mb-8">
                         <h1 className="!text-3xl !font-black !text-[#176B87] !mb-4">🔒 Change Password</h1>
                         <p className="!text-gray-600">
-                            This is your first login. Please set a new password to continue.
+                            This is your first login. Please enter your temporary password and set a new password to continue.
                         </p>
                     </div>
 
                     <Form noValidate validated={validated} onSubmit={handleSubmit}>
                         <div className='!flex !flex-col !gap-6'>
+                            <div>
+                                <InputLogin
+                                    size="15"
+                                    type="password"
+                                    label="Current Password"
+                                    feedback="Please enter your current password."
+                                    name="currentPassword"
+                                    required
+                                />
+                                <small className="!text-gray-500 !text-xs">
+                                    Enter the temporary password provided to you
+                                </small>
+                            </div>
+
                             <div>
                                 <InputLogin
                                     size="15"
@@ -113,20 +134,28 @@ function ChangePassword() {
                                 <InputLogin
                                     size="15"
                                     type="password"
-                                    label="Confirm Password"
+                                    label="Confirm New Password"
                                     feedback="Please confirm your password."
                                     name="confirmPassword"
                                     minLength={8}
                                 />
                             </div>
 
-                            <div className="!pt-2">
+                            <div className="!pt-2 !flex !flex-col !gap-3">
                                 <button
                                     type="submit"
                                     disabled={loading}
                                     className="!w-full !py-4 !bg-gradient-to-r !from-[#176B87] !to-[#86B6F6] !text-white !text-lg !font-bold !rounded-xl hover:!shadow-2xl hover:!scale-[1.02] !transition-all disabled:!opacity-50 disabled:!cursor-not-allowed !border-none"
                                 >
                                     {loading ? '🔄 Changing Password...' : '🔒 Change Password'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/login')}
+                                    disabled={loading}
+                                    className="!w-full !py-4 !bg-gray-500 !text-white !text-lg !font-bold !rounded-xl hover:!bg-gray-600 hover:!shadow-xl hover:!scale-[1.02] !transition-all disabled:!opacity-50 disabled:!cursor-not-allowed !border-none"
+                                >
+                                    Cancel
                                 </button>
                             </div>
 

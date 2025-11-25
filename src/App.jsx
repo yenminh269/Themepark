@@ -10,6 +10,7 @@ import SignUp from './components/layouts/public/Signup.jsx';
 import Login from './components/layouts/public/Login.jsx';
 import Logout from './components/layouts/public/Logout.jsx';
 import ChangePassword from './components/layouts/public/ChangePassword.jsx';
+import ForgetPassword from './components/layouts/public/ForgetPassword.jsx';
 import CompleteProfile from './components/layouts/public/CompleteProfile.jsx';
 import AdminMain from './components/layouts/admin/AdminMain.jsx';
 import EMaintenance from './components/layouts/employee-maintenance/EMaintenance.jsx';
@@ -93,6 +94,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/logout" element={<Logout />} />
+        <Route path="/forgot-password" element={<ForgetPassword />} />
         <Route path="/complete-profile" element={<CompleteProfile />} />
 
         {/* ===== CUSTOMER ROUTES (Require Customer Authentication) ===== */}

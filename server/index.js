@@ -17,6 +17,7 @@ import adminRoutes from './routes/admin.routes.js';
 import managerRoutes from './routes/manager.routes.js';
 import reportsRoutes from './routes/reports.routes.js';
 import zoneRoutes from './routes/zone.routes.js';
+import passwordRoutes from './routes/password.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,6 +56,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // serve u
 
 // ===== Mount Route Modules =====
 app.use('/api/customer', customerRoutes);
+app.use('/api/employee', employeeRoutes);
 app.use('/employee', employeeRoutes);
 app.use('/employees', employeeRoutes);
 app.use('/ride', rideRoutes);
@@ -72,6 +74,7 @@ app.use('/admin', adminRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/zone', zoneRoutes);
+app.use('/api/password', passwordRoutes);
 
 // ===== Health Check Endpoint =====
 app.get('/', (_req, res) => {

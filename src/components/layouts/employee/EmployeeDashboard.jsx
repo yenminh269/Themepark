@@ -1,15 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../services/api';
+import { useToast } from '@chakra-ui/react';
 import './EmployeeDashboard.css';
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [employeeInfo, setEmployeeInfo] = useState(null);
   const [showEmployeeInfo, setShowEmployeeInfo] = useState(false);
-  const [assignedStores, setAssignedStores] = useState([]);
-  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Password change state
+  const [showPasswordTab, setShowPasswordTab] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
 
   useEffect(() => {
     const loadEmployeeData = async () => {
@@ -20,37 +35,17 @@ export default function EmployeeDashboard() {
           const parsed = JSON.parse(employeeData);
           setEmployeeInfo(parsed);
 
-          // Fetch assigned stores from the database
-          let fetchedStores = [];
+          // Fetch employee schedule from employee_store_job table
           try {
-            console.log('=== DEBUG: Fetching stores for employee ===');
-            console.log('Employee ID:', parsed.employee_id);
-            console.log('API endpoint:', `/employee/${parsed.employee_id}/stores`);
-
-            const storesData = await api.getEmployeeStores(parsed.employee_id);
-
-            console.log('=== DEBUG: API Response ===');
-            console.log('Raw response:', storesData);
-            console.log('Is array?', Array.isArray(storesData));
-            console.log('Length:', storesData?.length);
-            console.log('First item:', storesData?.[0]);
-
-            fetchedStores = storesData || [];
-            setAssignedStores(fetchedStores);
-
-            console.log('=== DEBUG: State updated ===');
-            console.log('fetchedStores:', fetchedStores);
+            const scheduleData = await api.getEmployeeSchedule(parsed.employee_id);
+            console.log('Schedule data received:', scheduleData);
+            console.log('Is array?', Array.isArray(scheduleData));
+            console.log('Length:', scheduleData?.length);
+            setSchedule(scheduleData || []);
           } catch (error) {
-            console.error('=== ERROR: Failed to fetch employee stores ===');
-            console.error('Error:', error);
-            console.error('Error message:', error.message);
-            setAssignedStores([]);
+            console.error('Failed to fetch employee schedule:', error);
+            setSchedule([]);
           }
-
-          // Get recent transactions for assigned stores (still mock for now)
-          // TODO: Replace with real API call when store orders endpoint is ready
-          const mockTransactions = getMockTransactionsForStores(fetchedStores);
-          setRecentTransactions(mockTransactions);
 
         } catch (error) {
           console.error('Error parsing employee data:', error);
@@ -65,18 +60,104 @@ export default function EmployeeDashboard() {
     loadEmployeeData();
   }, [navigate]);
 
-  // Mock data function for transactions - replace with real API call later
-  const getMockTransactionsForStores = (stores) => {
-    if (stores.length === 0) return [];
-    return stores.flatMap(store =>
-      Array.from({ length: 3 }, (_, i) => ({
-        id: `${store.store_id}-${i}`,
-        store_name: store.name,
-        time: new Date(Date.now() - Math.random() * 8 * 60 * 60 * 1000).toLocaleTimeString(),
-        amount: (Math.random() * 50 + 10).toFixed(2),
-        items: Math.floor(Math.random() * 5) + 1
-      }))
-    ).sort((a, b) => new Date('2000-01-01 ' + b.time) - new Date('2000-01-01 ' + a.time));
+  // Toggle password visibility
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  // Handle password change
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast({
+        title: 'Missing fields',
+        description: 'Please fill in all password fields',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+        position: 'top-right'
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: 'Password mismatch',
+        description: 'New password and confirmation do not match',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top-right'
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      toast({
+        title: 'Weak password',
+        description: 'Password must be at least 8 characters long',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top-right'
+      });
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      toast({
+        title: 'Same password',
+        description: 'New password must be different from current password',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top-right'
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      await api.changeEmployeePasswordVerified(
+        passwordData.currentPassword,
+        passwordData.newPassword
+      );
+
+      toast({
+        title: 'Success!',
+        description: 'Password changed successfully',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+        position: 'top-right'
+      });
+
+      // Clear form
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      console.error('Error changing password:', error);
+
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to change password',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top-right'
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleLogout = () => {
@@ -118,6 +199,7 @@ export default function EmployeeDashboard() {
                 fontWeight: 'bold',
                 cursor: 'pointer',
                 fontSize: '14px',
+                marginRight: '10px',
                 transition: 'background-color 0.2s'
               }}
               onMouseOver={(e) => e.target.style.backgroundColor = '#6d8047'}
@@ -128,127 +210,64 @@ export default function EmployeeDashboard() {
             Logout
             </button>
           </div>
-          
+
         </div>
       </header>
 
       {/* Main Content */}
       <main className="dashboard-content">
         <div className="dashboard-grid">
-          {/* Assigned Stores */}
-          <div className="dashboard-card">
-            <h2>🏪 My Shifts</h2>
-            <div className="stores-list">
-              {assignedStores.length === 0 ? (
-                <p className="no-stores-message">No shifts scheduled yet.</p>
-              ) : (
-                assignedStores.map((shift, index) => (
-                  <div key={`${shift.store_id}-${shift.work_date}-${index}`} className="store-item">
-                    <div className="store-info">
-                      <h3>{shift.name}</h3>
-                      <span className="store-type">{shift.type}</span>
-                      <span className={`store-status status-${shift.status}`}>
-                        {shift.status}
-                      </span>
-                    </div>
-                    <div className="shift-details">
-                      <div className="shift-info-row">
-                        <span className="shift-label">📅 Date:</span>
-                        <span className="shift-value">
-                          {shift.work_date
-                            ? new Date(shift.work_date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })
-                            : 'Not set'}
-                        </span>
-                      </div>
-                      <div className="shift-info-row">
-                        <span className="shift-label">⏰ Shift:</span>
-                        <span className="shift-value">
-                          {shift.shift_start && shift.shift_end
-                            ? `${shift.shift_start.slice(0, 5)} - ${shift.shift_end.slice(0, 5)}`
-                            : 'Not set'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Today's Activity */}
-          <div className="dashboard-card">
-            <h2>📊 Today's Activity</h2>
-            <div className="activity-stats">
-              <div className="stat-item">
-                <span className="stat-number">
-                  {recentTransactions.filter(t =>
-                    new Date(t.time).toDateString() === new Date().toDateString()
-                  ).length}
-                </span>
-                <span className="stat-label">Transactions</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">
-                  ${recentTransactions
-                    .filter(t => new Date(t.time).toDateString() === new Date().toDateString())
-                    .reduce((sum, t) => sum + parseFloat(t.amount), 0)
-                    .toFixed(2)}
-                </span>
-                <span className="stat-label">Revenue</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">
-                  {recentTransactions
-                    .filter(t => new Date(t.time).toDateString() === new Date().toDateString())
-                    .reduce((sum, t) => sum + t.items, 0)}
-                </span>
-                <span className="stat-label">Items Sold</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Recent Transactions */}
+          {/* My Schedule */}
           <div className="dashboard-card full-width">
-            <h2>🛒 Recent Transactions</h2>
-            <div className="transactions-list">
-              {recentTransactions.slice(0, 10).map(transaction => (
-                <div key={transaction.id} className="transaction-item">
-                  <div className="transaction-info">
-                    <span className="store-name">{transaction.store_name}</span>
-                    <span className="transaction-time">{transaction.time}</span>
-                  </div>
-                  <div className="transaction-details">
-                    <span className="items-count">{transaction.items} items</span>
-                    <span className="amount">${transaction.amount}</span>
-                  </div>
+            <h2>📅 My Work Schedule</h2>
+            <div className="schedule-list">
+              {schedule.length === 0 ? (
+                <p className="no-schedule-message">No shifts scheduled yet.</p>
+              ) : (
+                <div className="schedule-table">
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>Store</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>Date</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>Shift Start</th>
+                        <th style={{ padding: '12px', textAlign: 'left' }}>Shift End</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schedule.map((shift, index) => (
+                        <tr key={`${shift.store_id}-${shift.work_date}-${index}`} style={{ borderBottom: '1px solid #eee' }}>
+                          <td style={{ padding: '12px' }}>
+                            <strong>{shift.store_name}</strong>
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            {shift.work_date
+                              ? new Date(shift.work_date).toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })
+                              : 'Not set'}
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            {shift.shift_start ? shift.shift_start.slice(0, 5) : 'Not set'}
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            {shift.shift_end ? shift.shift_end.slice(0, 5) : 'Not set'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="dashboard-card">
-            <h2>⚡ Quick Actions</h2>
-            <div className="quick-actions">
-              <button className="action-btn">
-                📱 Process Sale
-              </button>
-              <button className="action-btn">
-                📦 Check Inventory
-              </button>
-              <button className="action-btn">
-                🔔 Request Help
-              </button>
+              )}
             </div>
           </div>
         </div>
       </main>
 
-      {/* Employee Information Modal */}
+      {/* Employee Information Modal with Tabs */}
       {showEmployeeInfo && employeeInfo && (
         <div style={{
           position: 'fixed',
@@ -263,92 +282,298 @@ export default function EmployeeDashboard() {
             backgroundColor: 'white',
             borderRadius: '16px',
             padding: '18px',
-            maxWidth: '400px',
+            maxWidth: '500px',
             width: '100%',
             margin: '0 16px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            maxHeight: '90vh',
+            overflow: 'auto'
           }}>
-            <h2 style={{fontSize: '24px', fontWeight: 'bold', color: '#3e4b2b', marginBottom: '24px'}}>
-              Employee Information
+            <h2 style={{fontSize: '24px', fontWeight: 'bold', color: '#607245ff', marginBottom: '20px'}}>
+              My Profile
             </h2>
 
-            <div>
-              <div>
-                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                  Employee ID
-                </label>
-                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                  {employeeInfo.employee_id}
-                </p>
-              </div>
-
-              <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
-                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                  Name
-                </label>
-                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                  {employeeInfo.first_name} {employeeInfo.last_name}
-                </p>
-              </div>
-
-              <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
-                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                  Job Title
-                </label>
-                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                  {employeeInfo.job_title}
-                </p>
-              </div>
-
-              <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
-                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                  Email
-                </label>
-                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                  {employeeInfo.email || 'Not provided'}
-                </p>
-              </div>
-
-              <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
-                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                  Phone
-                </label>
-                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                  {employeeInfo.phone || 'Not provided'}
-                </p>
-              </div>
-
-              <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
-                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                  Gender
-                </label>
-                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                  {employeeInfo.gender || 'Not provided'}
-                </p>
-              </div>
-
-              <div style={{marginBottom: '15px'}}>
-                <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
-                  Hire Date
-                </label>
-                <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
-                  {employeeInfo.hire_date
-                    ? new Date(employeeInfo.hire_date).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
-                    : 'Not provided'}
-                </p>
-              </div>
+            {/* Tabs */}
+            <div style={{display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e0e0e0'}}>
+              <button
+                onClick={() => setShowPasswordTab(false)}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderBottom: !showPasswordTab ? '3px solid #3e4b2b' : '3px solid transparent',
+                  color: !showPasswordTab ? '#3e4b2b' : '#666',
+                  fontWeight: !showPasswordTab ? 'bold' : 'normal',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  backgroundColor: 'transparent'
+                }}
+              >Information
+              </button>
+              <button
+                onClick={() => setShowPasswordTab(true)}
+                style={{
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderBottom: showPasswordTab ? '3px solid #3e4b2b' : '3px solid transparent',
+                  color: showPasswordTab ? '#3e4b2b' : '#666',
+                  fontWeight: showPasswordTab ? 'bold' : 'normal',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  backgroundColor: 'transparent'
+                }}
+              >Change Password
+              </button>
             </div>
 
+            {/* Information Tab */}
+            {!showPasswordTab && (
+              <div>
+                <div style={{marginBottom: '15px'}}>
+                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                    Employee ID
+                  </label>
+                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                    {employeeInfo.employee_id}
+                  </p>
+                </div>
+
+                <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
+                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                    Name
+                  </label>
+                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                    {employeeInfo.first_name} {employeeInfo.last_name}
+                  </p>
+                </div>
+
+                <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
+                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                    Job Title
+                  </label>
+                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                    {employeeInfo.job_title}
+                  </p>
+                </div>
+
+                <div style={{marginBottom: '15px',  borderBottom: '1px solid #e0e0e0'}}>
+                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                    Email
+                  </label>
+                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                    {employeeInfo.email || 'Not provided'}
+                  </p>
+                </div>
+
+                <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
+                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                    Phone
+                  </label>
+                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                    {employeeInfo.phone || 'Not provided'}
+                  </p>
+                </div>
+
+                <div style={{marginBottom: '15px', borderBottom: '1px solid #e0e0e0'}}>
+                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                    Gender
+                  </label>
+                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                    {employeeInfo.gender || 'Not provided'}
+                  </p>
+                </div>
+
+                <div style={{marginBottom: '15px'}}>
+                  <label style={{display: 'block', fontSize: '12px', color: '#666', marginBottom: '5px'}}>
+                    Hire Date
+                  </label>
+                  <p style={{fontSize: '16px', color: '#333', margin: 0, fontWeight: '500'}}>
+                    {employeeInfo.hire_date
+                      ? new Date(employeeInfo.hire_date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      : 'Not provided'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Password Change Tab */}
+            {showPasswordTab && (
+              <form onSubmit={handlePasswordChange}>
+                <div style={{marginBottom: '16px'}}>
+                  <label style={{display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#555', marginBottom: '8px'}}>
+                    Current Password
+                  </label>
+                  <div style={{position: 'relative'}}>
+                    <input
+                      type={showPasswords.current ? 'text' : 'password'}
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                      placeholder="Enter current password"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        paddingRight: '45px',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('current')}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '18px'
+                      }}
+                    >
+                      {showPasswords.current ? '👁️' : '👁️‍🗨️'}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{marginBottom: '16px'}}>
+                  <label style={{display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#555', marginBottom: '8px'}}>
+                    New Password
+                  </label>
+                  <div style={{position: 'relative'}}>
+                    <input
+                      type={showPasswords.new ? 'text' : 'password'}
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                      placeholder="Enter new password (min 8 characters)"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        paddingRight: '45px',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('new')}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '18px'
+                      }}
+                    >
+                      {showPasswords.new ? '👁️' : '👁️‍🗨️'}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{marginBottom: '16px'}}>
+                  <label style={{display: 'block', fontSize: '14px', fontWeight: 'bold', color: '#555', marginBottom: '8px'}}>
+                    Confirm New Password
+                  </label>
+                  <div style={{position: 'relative'}}>
+                    <input
+                      type={showPasswords.confirm ? 'text' : 'password'}
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                      placeholder="Re-type new password"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        paddingRight: '45px',
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        fontSize: '16px',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('confirm')}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '18px'
+                      }}
+                    >
+                      {showPasswords.confirm ? '👁️' : '👁️‍🗨️'}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{
+                  backgroundColor: '#e8f4f8',
+                  border: '1px solid #b8daeb',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  marginBottom: '20px'
+                }}>
+                  <p style={{fontSize: '13px', color: '#31708f', margin: 0}}>
+                    <strong>Password requirements:</strong><br />
+                    • Minimum 8 characters<br />
+                    • Must be different from current password
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: isChangingPassword ? '#aaa' : '#3e4b2b',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    cursor: isChangingPassword ? 'not-allowed' : 'pointer',
+                    fontSize: '16px',
+                    marginBottom: '10px'
+                  }}
+                >
+                  {isChangingPassword ? 'Changing Password...' : 'Change Password'}
+                </button>
+              </form>
+            )}
+
             <button
-              onClick={() => setShowEmployeeInfo(false)}
+              onClick={() => {
+                setShowEmployeeInfo(false);
+                setShowPasswordTab(false);
+                setPasswordData({
+                  currentPassword: '',
+                  newPassword: '',
+                  confirmPassword: ''
+                });
+              }}
               style={{
                 width: '100%',
                 padding: '12px',
-                backgroundColor: '#3e4b2b',
+                backgroundColor: '#6c757d',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -362,6 +587,7 @@ export default function EmployeeDashboard() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

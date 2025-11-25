@@ -153,95 +153,6 @@ router.delete('/:id', async (req, res) => {
   });
 });
 
-// Change employee password (first-time login or password reset)
-router.post('/change-password', requireEmployeeAuth, async (req, res) => {
-  const { new_password } = req.body;
-  const employee_id = req.employee_id; // From JWT token
-
-  if (!new_password) {
-    return res.status(400).json({
-      message: 'New password is required'
-    });
-  }
-
-  // Validate password strength
-  if (new_password.length < 8) {
-    return res.status(400).json({
-      message: 'Password must be at least 8 characters long'
-    });
-  }
-
-  try {
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(new_password, 10);
-
-    // Update the password and set password_changed to TRUE
-    const sql = `UPDATE employee
-                 SET password = ?, password_changed = TRUE
-                 WHERE employee_id = ? AND deleted_at IS NULL AND terminate_date IS NULL`;
-
-    const result = await new Promise((resolve, reject) => {
-      db.query(sql, [hashedPassword, employee_id], (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-      });
-    });
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        message: 'Employee not found or already terminated'
-      });
-    }
-
-    // Fetch updated employee data to generate new token
-    const fetchSql = `SELECT employee_id, email, first_name, last_name, job_title, phone, hire_date, gender, password_changed
-                      FROM employee
-                      WHERE employee_id = ?`;
-
-    const employeeRows = await new Promise((resolve, reject) => {
-      db.query(fetchSql, [employee_id], (err, results) => {
-        if (err) reject(err);
-        else resolve(results);
-      });
-    });
-
-    if (employeeRows.length === 0) {
-      return res.status(404).json({
-        message: 'Employee not found'
-      });
-    }
-
-    const employee = employeeRows[0];
-
-    // Generate new token with updated employee data
-    const newToken = makeEmployeeToken(employee);
-
-    res.json({
-      message: 'Password changed successfully',
-      token: newToken,
-      data: {
-        employee_id: employee.employee_id,
-        email: employee.email,
-        first_name: employee.first_name,
-        last_name: employee.last_name,
-        job_title: employee.job_title,
-        phone: employee.phone,
-        hire_date: employee.hire_date,
-        gender: employee.gender,
-        password_changed: employee.password_changed,
-        is_employee: true
-      }
-    });
-
-  } catch (err) {
-    console.error('Error changing password:', err);
-    return res.status(500).json({
-      message: 'Error changing password',
-      error: err.message
-    });
-  }
-});
-
 // Change employee password with current password verification (for profile page)
 router.post('/change-password-verified', requireEmployeeAuth, async (req, res) => {
   const { current_password, new_password } = req.body;
@@ -392,6 +303,42 @@ router.delete('/:id/permanent', async (req, res) => {
       });
     }
     res.json({ message: "Employee deleted permanently", data: result });
+  });
+});
+
+// Get employee schedule from employee_store_job table
+router.get('/:id/schedule', async (req, res) => {
+  const employeeId = req.params.id;
+
+  const sql = `
+    SELECT
+      esj.employee_id,
+      esj.store_id,
+      s.name as store_name,
+      esj.work_date,
+      esj.shift_start,
+      esj.shift_end,
+      esj.created_at,
+      esj.updated_at
+    FROM employee_store_job esj
+    INNER JOIN store s ON esj.store_id = s.store_id
+    WHERE esj.employee_id = ?
+    ORDER BY esj.work_date DESC, esj.shift_start ASC
+  `;
+
+  db.query(sql, [employeeId], (err, results) => {
+    if (err) {
+      console.error('Error fetching employee schedule:', err);
+      return res.status(500).json({
+        message: 'Error fetching employee schedule',
+        error: err.message
+      });
+    }
+    res.json({
+      message: 'Schedule retrieved successfully',
+      data: results,
+      count: results.length
+    });
   });
 });
 
