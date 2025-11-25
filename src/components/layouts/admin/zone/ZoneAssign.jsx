@@ -374,7 +374,7 @@ function ZoneAssign() {
     <div className="flex flex-col gap-4">
       {/* Header Section */}
       <div className="flex justify-between items-center mb-2">
-        <h2 className="text-2xl font-bold !text-[#4B5945]">Zone Management</h2>
+        <h2 className="!text-xl sm:!text-4xl font-bold !text-[#4B5945]">Zone Management</h2>
         <div className="flex gap-2">
           {!showZoneForm && !showAssignForm && (
             <>

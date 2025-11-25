@@ -239,7 +239,7 @@ export default function Navbar() {
                 navigate("/");
                 setMobileMenuOpen(false);
               }}
-              className="!block !w-full !text-lg !text-[#B4D4FF] hover:underline !rounded-lg  "
+              className="!block !w-full !text-md !text-[#CBE1FF] hover:underline !rounded-lg  "
             > Home 
             </button>
             <button
@@ -247,15 +247,15 @@ export default function Navbar() {
             handleGetTickets();
             setMobileMenuOpen(false);
             }}
-            className="!block !w-full !text-lg  !text-[#B4D4FF] hover:underline !rounded-lg "
-            >Get Tickets
+            className="!block !w-full !text-md !text-[#CBE1FF] hover:underline !rounded-lg "
+            >Tickets
             </button>
             <button
               onClick={() => {
                 navigate("/stores");
                 setMobileMenuOpen(false);
               }}
-              className="!block !w-full !text-lg !text-[#B4D4FF] hover:underline !rounded-lg"
+              className=" !w-full !text-md !text-[#CBE1FF] hover:underline !rounded-lg"
             >Shop
             </button>
             <button
@@ -263,7 +263,7 @@ export default function Navbar() {
                 navigate("/schedule");
                 setMobileMenuOpen(false);
               }}
-              className="!block !w-full !text-lg !text-[#B4D4FF] hover:underline !rounded-lg"
+              className="!w-full !text-md !text-[#CBE1FF] hover:underline !rounded-lg"
             >Calendar
             </button>
             {user ? (
@@ -273,13 +273,13 @@ export default function Navbar() {
                     navigate("/userinfo");
                     setMobileMenuOpen(false);
                   }}
-                  className="!block !w-full !text-left !px-4 !py-2 !text-gray-450 hover:!bg-[#62B0E3] !rounded-lg !bg-transparent !border-none"
+                  className="!block !w-full !text-md  !py-2 !text-gray-450 hover:!bg-[#CBE1FF] !rounded-lg !border-none"
                 > My Account
                 </button>
                 
                 <button
                   onClick={handleSignOut}
-                  className="!pt-0 !block !w-full !text-left !px-4 !py-2 !text-red-700 hover:!bg-[#C99B9B] !rounded-lg !bg-transparent !border-none"
+                  className=" !block !w-full  !text-red-700 hover:!bg-[#C99B9B] !rounded-lg  !border-none"
                 > Sign Out
                 </button>
               </>
@@ -287,13 +287,13 @@ export default function Navbar() {
               <>
                 <Link
                   to="/login"
-                 className="!text-sm !mb-0 !py-3 !px-4 !mr-1 !rounded-[20px] !font-bold !text-[#EEF5FF] !border-2 !border-[#EEF5FF]"
+                 className="!text-sm !mb-0 !py-2 !px-3 !mr-1 !rounded-[20px] !font-bold !text-[#EEF5FF] !border-2 !border-[#EEF5FF]"
                onClick={() => setMobileMenuOpen(false)}
                 >Log In
                 </Link>
                 <Link
                   to="/signup"
-                  className="!text-sm !py-3  !px-4 !rounded-[20px] !font-bold !text-[#EEF5FF] !border-2 !border-[#EEF5FF]"
+                  className="!text-sm !py-2 !px-3  !rounded-[20px] !font-bold !text-[#EEF5FF] !border-2 !border-[#EEF5FF]"
                onClick={() => setMobileMenuOpen(false)}
                 >
                   Sign Up

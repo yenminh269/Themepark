@@ -19,7 +19,7 @@ export default function MobileSidebar({ isOpen, onClose }) {
       <Box position="fixed" top="0"
         left="0" w="100vw"  h="100vh"
         bg="blackAlpha.600"
-        zIndex="998"
+        zIndex="998" 
         onClick={onClose}
       />
 
@@ -29,7 +29,7 @@ export default function MobileSidebar({ isOpen, onClose }) {
         right="0" bg="#424c3dff"
         zIndex="999" maxH="calc(100vh - 72px)"
         overflowY="auto" boxShadow="lg"
-        borderBottomRadius="xl" p="20px"
+        borderBottomRadius="xl" p="25px" 
         animation="slideDown 0.3s ease"
       >
         <VStack align="stretch" gap="5px">

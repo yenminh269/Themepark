@@ -321,9 +321,9 @@ export default function UserInfoPage() {
       {/* Navbar is now global in App.jsx */}
 
       {/* Content */}
-      <main className="!flex !flex-1 !max-w-6xl !mx-auto !w-full !p-6 !gap-6 ">
+      <main className="!flex flex-col !flex-1 md:flex-row !max-w-6xl !mx-auto !w-full !p-6 !gap-6 ">
         {/* Left Sidebar Tabs */}
-        <aside className="!w-1/4 !bg-white/65 !rounded-xl !shadow !p-4 !flex !flex-col !gap-3">
+        <aside className="md:!w-1/3 !bg-white/65 !rounded-xl !shadow-lg !p-4 !flex md:flex-col !gap-3">
           <button
             onClick={() => setActiveTab("info")}
             className={`!py-2 !px-4 !rounded-md !font-semibold ${
