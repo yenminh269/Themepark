@@ -13,7 +13,7 @@ function CompleteProfile() {
     const navigate = useNavigate();
 
     // Get customer from localStorage
-    const customerData = localStorage.getItem('themepark_user');
+    const customerData = localStorage.getItem('customer_info');
     const customer = customerData ? JSON.parse(customerData) : null;
 
     // If no customer or profile is already complete, redirect
@@ -24,8 +24,9 @@ function CompleteProfile() {
 
     // Handle logout
     const handleLogout = () => {
-        localStorage.removeItem('themepark_user');
-        localStorage.removeItem('customer_token');
+        localStorage.removeItem('customer_info');
+        localStorage.removeItem('employee_info');
+        localStorage.removeItem('user_token');
         toast.info('You have been logged out');
         navigate('/login');
     };

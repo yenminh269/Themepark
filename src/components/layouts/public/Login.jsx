@@ -36,10 +36,10 @@ function Login(){
                 const customer = JSON.parse(decodeURIComponent(customerData));
 
                 // Store customer token
-                localStorage.setItem('customer_token', token);
+                localStorage.setItem('user_token', token);
 
                 // Store customer info in localStorage using the key AuthContext expects
-                localStorage.setItem('themepark_user', JSON.stringify(customer));
+                localStorage.setItem('customer_info', JSON.stringify(customer));
 
                 // Notify AuthContext (and other listeners) so UI updates immediately
                 try {
@@ -47,7 +47,6 @@ function Login(){
                 } catch {
                     // ignore if running in environments without CustomEvent
                 }
-
                 // Check if profile is incomplete (Google OAuth default values)
                 const isIncompleteProfile =
                     customer.phone === '0' ||

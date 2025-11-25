@@ -132,63 +132,79 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // does email already exist?
+    // Check if email already exists in customer table
     db.query(
       "SELECT customer_id FROM customer WHERE email = ?",
       [email],
-      async (err, rows) => {
+      async (err, customerRows) => {
         if (err) {
-          console.error("SIGNUP email check error:", err);
+          console.error("SIGNUP customer email check error:", err);
           return res.status(500).json({ error: "Database error" });
         }
 
-        if (rows.length > 0) {
+        if (customerRows.length > 0) {
           return res.status(409).json({ error: "Email already registered" });
         }
 
-        // hash password before insert
-        const hashed = await bcrypt.hash(password, 10);
-
-        const insertSql = `
-          INSERT INTO customer
-          (first_name, last_name, gender, email, password, dob, phone)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
-        `;
-
+        // Check if email already exists in employee table
         db.query(
-          insertSql,
-          [
-            first_name,
-            last_name,
-            gender,
-            email,
-            hashed,
-            dob,   // must be 'YYYY-MM-DD'
-            phone,
-          ],
-          (err2, result) => {
+          "SELECT employee_id FROM employee WHERE email = ?",
+          [email],
+          async (err2, employeeRows) => {
             if (err2) {
-              console.error("SIGNUP insert error:", err2);
-              return res.status(500).json({ error: "Signup failed", detail: err2.message });
+              console.error("SIGNUP employee email check error:", err2);
+              return res.status(500).json({ error: "Database error" });
             }
 
-            // build object to return
-            const newCustomer = {
-              customer_id: result.insertId,
-              first_name,
-              last_name,
-              gender,
-              email,
-              dob,
-              phone,
-            };
+            if (employeeRows.length > 0) {
+              return res.status(409).json({ error: "Email already registered" });
+            }
 
-            const token = makeToken(newCustomer);
+            // hash password before insert
+            const hashed = await bcrypt.hash(password, 10);
 
-            return res.json({
-              token,
-              customer: newCustomer,
-            });
+            const insertSql = `
+              INSERT INTO customer
+              (first_name, last_name, gender, email, password, dob, phone)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            db.query(
+              insertSql,
+              [
+                first_name,
+                last_name,
+                gender,
+                email,
+                hashed,
+                dob,   // must be 'YYYY-MM-DD'
+                phone,
+              ],
+              (err3, result) => {
+                if (err3) {
+                  console.error("SIGNUP insert error:", err3);
+                  return res.status(500).json({ error: "Signup failed", detail: err3.message });
+                }
+
+                // build object to return
+                const newCustomer = {
+                  customer_id: result.insertId,
+                  first_name,
+                  last_name,
+                  gender,
+                  email,
+                  dob,
+                  phone,
+                };
+
+                const token = makeToken(newCustomer);
+
+                return res.json({
+                  token,
+                  customer: newCustomer,
+                });
+              }
+            );
           }
         );
       }

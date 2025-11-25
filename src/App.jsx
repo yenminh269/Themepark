@@ -95,9 +95,10 @@ function AppContent() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/logout" element={<Logout />} />
         <Route path="/forgot-password" element={<ForgetPassword />} />
-        <Route path="/complete-profile" element={<CompleteProfile />} />
+       
 
         {/* ===== CUSTOMER ROUTES (Require Customer Authentication) ===== */}
+         <Route path="/complete-profile" element={<ProtectedRoute><CompleteProfile /></ProtectedRoute>} />
         <Route path="/tickets" element={<ProtectedRoute><TicketsPage /></ProtectedRoute>} />
         <Route path="/map" element={<ProtectedRoute><ParkMapPage /></ProtectedRoute>} />
         <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />

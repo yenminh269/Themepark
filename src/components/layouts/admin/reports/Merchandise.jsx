@@ -234,11 +234,118 @@ Store: ${store === 'all' ? 'All Stores' : 'Specific Store'}
 ==============================
 `;
 
-      // TODO: Add report data formatting based on type
+      // Format report data based on type
+      if (type === 'total_revenue') {
+        reportText += `\n`;
+        reportData.forEach((item, index) => {
+          reportText += `${index + 1}. Customer: ${item.first_name} ${item.last_name}\n`;
+          reportText += `   Email: ${item.email}\n`;
+          reportText += `   Order Date: ${new Date(item.order_date).toLocaleDateString()}\n`;
+          reportText += `   Item: ${item.item_name}\n`;
+          if (store === 'all') reportText += `   Store: ${item.store_name}\n`;
+          if (items === 'all') reportText += `   Category: ${item.category}\n`;
+          reportText += `   Quantity: ${item.quantity}\n`;
+          reportText += `   Price/Item: $${parseFloat(item.price_per_item).toFixed(2)}\n`;
+          reportText += `   Subtotal: $${parseFloat(item.subtotal).toFixed(2)}\n\n`;
+        });
+
+        // Add Grand Total
+        const totalQuantity = reportData.reduce((sum, item) => sum + parseInt(item.quantity || 0), 0);
+        const totalRevenue = reportData.reduce((sum, item) => sum + parseFloat(item.subtotal || 0), 0);
+        reportText += `\n==============================\n`;
+        reportText += `GRAND TOTAL:\n`;
+        reportText += `Total Items Sold: ${totalQuantity}\n`;
+        reportText += `Total Revenue: $${totalRevenue.toFixed(2)}\n`;
+      } else if (type === 'growth') {
+        reportText += `\n`;
+        reportData.forEach((item, index) => {
+          reportText += `${index + 1}. Date: ${new Date(item.order_date).toLocaleDateString()}\n`;
+          reportText += `   Store: ${item.store_name}\n`;
+          reportText += `   Number of Orders: ${item.order_count}\n`;
+          reportText += `   Total Revenue: $${parseFloat(item.total_revenue).toFixed(2)}\n`;
+          reportText += `   Growth Rate: ${item.growth_rate > 0 ? '+' : ''}${parseFloat(item.growth_rate).toFixed(2)}%\n\n`;
+        });
+
+        // Add Average Growth Total
+        const totalOrders = reportData.reduce((sum, item) => sum + parseInt(item.order_count || 0), 0);
+        const totalRevenue = reportData.reduce((sum, item) => sum + parseFloat(item.total_revenue || 0), 0);
+        const avgGrowth = reportData.reduce((sum, item) => sum + parseFloat(item.growth_rate || 0), 0) / reportData.length;
+        reportText += `\n==============================\n`;
+        reportText += `AVERAGE ${store === 'specific' ? 'DAILY' : 'STORE'} GROWTH RATE WITH TOTAL REVENUE:\n`;
+        reportText += `Total Orders: ${totalOrders}\n`;
+        reportText += `Total Revenue: $${totalRevenue.toFixed(2)}\n`;
+        reportText += `Average Growth Rate: ${avgGrowth > 0 ? '+' : ''}${avgGrowth.toFixed(2)}%\n`;
+      } else if (type === 'monthly_growth') {
+        reportText += `\n`;
+        reportData.forEach((item, index) => {
+          reportText += `${index + 1}. Month: ${item.month_name} ${item.year}\n`;
+          reportText += `   Total Orders: ${item.total_orders}\n`;
+          reportText += `   Total Revenue: $${parseFloat(item.total_revenue).toFixed(2)}\n`;
+          reportText += `   Growth Rate: ${item.growth_rate > 0 ? '+' : ''}${parseFloat(item.growth_rate).toFixed(2)}%\n`;
+          if (store === 'all') {
+            reportText += `   Top Contributor: ${item.top_contributor}\n`;
+            reportText += `   Contribution: ${parseFloat(item.top_contributor_percentage).toFixed(1)}%\n`;
+          }
+          reportText += `\n`;
+
+          // Add Store Performance Breakdown (for All Stores)
+          if (store === 'all' && item.stores && item.stores.length > 0) {
+            reportText += `   Store Performance Breakdown:\n`;
+            item.stores.forEach((storeItem, storeIdx) => {
+              reportText += `   ${storeIdx + 1}. ${storeItem.store_name}\n`;
+              reportText += `      Orders: ${storeItem.order_count}\n`;
+              reportText += `      Revenue: $${parseFloat(storeItem.total_revenue).toFixed(2)}\n`;
+              reportText += `      Contribution: ${parseFloat(storeItem.contribution_percentage).toFixed(1)}%\n`;
+            });
+            reportText += `\n`;
+          }
+
+          // Add detailed order information
+          if (item.details && item.details.length > 0) {
+            reportText += `   Detailed Orders:\n`;
+            item.details.forEach((detail, detailIdx) => {
+              reportText += `   ${detailIdx + 1}. Customer: ${detail.first_name} ${detail.last_name}\n`;
+              reportText += `      Email: ${detail.email}\n`;
+              reportText += `      Phone: ${detail.phone}\n`;
+              reportText += `      Order Date: ${detail.formatted_order_date}\n`;
+              if (store === 'all') reportText += `      Store: ${detail.store_name}\n`;
+              if (store === 'specific') reportText += `      Order ID: ${detail.store_order_id}\n`;
+              reportText += `      Item: ${detail.item_name}\n`;
+              reportText += `      Quantity: ${detail.quantity}\n`;
+              reportText += `      Price/Item: $${parseFloat(detail.price_per_item).toFixed(2)}\n`;
+              reportText += `      Subtotal: $${parseFloat(detail.subtotal).toFixed(2)}\n`;
+              if (store === 'all') reportText += `      Order Total: $${parseFloat(detail.order_total).toFixed(2)}\n`;
+              reportText += `      Status: ${detail.status}\n`;
+              reportText += `      Payment: ${detail.payment_method?.replace('_', ' ')}\n\n`;
+            });
+          }
+        });
+
+        // Add Average Monthly Growth Summary
+        const totalRevenue = reportData.reduce((sum, item) => sum + parseFloat(item.total_revenue || 0), 0);
+        const totalOrders = reportData.reduce((sum, item) => sum + parseInt(item.total_orders || 0), 0);
+        const avgGrowth = reportData.reduce((sum, item) => sum + parseFloat(item.growth_rate || 0), 0) / reportData.length;
+        const bestMonth = reportData.reduce((max, item) => parseFloat(item.growth_rate) > parseFloat(max.growth_rate) ? item : max);
+        reportText += `\n==============================\n`;
+        reportText += `AVERAGE MONTHLY GROWTH:\n`;
+        reportText += `Total Orders: ${totalOrders}\n`;
+        reportText += `Total Revenue: $${totalRevenue.toFixed(2)}\n`;
+        reportText += `Average Growth Rate: ${avgGrowth > 0 ? '+' : ''}${avgGrowth.toFixed(2)}%\n`;
+        if (store === 'all') {
+          reportText += `Best Growth Month: ${bestMonth.month_name} ${bestMonth.year} with ${parseFloat(bestMonth.growth_rate).toFixed(2)}% growth rate\n`;
+        }
+      }
 
       reportText += `==============================\n`;
       if (conclusion) {
-        reportText += `${conclusion.replace(/<\/?strong>/g, '').replace(/<br\s*\/?>/g, '\n')}\n`;
+        // Remove all HTML tags from conclusion
+        const cleanConclusion = conclusion
+          .replace(/<\/?strong>/g, '')
+          .replace(/<\/?u>/g, '')
+          .replace(/<br\s*\/?>/g, '\n')
+          .replace(/<span[^>]*>/g, '')
+          .replace(/<\/span>/g, '');
+        reportText += `INSIGHTS:\n${cleanConclusion}\n`;
         reportText += '==============================';
       }
 
