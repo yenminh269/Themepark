@@ -2,8 +2,6 @@
 
 Full-stack Theme Park Management System for COSC 3380: Database Systems
 
-**Team Members:** Minh Ho
-
 **Repository:** [yenminh269/Themepark](https://github.com/yenminh269/Themepark)
 
 **Hosted Link:** [Velocity Valley](https://velocityvalley-themepark.vercel.app/)
@@ -330,45 +328,10 @@ cd Themepark-Management-System
 code .
 ```
 
-### Important Environment Configuration
-
-Both frontend and backend `.env` files must be properly configured before hosting locally.
-
-#### Backend Configuration (`server/.env`)
+#### Important Environment Configuration (`server/.env`)
 
 Create a `.env` file in the `server` directory:
-
-```env
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=velocity_valley
-
-# Server Configuration
-PORT=3001
-NODE_ENV=development
-
-# JWT Secret
-JWT_SECRET=your_secret_key_here
-JWT_EXPIRES_IN=7d
-
-# SendGrid Email Configuration (for password reset)
-SENDGRID_API_KEY=your_sendgrid_api_key
-SENDGRID_FROM_EMAIL=noreply@velocityvalley.com
-
-# Frontend URL (for CORS)
-FRONTEND_URL=http://localhost:5173
-```
-
-#### Frontend Configuration (`.env` in root directory)
-
-Create a `.env` file in the root directory:
-
-```env
-VITE_API_URL=http://localhost:3001
-```
+ `.env` files must be properly configured before hosting locally.
 
 ### Database Setup
 
