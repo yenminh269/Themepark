@@ -24,35 +24,34 @@ The system supports comprehensive CRUD operations across multiple entity types:
 
 #### Customers
 - **Sign Up & Authentication:** Email-based registration with password authentication, OAuth2 Google login
-- **Edit/Modify:** Name, email, phone, date of birth, address
-- **Change Password:** Secure password reset via email with temporary password generation
+- **Edit/Modify:** Name, phone, date of birth, password
+- **Forget Password:** Secure password reset via email with temporary password generation
 - **Complete Profile:** Required profile completion for OAuth users
 
-#### Employees (General Manager Access)
-- **Add New Employees:** Automated email generation 
+#### Employees
+- **Add New Employees:** Automated unique email and temporary password generation
 - **Edit/Modify:**
   - Personal info: first name, last name, gender, email, phone, SSN
   - Job-specific: job title, hire date, terminate date, salary
-- **Manage:** Reset passwords, terminate employees, revoke termination, permanently delete
 - **Schedule:** Assign mechanical employees to ride maintenance tasks
 - **Assign:** Assign sales employees to store shifts
 
 #### Rides
-- **Add New Rides:** Name, description, height requirement, capacity, zone assignment, operational hours
-- **Edit/Modify:** All ride attributes, status (open/closed/under_maintenance/pending_expansion)
+- **Add New Rides:** Name, description, capacity, operational hours, image URL, price, open and close time
+- **Edit/Modify:** All ride attributes, status (open/closed/maintenance/pending_expansion)
 - **Maintenance:** Assign mechanical employees to ride maintenance tasks
 - **Expansion:** Automatic expansion trigger when ride reaches 15% monthly sales quota
 - **Rain Management:** Automatic closure during rain, automatic reopening when rain clears
 
 #### Stores (Merchandise, Food & Beverage)
-- **Add New Stores:** Name, type (merchandise/food_drink), status, location
-- **Edit/Modify:** Store details, operating hours, zone assignment
+- **Add New Stores:** Name, type (merchandise/food_drink), status, description, image URL
+- **Edit/Modify:** Store details, operating hours
 - **Inventory Management:** Stock tracking, restocking, low-stock alerts
 - **Employee Assignment:** Assign sales employees to store shifts
 
 #### Merchandise Items
 - **Add New Items:** Name, description, price, category, stock quantity, image URL
-- **Edit/Modify:** All item attributes, availability status
+- **Edit/Modify:** All item attributes, stock management
 - **Stock Management:** Track inventory levels across multiple stores
 - **Restock:** Update stock quantities with automated alerts
 
@@ -63,7 +62,7 @@ The system supports comprehensive CRUD operations across multiple entity types:
 
 #### Maintenance Tasks
 - **Create Tasks:** Assign rides to mechanical employees with priority levels
-- **Track Status:** pending → in_progress → done
+- **Track Status:** scheduled → in_progress → done
 - **Completion:** Employees mark tasks complete with timestamp
 
 #### Rain-Out Management
@@ -81,8 +80,6 @@ The application implements a role-based access control system with distinct user
 **Public Access:**
 - Browse park information (hours, parking, safety, FAQ, accessibility, group bookings)
 - View stores and merchandise
-- Explore park map with zones, rides, and stores
-- View ride schedules and operational hours
 
 **Authenticated Access:**
 - Purchase ride tickets with email confirmation
@@ -90,14 +87,15 @@ The application implements a role-based access control system with distinct user
 - View order history and confirmations
 - Edit profile information
 - Change password
-- View park map with interactive zone details
+- Explore park map with zones, rides, and stores
+- View ride schedules and operational hours
 
 #### General Manager 💼
 **Full System Access:**
 - **Employee Management:**
-  - Add, edit, terminate, revoke termination, permanently delete employees
+  - Add, edit, terminate employees, revoke termination, permanently delete
   - Reset employee passwords with temporary password generation
-  - View all employee records including salary information
+  - View all employee records and their information
 - **Ride Management:**
   - Create, edit, delete rides
   - Assign rides to zones
@@ -117,7 +115,6 @@ The application implements a role-based access control system with distinct user
   - Customer reports (new registrations, purchase activity)
 - **Rain Management:**
   - View rain-out history
-  - Clear rain events to reopen rides
 
 #### Store Manager 🏪
 **Store Operations:**
@@ -126,16 +123,17 @@ The application implements a role-based access control system with distinct user
 - Manage inventory for individual stores (merchandise and food/beverage)
 - Restock items when inventory runs low
 - Create and manage sales employee schedules
-- View employee shift assignments
+- View and manage store operations
 
 #### Mechanical Employee 🔧
 **Maintenance Operations:**
 - View assigned maintenance tasks for the day
-- Update task status (pending → in_progress → done)
+- Update task status (scheduled → done)
 - Complete maintenance records with timestamp
 - Add rain-out records when weather conditions require ride closures
 - View rain-out history
 - Change password securely
+- Clear rain events to reopen rides
 
 #### Sales Employee 💰
 **Point of Sale Operations:**
@@ -177,7 +175,7 @@ The application implements a role-based access control system with distinct user
 **Action:**
 - **Rain Start:**
   - Closes all rides with status `open` by setting status to `closed`
-  - Excludes rides already under maintenance or deleted
+  - Excludes rides already permanently deleted
 - **Rain Clear:**
   - Reopens all rides with status `closed` by setting status to `open`
   - Excludes rides under maintenance or permanently closed
